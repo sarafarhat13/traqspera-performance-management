@@ -17,7 +17,6 @@ import {
 } from '../data/seed'
 import type {
   AppState,
-  DemoRole,
   EmployeeDetailsTab,
   EmployeeReviewerAssignment,
   PerformanceReview,
@@ -34,15 +33,17 @@ import {
   workflowFromLegacy,
 } from '../utils/workflow'
 
-const STORAGE_KEY = 'traqspera-performance-management-v2'
+const STORAGE_KEY = 'traqspera-performance-management-v3'
 /** Bump when bundled seed cycles/reviews change so stale localStorage is refreshed. */
-const SEED_VERSION = 3
+const SEED_VERSION = 4
+
+const DEFAULT_ACTIVE_PERSON_ID = 'mgr-1'
 
 const SEED_CYCLE_IDS = new Set(seedCycles.map((cycle) => cycle.id))
 
 type PersistedState = Pick<
   AppState,
-  'templates' | 'cycles' | 'reviews' | 'demoRole' | 'activePersonId'
+  'templates' | 'cycles' | 'reviews' | 'activePersonId'
 > & {
   seedVersion?: number
 }
@@ -172,13 +173,13 @@ function reviewsForCycleLaunch(
 
 interface PerformanceContextValue {
   state: AppState
-  setDemoRole: (role: DemoRole) => void
   setView: (view: ViewId) => void
   setLayoutMode: (mode: 'desktop' | 'mobile') => void
   selectTemplate: (id: string | null) => void
   selectCycle: (id: string | null) => void
   selectPerson: (id: string | null) => void
   setEmployeeDetailsTab: (tab: EmployeeDetailsTab) => void
+  openMyPerformance: () => void
   openEmployeeReview: (reviewId: string) => void
   selectReview: (id: string | null) => void
   startNewTemplate: () => void
@@ -211,11 +212,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
   const initialReviews = resolveReviews(persisted)
 
   const [state, setState] = useState<AppState>(() => ({
-    demoRole: persisted.demoRole ?? 'hr_admin',
-    activePersonId:
-      persisted.activePersonId ??
-      seedPeople.find((p) => p.role === (persisted.demoRole ?? 'hr_admin'))?.id ??
-      'hr-1',
+    activePersonId: persisted.activePersonId ?? DEFAULT_ACTIVE_PERSON_ID,
     view: 'hr_dashboard',
     selectedTemplateId: null,
     selectedCycleId: null,
@@ -232,7 +229,6 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const payload: PersistedState = {
-      demoRole: state.demoRole,
       activePersonId: state.activePersonId,
       templates: state.templates,
       cycles: state.cycles,
@@ -240,29 +236,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       seedVersion: SEED_VERSION,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-  }, [state.demoRole, state.activePersonId, state.templates, state.cycles, state.reviews])
-
-  const setDemoRole = useCallback((role: DemoRole) => {
-    const person = seedPeople.find((p) => p.role === role)
-    const defaultView: ViewId =
-      role === 'hr_admin'
-        ? 'hr_dashboard'
-        : role === 'employee'
-          ? 'employee_details'
-          : 'manager_dashboard'
-    setState((s) => ({
-      ...s,
-      demoRole: role,
-      activePersonId: person?.id ?? s.activePersonId,
-      view: defaultView,
-      selectedReviewId: null,
-      selectedCycleId: null,
-      selectedPersonId: role === 'employee' ? (person?.id ?? s.activePersonId) : null,
-      employeeDetailsTab: role === 'employee' ? 'performance' : 'personal',
-      selectedTemplateId: null,
-      editingTemplateId: null,
-    }))
-  }, [])
+  }, [state.activePersonId, state.templates, state.cycles, state.reviews])
 
   const setView = useCallback((view: ViewId) => {
     setState((s) => ({ ...s, view }))
@@ -290,6 +264,17 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
 
   const setEmployeeDetailsTab = useCallback((employeeDetailsTab: EmployeeDetailsTab) => {
     setState((s) => ({ ...s, employeeDetailsTab }))
+  }, [])
+
+  const openMyPerformance = useCallback(() => {
+    setState((s) => ({
+      ...s,
+      view: 'employee_details',
+      selectedPersonId: s.activePersonId,
+      employeeDetailsTab: 'performance',
+      selectedReviewId: null,
+      selectedCycleId: null,
+    }))
   }, [])
 
   const openEmployeeReview = useCallback((reviewId: string) => {
@@ -365,12 +350,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
           s.people,
           options?.reviewerAssignments,
         ),
-        view:
-          s.demoRole === 'hr_admin'
-            ? 'hr_dashboard'
-            : s.demoRole === 'manager'
-              ? 'manager_dashboard'
-              : s.view,
+        view: 'hr_dashboard',
       }))
     },
     [],
@@ -396,7 +376,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       setState((s) => ({
         ...s,
         cycles: [...s.cycles, cycle],
-        view: s.demoRole === 'hr_admin' ? 'hr_dashboard' : s.view,
+        view: 'hr_dashboard',
       }))
     },
     [],
@@ -508,13 +488,13 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       state,
-      setDemoRole,
       setView,
       setLayoutMode,
       selectTemplate,
       selectCycle,
       selectPerson,
       setEmployeeDetailsTab,
+      openMyPerformance,
       openEmployeeReview,
       selectReview,
       startNewTemplate,
@@ -534,13 +514,13 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
     }),
     [
       state,
-      setDemoRole,
       setView,
       setLayoutMode,
       selectTemplate,
       selectCycle,
       selectPerson,
       setEmployeeDetailsTab,
+      openMyPerformance,
       openEmployeeReview,
       selectReview,
       startNewTemplate,

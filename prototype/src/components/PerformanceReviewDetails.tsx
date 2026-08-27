@@ -23,15 +23,15 @@ export function PerformanceReviewDetails() {
   }
 
   const handleBack = () => {
-    if (state.selectedPersonId && (state.demoRole === 'hr_admin' || state.demoRole === 'manager')) {
+    if (state.selectedPersonId && state.selectedPersonId !== state.activePersonId) {
       setView('employee_details')
       return
     }
-    if (state.demoRole === 'hr_admin') {
-      setView(state.selectedCycleId ? 'cycle_details' : 'hr_dashboard')
+    if (state.selectedCycleId) {
+      setView('cycle_details')
       return
     }
-    if (state.demoRole === 'employee') {
+    if (review.employeeId === state.activePersonId) {
       selectPerson(state.activePersonId)
       setEmployeeDetailsTab('performance')
       setView('employee_details')

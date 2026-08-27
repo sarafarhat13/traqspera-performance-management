@@ -22,7 +22,6 @@ import { ModusWcSelect } from '@trimble-oss/moduswebcomponents-react'
 import { useState, useEffect } from 'react'
 import { usePerformance } from '../context/PerformanceContext'
 import { readInputString } from '../utils/modusFormEvents'
-import type { DemoRole } from '../types'
 import {
   NAV_COLLAPSED_W,
   NAV_EXPANDED_W,
@@ -40,15 +39,21 @@ type NavSection = {
   label: string
   icon: ReactNode
   page?: TraqsperaNavPage
-  getChildren?: (role: DemoRole) => { key: TraqsperaNavPage; label: string }[]
+  children?: { key: TraqsperaNavPage; label: string }[]
 }
+
+const PERFORMANCE_NAV_CHILDREN: { key: TraqsperaNavPage; label: string }[] = [
+  { key: 'p_perf_dashboard', label: 'Reviews Dashboard' },
+  { key: 'p_perf_team', label: 'Team Reviews' },
+  { key: 'p_perf_templates', label: 'Templates' },
+]
 
 const NAV_SECTIONS: NavSection[] = [
   {
     key: 'my_info',
     label: 'My Info',
     icon: <User size={16} />,
-    getChildren: () => [
+    children: [
       { key: 'my_info_personal', label: 'Personal Information' },
       { key: 'my_info_hours', label: 'My Hours' },
       { key: 'my_info_certifications', label: 'Certifications' },
@@ -63,33 +68,12 @@ const NAV_SECTIONS: NavSection[] = [
     key: 'performance',
     label: 'Performance',
     icon: <Award size={16} />,
-    getChildren: (role) => {
-      if (role === 'employee') {
-        return []
-      }
-      if (role === 'hr_admin') {
-        return [
-          { key: 'p_perf_dashboard', label: 'Reviews Dashboard' },
-          { key: 'p_perf_templates', label: 'Templates' },
-        ]
-      }
-      return [
-        { key: 'p_perf_dashboard', label: 'Reviews Dashboard' },
-        { key: 'p_perf_team', label: 'Team Reviews' },
-        { key: 'p_perf_templates', label: 'Templates' },
-      ]
-    },
+    children: PERFORMANCE_NAV_CHILDREN,
   },
   { key: 'equipment', label: 'Equipment', icon: <Wrench size={16} />, page: 'equipment' },
   { key: 'documents', label: 'Documents', icon: <FileText size={16} />, page: 'documents' },
   { key: 'settings', label: 'Settings', icon: <Settings size={16} />, page: 'settings' },
   { key: 'global_admin', label: 'Global Admin', icon: <Shield size={16} />, page: 'global_admin' },
-]
-
-const ROLE_VIEWING_OPTIONS = [
-  { label: 'Viewing as HR Admin', value: 'hr_admin' },
-  { label: 'Viewing as Employee', value: 'employee' },
-  { label: 'Viewing as Manager', value: 'manager' },
 ]
 
 function TopBar({
@@ -100,7 +84,7 @@ function TopBar({
   minimalChrome?: boolean
 }) {
   const [tenant, setTenant] = useState('enterprise')
-  const { state, setDemoRole } = usePerformance()
+  const { state } = usePerformance()
   const person = state.people.find((p) => p.id === state.activePersonId)
 
   return (
@@ -136,14 +120,6 @@ function TopBar({
         customClass="w-[180px]"
       />
       <div className="ml-auto flex items-center gap-[6px]">
-        <ModusWcSelect
-          aria-label="Viewing as"
-          size="sm"
-          value={state.demoRole}
-          options={ROLE_VIEWING_OPTIONS}
-          onInputChange={(e) => setDemoRole(readInputString(e as CustomEvent) as DemoRole)}
-          customClass="w-[200px]"
-        />
         <button
           type="button"
           className="flex h-[32px] w-[32px] items-center justify-center rounded-full text-[#6a6e79] hover:text-[#252a2e] hover:bg-[#f1f1f6] transition-colors"
@@ -188,13 +164,11 @@ function NavSidebar({
   onNavigate,
   collapsed,
   onToggleCollapse,
-  role,
 }: {
   activePage: TraqsperaNavPage
   onNavigate: (page: TraqsperaNavPage) => void
   collapsed: boolean
   onToggleCollapse: () => void
-  role: DemoRole
 }) {
   const navW = collapsed ? NAV_COLLAPSED_W : NAV_EXPANDED_W
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => ({
@@ -233,8 +207,8 @@ function NavSidebar({
       }}
     >
       <div className="flex-1 overflow-y-auto py-[4px]" style={{ scrollbarWidth: 'none' }}>
-        {NAV_SECTIONS.filter((section) => !(section.key === 'performance' && role === 'employee')).map((section) => {
-          const children = section.getChildren?.(role)
+        {NAV_SECTIONS.map((section) => {
+          const children = section.children
           const myInfoActive = section.key === 'my_info' && MY_INFO_PAGES.has(activePage)
           const performanceActive = section.key === 'performance' && PERFORMANCE_PAGES.has(activePage)
           const settingsActive = section.key === 'settings' && SETTINGS_PAGES.has(activePage)
@@ -396,7 +370,6 @@ export function TraqsperaShell({
   children,
 }: TraqsperaShellProps) {
   const [navCollapsed, setNavCollapsed] = useState(true)
-  const { state } = usePerformance()
   const inSettings = SETTINGS_PAGES.has(activePage)
   const navW = navCollapsed ? NAV_COLLAPSED_W : NAV_EXPANDED_W
   const showSideNav = !minimalChrome && !fullScreenContent
@@ -425,7 +398,6 @@ export function TraqsperaShell({
           onNavigate={onNavigate}
           collapsed={navCollapsed}
           onToggleCollapse={() => setNavCollapsed((v) => !v)}
-          role={state.demoRole}
         />
       )}
       {showSideNav && inSettings && (

@@ -1,4 +1,4 @@
-import type { DemoRole, PerformanceReview, ReviewCycle, ReviewStatus, WorkflowStep, WorkflowStepType } from '../types'
+import type { PerformanceReview, ReviewCycle, ReviewStatus, WorkflowStep, WorkflowStepType } from '../types'
 import { formatDate } from './status'
 
 export const WORKFLOW_STEP_LABELS: Record<WorkflowStepType, string> = {
@@ -226,23 +226,20 @@ export function formatCurrentStageDue(cycle: ReviewCycle, review: PerformanceRev
 /** Whether the current viewer should take action on this review's open stage. */
 export function isReviewActionRequired(
   review: PerformanceReview,
-  context?: { role?: DemoRole; personId?: string },
+  context?: { personId?: string },
 ): boolean {
   if (review.status === 'completed') return false
 
-  const { role, personId } = context ?? {}
+  const { personId } = context ?? {}
+  if (!personId) return false
 
-  if (role === 'employee' && personId === review.employeeId) {
+  if (personId === review.employeeId) {
     return review.status === 'self_eval_pending' || review.status === 'acknowledgement_pending'
   }
 
-  if (role === 'manager' && personId === review.managerId) {
+  if (personId === review.managerId) {
     return review.status === 'manager_pending'
   }
 
-  if (role === 'hr_admin') {
-    return true
-  }
-
-  return true
+  return false
 }

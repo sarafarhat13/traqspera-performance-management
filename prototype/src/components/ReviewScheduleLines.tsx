@@ -1,5 +1,5 @@
 import { ModusWcTypography } from '@trimble-oss/moduswebcomponents-react'
-import type { DemoRole, PerformanceReview, ReviewCycle } from '../types'
+import type { PerformanceReview, ReviewCycle } from '../types'
 import { usePerformance } from '../context/PerformanceContext'
 import { formatReviewPeriod } from '../utils/status'
 import { CurrentStageDueLine } from './CurrentStageDueLine'
@@ -7,7 +7,6 @@ import { CurrentStageDueLine } from './CurrentStageDueLine'
 type ReviewScheduleLinesProps = {
   cycle: ReviewCycle
   review: PerformanceReview
-  demoRole?: DemoRole
   activePersonId?: string
 }
 
@@ -15,11 +14,9 @@ type ReviewScheduleLinesProps = {
 export function ReviewScheduleLines({
   cycle,
   review,
-  demoRole: demoRoleProp,
   activePersonId: activePersonIdProp,
 }: ReviewScheduleLinesProps) {
   const { state } = usePerformance()
-  const demoRole = demoRoleProp ?? state.demoRole
   const activePersonId = activePersonIdProp ?? state.activePersonId
 
   return (
@@ -28,7 +25,6 @@ export function ReviewScheduleLines({
       <CurrentStageDueLine
         cycle={cycle}
         review={review}
-        demoRole={demoRole}
         activePersonId={activePersonId}
       />
     </div>

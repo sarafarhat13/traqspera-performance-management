@@ -1,11 +1,10 @@
 import { ModusWcIcon, ModusWcTypography } from '@trimble-oss/moduswebcomponents-react'
-import type { DemoRole, PerformanceReview, ReviewCycle } from '../types'
+import type { PerformanceReview, ReviewCycle } from '../types'
 import { formatCurrentStageDue, isReviewActionRequired } from '../utils/workflow'
 
 type CurrentStageDueLineProps = {
   cycle: ReviewCycle
   review: PerformanceReview
-  demoRole?: DemoRole
   activePersonId?: string
   size?: 'sm' | 'xs'
   iconSize?: 'xs' | 'sm'
@@ -15,7 +14,6 @@ type CurrentStageDueLineProps = {
 export function CurrentStageDueLine({
   cycle,
   review,
-  demoRole,
   activePersonId,
   size = 'sm',
   iconSize = 'xs',
@@ -23,7 +21,7 @@ export function CurrentStageDueLine({
   const stageDue = formatCurrentStageDue(cycle, review)
   if (!stageDue) return null
 
-  const actionRequired = isReviewActionRequired(review, { role: demoRole, personId: activePersonId })
+  const actionRequired = isReviewActionRequired(review, { personId: activePersonId })
   const toneClass = actionRequired
     ? 'text-[var(--modus-wc-color-warning)]'
     : 'text-[var(--modus-wc-color-base-content-low-contrast)]'

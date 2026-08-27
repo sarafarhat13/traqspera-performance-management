@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useState } from 'react'
 import { PerformanceProvider, usePerformance } from './context/PerformanceContext'
 import { TraqsperaShell } from './layouts/TraqsperaShell'
 import { HRAdminDashboard } from './components/HRAdminDashboard'
@@ -17,34 +17,24 @@ import { navPageFromView, navTargetFromNavPage } from './navigation'
 import type { TraqsperaNavPage } from './layouts/traqsperaShellConstants'
 
 function PerformanceApp() {
-  const { state, setView, setEmployeeDetailsTab, selectPerson } = usePerformance()
+  const { state, setView, setEmployeeDetailsTab, selectPerson, openMyPerformance } = usePerformance()
+  const [myPerformanceVisit, setMyPerformanceVisit] = useState(0)
 
-  useEffect(() => {
-    if (state.demoRole === 'employee' && state.view === 'employee_dashboard') {
-      selectPerson(state.activePersonId)
-      if (state.layoutMode !== 'mobile') {
-        setEmployeeDetailsTab('performance')
-      }
-      setView('employee_details')
-    }
-  }, [
-    state.demoRole,
-    state.view,
-    state.activePersonId,
-    state.layoutMode,
-    selectPerson,
-    setEmployeeDetailsTab,
-    setView,
-  ])
-
-  const activeNavPage = navPageFromView(state.view, state.demoRole, {
+  const activeNavPage = navPageFromView(state.view, {
     selectedPersonId: state.selectedPersonId,
     activePersonId: state.activePersonId,
     employeeDetailsTab: state.employeeDetailsTab,
+    selectedCycleId: state.selectedCycleId,
   })
 
   const handleNavigate = (page: TraqsperaNavPage) => {
-    const target = navTargetFromNavPage(page, state.demoRole, state.activePersonId)
+    if (page === 'my_info_performance') {
+      openMyPerformance()
+      setMyPerformanceVisit((visit) => visit + 1)
+      return
+    }
+
+    const target = navTargetFromNavPage(page, state.activePersonId)
     if (!target) return
     if (target.selectedPersonId !== undefined) {
       selectPerson(target.selectedPersonId)
@@ -61,9 +51,7 @@ function PerformanceApp() {
     state.selectedPersonId === state.activePersonId
 
   const employeeMobileOwnView =
-    viewingOwnEmployeeDetails &&
-    state.demoRole === 'employee' &&
-    state.layoutMode === 'mobile'
+    viewingOwnEmployeeDetails && state.layoutMode === 'mobile'
 
   const content = (() => {
     switch (state.view) {
@@ -72,7 +60,7 @@ function PerformanceApp() {
       case 'cycle_details':
         return <CycleDetailView />
       case 'employee_details':
-        return <EmployeeDetails />
+        return <EmployeeDetails myPerformanceVisit={myPerformanceVisit} />
       case 'templates':
         return <TemplateList />
       case 'template_editor':

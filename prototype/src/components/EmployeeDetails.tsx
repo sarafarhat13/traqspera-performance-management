@@ -9,6 +9,7 @@ import {
 import { usePerformance } from '../context/PerformanceContext'
 import type { EmployeeDetailsTab } from '../types'
 import { formatReviewPeriod } from '../utils/status'
+import { isReviewManager } from '../utils/viewerContext'
 import { CurrentStageDueLine } from './CurrentStageDueLine'
 import { StatusBadge } from './StatusBadge'
 import { PerformanceReviewDetailContent } from './PerformanceReviewDetailContent'
@@ -73,7 +74,7 @@ function mobileSectionTitle(section: EmployeeMobileHubSection): string {
   return EMPLOYEE_MOBILE_SECTION_TITLES[section]
 }
 
-export function EmployeeDetails() {
+export function EmployeeDetails({ myPerformanceVisit = 0 }: { myPerformanceVisit?: number }) {
   const {
     state,
     setView,
@@ -93,10 +94,14 @@ export function EmployeeDetails() {
   const [mobileSectionOpen, setMobileSectionOpen] = useState(false)
   const [mobileSection, setMobileSection] = useState<EmployeeMobileHubSection>('personal')
   const isOwnEmployeeView =
-    state.demoRole === 'employee' &&
-    person !== undefined &&
-    person.id === state.activePersonId
+    person !== undefined && person.id === state.activePersonId
   const isMobileOwnView = isOwnEmployeeView && state.layoutMode === 'mobile'
+
+  const resetPerformanceMode = () => {
+    setPerformanceMode('list')
+    setDetailReviewId(null)
+    selectReview(null)
+  }
 
   useEffect(() => {
     if (!isMobileOwnView) {
@@ -104,11 +109,12 @@ export function EmployeeDetails() {
     }
   }, [isMobileOwnView])
 
-  const resetPerformanceMode = () => {
-    setPerformanceMode('list')
-    setDetailReviewId(null)
-    selectReview(null)
-  }
+  useEffect(() => {
+    if (myPerformanceVisit === 0) return
+    resetPerformanceMode()
+    setMobileSection('performance')
+    setMobileSectionOpen(state.layoutMode === 'mobile')
+  }, [myPerformanceVisit, state.layoutMode])
 
   const employeeReviews = useMemo(() => {
     if (!person) return []
@@ -143,25 +149,16 @@ export function EmployeeDetails() {
       return
     }
     if (state.selectedPersonId === state.activePersonId) {
-      if (state.demoRole === 'employee') {
-        if (activeTab !== 'personal') {
-          setEmployeeDetailsTab('personal')
-          resetPerformanceMode()
-        }
-        return
+      if (activeTab === 'performance') {
+        resetPerformanceMode()
       }
-      if (state.demoRole === 'manager') {
-        setView('manager_dashboard')
-        return
+      if (activeTab !== 'personal') {
+        setEmployeeDetailsTab('personal')
+        resetPerformanceMode()
       }
-      setView('hr_dashboard')
       return
     }
-    if (state.demoRole === 'manager') {
-      setView('manager_dashboard')
-      return
-    }
-    setView('hr_dashboard')
+    setView('manager_dashboard')
   }
 
   const selectTab = (tab: EmployeeDetailsTab) => {
@@ -170,6 +167,94 @@ export function EmployeeDetails() {
     }
     setEmployeeDetailsTab(tab)
   }
+
+  const ownPerformanceContent =
+    performanceMode === 'self_eval' && state.selectedReviewId ? (
+      <EmployeeSelfEvalPanel
+        reviewId={state.selectedReviewId}
+        onBack={resetPerformanceMode}
+        onSubmitted={resetPerformanceMode}
+      />
+    ) : performanceMode === 'acknowledgement' && state.selectedReviewId ? (
+      <EmployeeAcknowledgementPanel
+        reviewId={state.selectedReviewId}
+        onBack={resetPerformanceMode}
+        onSubmitted={resetPerformanceMode}
+      />
+    ) : detailReviewId ? (
+      <div className="flex flex-col gap-3">
+        {(() => {
+          const activeReview = employeeReviews.find(({ review }) => review.id === detailReviewId)
+          if (!activeReview) return null
+          const { review, cycle } = activeReview
+          return (
+            <div className="flex min-w-0 items-start gap-3">
+              {!isMobileOwnView && (
+                <PageBackButton onBack={resetPerformanceMode} ariaLabel="Back to performance reviews" />
+              )}
+              <div className="mb-1 flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <h2 className="text-[16px] font-bold text-[#252a2e]">{cycle?.name ?? 'Review cycle'}</h2>
+                  {cycle && (
+                    <div>
+                      <p className="text-[13px] text-[#6a6e79]">
+                        {formatReviewPeriod(cycle.startDate, cycle.dueDate)}
+                      </p>
+                      <CurrentStageDueLine
+                        cycle={cycle}
+                        review={review}
+                        activePersonId={state.activePersonId}
+                        size="sm"
+                      />
+                    </div>
+                  )}
+                </div>
+                <StatusBadge status={review.status} />
+              </div>
+            </div>
+          )
+        })()}
+        <PerformanceReviewDetailContent reviewId={detailReviewId} />
+      </div>
+    ) : (
+      <EmployeeMyReviewsPanel
+        reviews={employeeReviews}
+        onSelfEval={(reviewId) => {
+          selectReview(reviewId)
+          setPerformanceMode('self_eval')
+        }}
+        onAcknowledge={(reviewId) => {
+          selectReview(reviewId)
+          setPerformanceMode('acknowledgement')
+        }}
+        onViewDetails={(reviewId) => {
+          selectReview(reviewId)
+          setDetailReviewId(reviewId)
+          setPerformanceMode('detail')
+        }}
+      />
+    )
+
+  const layoutModeToggle = (
+    <div className="flex shrink-0 gap-1">
+      <ModusWcButton
+        variant={state.layoutMode === 'desktop' ? 'filled' : 'outlined'}
+        color={state.layoutMode === 'desktop' ? 'primary' : 'tertiary'}
+        size="sm"
+        onButtonClick={() => setLayoutMode('desktop')}
+      >
+        Desktop
+      </ModusWcButton>
+      <ModusWcButton
+        variant={state.layoutMode === 'mobile' ? 'filled' : 'outlined'}
+        color={state.layoutMode === 'mobile' ? 'primary' : 'tertiary'}
+        size="sm"
+        onButtonClick={() => setLayoutMode('mobile')}
+      >
+        Mobile
+      </ModusWcButton>
+    </div>
+  )
 
   const openMobileSection = (section: EmployeeMobileHubSection) => {
     setMobileSection(section)
@@ -294,71 +379,8 @@ export function EmployeeDetails() {
       </div>
 
       <div hidden={!isMobileSectionVisible('performance')} aria-hidden={!isMobileSectionVisible('performance')}>
-        {isOwnEmployeeView && performanceMode === 'self_eval' && state.selectedReviewId ? (
-          <EmployeeSelfEvalPanel
-            reviewId={state.selectedReviewId}
-            onBack={resetPerformanceMode}
-            onSubmitted={resetPerformanceMode}
-          />
-        ) : isOwnEmployeeView && performanceMode === 'acknowledgement' && state.selectedReviewId ? (
-          <EmployeeAcknowledgementPanel
-            reviewId={state.selectedReviewId}
-            onBack={resetPerformanceMode}
-            onSubmitted={resetPerformanceMode}
-          />
-        ) : detailReviewId ? (
-          <div className="flex flex-col gap-3">
-            {(() => {
-              const activeReview = employeeReviews.find(({ review }) => review.id === detailReviewId)
-              if (!activeReview) return null
-              const { review, cycle } = activeReview
-              return (
-                <div className="flex min-w-0 items-start gap-3">
-                  {!isMobileOwnView && (
-                    <PageBackButton onBack={resetPerformanceMode} ariaLabel="Back to performance reviews" />
-                  )}
-                  <div className="mb-1 flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <h2 className="text-[16px] font-bold text-[#252a2e]">{cycle?.name ?? 'Review cycle'}</h2>
-                      {cycle && (
-                        <div>
-                          <p className="text-[13px] text-[#6a6e79]">
-                            {formatReviewPeriod(cycle.startDate, cycle.dueDate)}
-                          </p>
-                          <CurrentStageDueLine
-                            cycle={cycle}
-                            review={review}
-                            demoRole={state.demoRole}
-                            activePersonId={state.activePersonId}
-                            size="sm"
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <StatusBadge status={review.status} />
-                  </div>
-                </div>
-              )
-            })()}
-            <PerformanceReviewDetailContent reviewId={detailReviewId} />
-          </div>
-        ) : isOwnEmployeeView ? (
-          <EmployeeMyReviewsPanel
-            reviews={employeeReviews}
-            onSelfEval={(reviewId) => {
-              selectReview(reviewId)
-              setPerformanceMode('self_eval')
-            }}
-            onAcknowledge={(reviewId) => {
-              selectReview(reviewId)
-              setPerformanceMode('acknowledgement')
-            }}
-            onViewDetails={(reviewId) => {
-              selectReview(reviewId)
-              setDetailReviewId(reviewId)
-              setPerformanceMode('detail')
-            }}
-          />
+        {isOwnEmployeeView ? (
+          ownPerformanceContent
         ) : (
           <div className="flex flex-col gap-3">
             {employeeReviews.length === 0 ? (
@@ -390,14 +412,14 @@ export function EmployeeDetails() {
                         <CurrentStageDueLine
                           cycle={cycle}
                           review={review}
-                          demoRole={state.demoRole}
                           activePersonId={state.activePersonId}
                           size="sm"
                         />
                       </div>
                     )}
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {state.demoRole === 'manager' && review.status === 'manager_pending' && (
+                      {isReviewManager(state.activePersonId, review) &&
+                        review.status === 'manager_pending' && (
                         <ModusWcButton
                           variant="filled"
                           color="primary"
@@ -481,24 +503,7 @@ export function EmployeeDetails() {
           <h1 className="text-[18px] font-bold leading-[28px] text-[#252a2e]">Employee Details</h1>
         </div>
         {isOwnEmployeeView ? (
-          <div className="flex shrink-0 gap-1">
-            <ModusWcButton
-              variant={state.layoutMode === 'desktop' ? 'filled' : 'outlined'}
-              color={state.layoutMode === 'desktop' ? 'primary' : 'tertiary'}
-              size="sm"
-              onButtonClick={() => setLayoutMode('desktop')}
-            >
-              Desktop
-            </ModusWcButton>
-            <ModusWcButton
-              variant={state.layoutMode === 'mobile' ? 'filled' : 'outlined'}
-              color={state.layoutMode === 'mobile' ? 'primary' : 'tertiary'}
-              size="sm"
-              onButtonClick={() => setLayoutMode('mobile')}
-            >
-              Mobile
-            </ModusWcButton>
-          </div>
+          layoutModeToggle
         ) : (
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             <button

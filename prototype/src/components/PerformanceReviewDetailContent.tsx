@@ -71,7 +71,6 @@ export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string 
                 <CurrentStageDueLine
                   cycle={cycle}
                   review={review}
-                  demoRole={state.demoRole}
                   activePersonId={state.activePersonId}
                 />
               )}

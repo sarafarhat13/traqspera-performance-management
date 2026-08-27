@@ -53,7 +53,6 @@ export function CycleDetailView() {
     updateCycle,
   } = usePerformance()
 
-  const isAdmin = state.demoRole === 'hr_admin'
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [draftName, setDraftName] = useState('')
   const [draftDueDate, setDraftDueDate] = useState('')
@@ -222,11 +221,6 @@ export function CycleDetailView() {
             employeeName: string
             reviewerType?: string
           }
-          if (!isAdmin) {
-            const label = document.createElement('span')
-            label.textContent = record.managerName
-            return label
-          }
           return createManagerSelectCell(
             record.managerId,
             managerOptions,
@@ -257,7 +251,6 @@ export function CycleDetailView() {
             return empty
           }
           return createStageDueCell(cycle, review, {
-            role: state.demoRole,
             personId: state.activePersonId,
           })
         },
@@ -273,11 +266,9 @@ export function CycleDetailView() {
     ],
     [
       cycle,
-      isAdmin,
       managerOptions,
       openEmployeeReview,
       state.activePersonId,
-      state.demoRole,
       state.reviews,
       updateReviewManager,
     ],
@@ -376,7 +367,7 @@ export function CycleDetailView() {
             />
             <div className="flex shrink-0 items-center gap-2">
               <CycleStatusBadge status={cycle.status} />
-              {isAdmin && cycle.status === 'active' && (
+              {cycle.status === 'active' && (
                 <ModusWcButton
                   variant="borderless"
                   color="tertiary"

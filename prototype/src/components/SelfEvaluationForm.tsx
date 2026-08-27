@@ -6,6 +6,7 @@ import {
 } from '@trimble-oss/moduswebcomponents-react'
 import { usePerformance } from '../context/PerformanceContext'
 import { readInputString } from '../utils/modusFormEvents'
+import { isReviewEmployee } from '../utils/viewerContext'
 import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { SelfEvaluationFooter } from './SelfEvaluationFooter'
@@ -53,7 +54,7 @@ export function SelfEvaluationForm() {
   }
 
   const handleBack = () => {
-    if (state.demoRole === 'employee') {
+    if (isReviewEmployee(state.activePersonId, review)) {
       returnToEmployeePerformance(setView, setEmployeeDetailsTab, selectPerson, state.activePersonId)
       return
     }

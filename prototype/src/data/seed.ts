@@ -281,6 +281,7 @@ const SEED_PEOPLE_BASE: Omit<Person, 'union'>[] = [
     department: 'Operations',
     costCenter: 'CC-100',
     title: 'Operations Manager',
+    managerId: 'sup-1',
   },
   {
     id: 'mgr-2',
@@ -527,7 +528,7 @@ export const seedCycles: ReviewCycle[] = [
     }),
     ratingScale: defaultRatingScale,
     status: 'active',
-    employeeIds: ['emp-1', 'emp-2', 'emp-3'],
+    employeeIds: ['emp-1', 'emp-2', 'emp-3', 'mgr-1'],
   },
   {
     id: 'cycle-2025',
@@ -545,7 +546,7 @@ export const seedCycles: ReviewCycle[] = [
     }),
     ratingScale: defaultRatingScale,
     status: 'active',
-    employeeIds: CYCLE_2025_EMPLOYEE_IDS,
+    employeeIds: [...CYCLE_2025_EMPLOYEE_IDS, 'mgr-1'],
   },
   {
     id: 'cycle-90-days',
@@ -580,7 +581,7 @@ export const seedCycles: ReviewCycle[] = [
     }),
     ratingScale: defaultRatingScale,
     status: 'completed',
-    employeeIds: ['emp-4', 'emp-5', 'emp-6'],
+    employeeIds: ['emp-4', 'emp-5', 'emp-6', 'mgr-1'],
   },
 ]
 
@@ -665,6 +666,70 @@ export const seedReviews: PerformanceReview[] = [
     employeeId: 'emp-2',
     managerId: 'mgr-1',
     status: 'manager_pending',
+  },
+  {
+    id: 'rev-mgr1-2025-self',
+    cycleId: 'cycle-2025',
+    employeeId: 'mgr-1',
+    managerId: 'sup-1',
+    reviewerType: 'supervisor',
+    status: 'self_eval_pending',
+  },
+  {
+    id: 'rev-mgr1-2024-ack',
+    cycleId: 'cycle-2024',
+    employeeId: 'mgr-1',
+    managerId: 'sup-1',
+    reviewerType: 'supervisor',
+    status: 'acknowledgement_pending',
+    selfEval: {
+      answers: {
+        q1: 'Led operations through two major site expansions and improved on-time delivery by 12%.',
+        q2: 'Delayed rollout of the new scheduling tool due to vendor timeline shifts.',
+        q3: 'Partnered weekly with finance, HR, and field supervisors on staffing plans.',
+        q4: 'Want to strengthen executive communication and strategic planning skills.',
+      },
+      completedAt: '2024-02-18T09:30:00Z',
+    },
+    managerReview: {
+      answers: {
+        q1: 'Strong leadership on expansion projects with measurable operational gains.',
+        q2: 'Scheduling tool delay was communicated early; recovery plan is in place.',
+        q3: 'Highly effective cross-functional collaboration.',
+        q4: 'Support leadership development goals for the next cycle.',
+      },
+      completedAt: '2024-03-02T15:00:00Z',
+    },
+  },
+  {
+    id: 'rev-mgr1-2023-done',
+    cycleId: 'cycle-2023',
+    employeeId: 'mgr-1',
+    managerId: 'sup-1',
+    reviewerType: 'supervisor',
+    status: 'completed',
+    selfEval: {
+      answers: {
+        q1: 'Stabilized crew scheduling after the regional reorganization.',
+        q2: 'Missed Q3 training completion target for two direct reports.',
+        q3: 'Worked closely with safety and logistics on compliance initiatives.',
+        q4: 'Focused on coaching skills and workforce planning.',
+      },
+      completedAt: '2023-11-05T10:00:00Z',
+    },
+    managerReview: {
+      answers: {
+        q1: 'Delivered steady operational performance through a difficult transition.',
+        q2: 'Training gaps are being addressed with a revised plan.',
+        q3: 'Reliable partner to peer managers and corporate stakeholders.',
+        q4: 'Continue building the leadership bench on the operations team.',
+      },
+      completedAt: '2023-12-03T14:00:00Z',
+    },
+    acknowledgement: {
+      acknowledged: true,
+      completedAt: '2023-12-08T11:00:00Z',
+    },
   },
 ]
 

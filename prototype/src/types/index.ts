@@ -128,7 +128,6 @@ export interface PerformanceReview {
 }
 
 export interface AppState {
-  demoRole: DemoRole
   activePersonId: string
   view: ViewId
   selectedTemplateId: string | null

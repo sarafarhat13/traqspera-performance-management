@@ -1,4 +1,4 @@
-import type { CycleStatus, DemoRole, PerformanceReview, ReviewCycle, ReviewStatus } from '../types'
+import type { CycleStatus, PerformanceReview, ReviewCycle, ReviewStatus } from '../types'
 import { CYCLE_STATUS_LABELS, cycleStatusBadgeColor, MANAGER_DASHBOARD_STATUS_LABELS, managerDashboardStatusBadgeColor, STATUS_LABELS, statusBadgeColor, statusBadgeCustomClass, type StatusBadgeSemanticColor } from './status'
 import { formatCurrentStageDue, isReviewActionRequired } from './workflow'
 
@@ -209,7 +209,7 @@ export function createManagerSelectCell(
 export function createStageDueCell(
   cycle: ReviewCycle,
   review: PerformanceReview,
-  context?: { role?: DemoRole; personId?: string },
+  context?: { personId?: string },
 ) {
   const label = formatCurrentStageDue(cycle, review)
   if (!label) {

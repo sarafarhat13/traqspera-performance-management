@@ -77,9 +77,6 @@ export function LaunchCycleWizard() {
   const { state, setView, launchCycle, saveCycleDraft, saveTemplate, getTemplate, getPerson } =
     usePerformance()
 
-  const isAdmin = state.demoRole === 'hr_admin'
-  const dashboardView = isAdmin ? 'hr_dashboard' : 'manager_dashboard'
-
   const [stepIndex, setStepIndex] = useState(0)
   const [cycleName, setCycleName] = useState('')
   const [startDate, setStartDate] = useState(defaultStartDate())
@@ -101,13 +98,10 @@ export function LaunchCycleWizard() {
   const [filterTitle, setFilterTitle] = useState(FILTER_ALL)
   const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null)
 
-  const employeePool = useMemo(() => {
-    let people = state.people.filter((p) => p.role === 'employee')
-    if (!isAdmin) {
-      people = people.filter((p) => p.managerId === state.activePersonId)
-    }
-    return people
-  }, [state.people, state.activePersonId, isAdmin])
+  const employeePool = useMemo(
+    () => state.people.filter((p) => p.role === 'employee'),
+    [state.people],
+  )
 
   const departmentOptions = useMemo(() => {
     const values = [...new Set(employeePool.map((p) => p.department))].sort()
@@ -367,46 +361,42 @@ export function LaunchCycleWizard() {
         sortable: true,
         cellRenderer: (value: unknown) => createNeutralTagBadge(String(value)),
       },
-      ...(isAdmin
-        ? [
-            {
-              id: 'reviewer',
-              header: 'Reviewer',
-              accessor: 'reviewerType',
-              sortable: false,
-              className: 'tq-table-reviewer-cell',
-              cellRenderer: (_value: unknown, row: unknown) => {
-                const record = row as {
-                  id: string
-                  name: string
-                  isSelected: boolean
-                  reviewerType: string
-                  reviewerCustomManagerId: string
-                }
-                if (!record.isSelected) {
-                  const empty = document.createElement('span')
-                  empty.className =
-                    'text-sm text-[var(--modus-wc-color-base-content-low-contrast)]'
-                  empty.textContent = '—'
-                  return empty
-                }
-                const assignment: EmployeeReviewerAssignment = {
-                  type: record.reviewerType as ReviewerRoleType,
-                  customManagerId: record.reviewerCustomManagerId,
-                }
-                return createReviewerAssignmentCell(
-                  assignment,
-                  managerOptions,
-                  (type) => setReviewerType(record.id, type as ReviewerRoleType),
-                  (managerId) => setReviewerCustomManager(record.id, managerId),
-                  `Reviewer for ${record.name}`,
-                )
-              },
-            },
-          ]
-        : []),
+      {
+        id: 'reviewer',
+        header: 'Reviewer',
+        accessor: 'reviewerType',
+        sortable: false,
+        className: 'tq-table-reviewer-cell',
+        cellRenderer: (_value: unknown, row: unknown) => {
+          const record = row as {
+            id: string
+            name: string
+            isSelected: boolean
+            reviewerType: string
+            reviewerCustomManagerId: string
+          }
+          if (!record.isSelected) {
+            const empty = document.createElement('span')
+            empty.className =
+              'text-sm text-[var(--modus-wc-color-base-content-low-contrast)]'
+            empty.textContent = '—'
+            return empty
+          }
+          const assignment: EmployeeReviewerAssignment = {
+            type: record.reviewerType as ReviewerRoleType,
+            customManagerId: record.reviewerCustomManagerId,
+          }
+          return createReviewerAssignmentCell(
+            assignment,
+            managerOptions,
+            (type) => setReviewerType(record.id, type as ReviewerRoleType),
+            (managerId) => setReviewerCustomManager(record.id, managerId),
+            `Reviewer for ${record.name}`,
+          )
+        },
+      },
     ],
-    [isAdmin, reviewerAssignments, managerOptions],
+    [reviewerAssignments, managerOptions],
   )
 
   const isTemplateValid = () => {
@@ -451,7 +441,7 @@ export function LaunchCycleWizard() {
   }
 
   const exitToDashboard = () => {
-    setView(dashboardView)
+    setView('hr_dashboard')
   }
 
   const goBack = () => {
@@ -799,7 +789,7 @@ export function LaunchCycleWizard() {
             </div>
             <div className="flex flex-col gap-3">
               <div
-                className={`grid grid-cols-1 gap-3 ${isAdmin ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'}`}
+                className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4"
               >
                 <ModusWcSelect
                   label="Department"
@@ -822,31 +812,27 @@ export function LaunchCycleWizard() {
                   options={titleOptions}
                   onInputChange={(e) => setFilterTitle(readInputString(e as CustomEvent))}
                 />
-                {isAdmin && (
-                  <ModusWcSelect
-                    label="Reviewer for selected"
-                    size="sm"
-                    value={bulkReviewerType}
-                    options={REVIEWER_TYPE_OPTIONS}
-                    onInputChange={(e) =>
-                      applyBulkReviewer(readInputString(e as CustomEvent) as ReviewerRoleType)
-                    }
-                  />
-                )}
+                <ModusWcSelect
+                  label="Reviewer for selected"
+                  size="sm"
+                  value={bulkReviewerType}
+                  options={REVIEWER_TYPE_OPTIONS}
+                  onInputChange={(e) =>
+                    applyBulkReviewer(readInputString(e as CustomEvent) as ReviewerRoleType)
+                  }
+                />
               </div>
               <ModusWcTypography
                 hierarchy="p"
                 size="sm"
                 label={`${selectedEmployeeIds.length} selected · ${filteredEmployees.length} of ${employeePool.length} employees shown`}
               />
-              {isAdmin && (
-                <ModusWcTypography
-                  hierarchy="p"
-                  size="sm"
-                  customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                  label="Select employees with row checkboxes or Select all in the table header. For Custom (select manager), search and pick a manager from the list. Reviewer for selected applies Crew Manager, Supervisor, or Custom to every selected row."
-                />
-              )}
+              <ModusWcTypography
+                hierarchy="p"
+                size="sm"
+                customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                label="Select employees with row checkboxes or Select all in the table header. For Custom (select manager), search and pick a manager from the list. Reviewer for selected applies Crew Manager, Supervisor, or Custom to every selected row."
+              />
               <PerformanceDataTable
                 caption="Employees Available for This Review Cycle"
                 columns={employeeTableColumns}

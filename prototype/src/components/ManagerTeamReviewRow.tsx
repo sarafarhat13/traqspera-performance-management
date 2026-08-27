@@ -1,17 +1,13 @@
 import {
   ModusWcAvatar,
-  ModusWcBadge,
   ModusWcButton,
   ModusWcIcon,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
 import type { PerformanceReview, Person, ReviewCycle } from '../types'
-import {
-  formatDate,
-  MANAGER_DASHBOARD_STATUS_LABELS,
-  managerDashboardStatusBadgeColor,
-} from '../utils/status'
+import { formatDate } from '../utils/status'
 import { getCurrentStageDeadline } from '../utils/workflow'
+import { ManagerReviewStatusBadge } from './ManagerReviewStatusBadge'
 
 function employeeInitials(name: string): string {
   return name
@@ -60,13 +56,7 @@ export function ManagerTeamReviewRow({
               customClass="!m-0"
               label={employee?.name ?? 'Employee'}
             />
-            <ModusWcBadge
-              variant="filled"
-              color={managerDashboardStatusBadgeColor(review.status)}
-              size="sm"
-            >
-              {MANAGER_DASHBOARD_STATUS_LABELS[review.status]}
-            </ModusWcBadge>
+            <ManagerReviewStatusBadge status={review.status} />
           </div>
           <ModusWcTypography
             hierarchy="p"

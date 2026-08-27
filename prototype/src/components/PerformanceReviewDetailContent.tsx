@@ -6,7 +6,10 @@ import { MANAGER_OVERALL_RATING_KEY } from '../utils/workflow'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { CurrentStageDueLine } from './CurrentStageDueLine'
 
-const TAB_LABELS = ['Overview', 'Self evaluation', 'Manager review', 'Side-by-side']
+const REVIEW_DETAIL_TAB_LABELS = {
+  desktop: ['Overview', 'Self evaluation', 'Manager review', 'Side-by-side'],
+  mobile: ['Overview', 'Self eval', 'Manager', 'Compare'],
+} as const
 
 export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string }) {
   const { state, getReview, getCycle, getTemplate, getPerson } = usePerformance()
@@ -16,7 +19,14 @@ export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string 
   const manager = review ? getPerson(review.managerId) : undefined
 
   const [activeTab, setActiveTab] = useState(0)
-  const tabs = useMemo(() => TAB_LABELS.map((label) => ({ label })), [])
+  const isMobile = state.layoutMode === 'mobile'
+  const tabs = useMemo(
+    () =>
+      (isMobile ? REVIEW_DETAIL_TAB_LABELS.mobile : REVIEW_DETAIL_TAB_LABELS.desktop).map(
+        (label) => ({ label }),
+      ),
+    [isMobile],
+  )
 
   if (!review || !template) {
     return (
@@ -26,15 +36,19 @@ export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string 
 
   return (
     <div className="flex flex-col gap-3">
-      <ModusWcTabs
-        tabs={tabs}
-        activeTabIndex={activeTab}
-        tabStyle="bordered"
-        size="sm"
-        onTabChange={(e: CustomEvent<{ previousTab: number; newTab: number }>) =>
-          setActiveTab(e.detail.newTab)
-        }
-      />
+      <div className="tq-review-detail-tabs">
+        <ModusWcTabs
+          tabs={tabs}
+          activeTabIndex={activeTab}
+          tabStyle="bordered"
+          size="sm"
+          customClass="tq-review-detail-tabs__strip"
+          aria-label="Review detail sections"
+          onTabChange={(e: CustomEvent<{ previousTab: number; newTab: number }>) =>
+            setActiveTab(e.detail.newTab)
+          }
+        />
+      </div>
 
       <div hidden={activeTab !== 0} aria-hidden={activeTab !== 0}>
         <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>

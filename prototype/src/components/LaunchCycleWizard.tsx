@@ -57,6 +57,8 @@ const WIZARD_STEPS = [
   'Review & Launch',
 ] as const
 
+const LAUNCH_WIZARD_CARD = `${TRAQ_CARD_CLASS} tq-launch-wizard__card`
+
 const DEFAULT_RATING_SCALE: RatingScaleConfig = {
   min: 1,
   max: 5,
@@ -448,9 +450,13 @@ export function LaunchCycleWizard() {
     }
   }
 
+  const exitToDashboard = () => {
+    setView(dashboardView)
+  }
+
   const goBack = () => {
     if (stepIndex === 0) {
-      setView(dashboardView)
+      exitToDashboard()
       return
     }
     setStepIndex((i) => i - 1)
@@ -479,24 +485,40 @@ export function LaunchCycleWizard() {
 
   return (
     <TraqsperaPageBody>
-      <TraqsperaPageHeader
-        title="Launch performance review cycle"
-        subtitle="Configure the cycle, template, workflow, and participants before launching."
-        onBack={goBack}
-        backAriaLabel={stepIndex === 0 ? 'Cancel launch wizard' : 'Back to previous step'}
-      />
+      <div className="tq-launch-wizard-page">
+        <div className="tq-launch-wizard-page__close">
+          <ModusWcButton
+            variant="borderless"
+            color="tertiary"
+            shape="square"
+            size="sm"
+            aria-label="Close and return to performance dashboard"
+            onButtonClick={exitToDashboard}
+          >
+            <ModusWcIcon name="close" size="sm" decorative />
+          </ModusWcButton>
+        </div>
 
-      <div className="flex flex-col gap-3">
-        <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
-          <ModusWcStepper
-            steps={stepperItems}
-            orientation="horizontal"
-            aria-label="Launch cycle wizard progress"
+        <div className="tq-launch-wizard">
+          <TraqsperaPageHeader
+            title="Launch performance review cycle"
+            subtitle="Configure the cycle, template, workflow, and participants before launching."
           />
+
+          <div className="tq-launch-wizard__content flex flex-col gap-3">
+        <ModusWcCard bordered padding="compact" customClass={`${LAUNCH_WIZARD_CARD} tq-launch-wizard__stepper-card`}>
+          <div className="tq-launch-wizard__stepper-wrap">
+            <ModusWcStepper
+              steps={stepperItems}
+              orientation="horizontal"
+              customClass="tq-launch-wizard__steps"
+              aria-label="Launch cycle wizard progress"
+            />
+          </div>
         </ModusWcCard>
 
         {stepIndex === 0 && (
-          <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
+          <ModusWcCard bordered padding="compact" customClass={LAUNCH_WIZARD_CARD}>
             <ModusWcTypography
               slot="title"
               hierarchy="h4"
@@ -504,7 +526,7 @@ export function LaunchCycleWizard() {
               weight="semibold"
               label="Step 1 — Cycle Details"
             />
-            <div className="flex flex-col gap-3 max-w-xl">
+            <div className="flex flex-col gap-3">
               <ModusWcTextInput
                 label="Review cycle name"
                 size="sm"
@@ -557,7 +579,7 @@ export function LaunchCycleWizard() {
         )}
 
         {stepIndex === 1 && templateMode === 'select' && (
-          <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
+          <ModusWcCard bordered padding="compact" customClass={LAUNCH_WIZARD_CARD}>
             <div className="tq-template-step flex flex-col gap-4">
               <ModusWcTypography hierarchy="h4" size="lg" weight="semibold" label="Template" />
 
@@ -734,13 +756,13 @@ export function LaunchCycleWizard() {
         )}
 
         {stepIndex === 2 && (
-          <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
+          <ModusWcCard bordered padding="compact" customClass={LAUNCH_WIZARD_CARD}>
             <WorkflowStepConfig workflow={workflow} onWorkflowChange={setWorkflow} />
           </ModusWcCard>
         )}
 
         {stepIndex === 3 && (
-          <ModusWcCard bordered padding="compact" customClass={`${TRAQ_CARD_CLASS} tq-table-card`}>
+          <ModusWcCard bordered padding="compact" customClass={`${LAUNCH_WIZARD_CARD} tq-table-card`}>
             <div slot="title" className="flex w-full min-w-0 items-center justify-between gap-3 mb-4">
               <ModusWcTypography
                 hierarchy="h4"
@@ -856,44 +878,58 @@ export function LaunchCycleWizard() {
           />
         )}
 
-        {stepIndex !== 4 && (
-          <div className="flex flex-wrap justify-end gap-2">
-            <ModusWcButton
-              variant="filled"
-              color="primary"
-              size="sm"
-              disabled={!canAdvance()}
-              onButtonClick={goNext}
-            >
-              Continue
-            </ModusWcButton>
           </div>
-        )}
+        </div>
 
-        {stepIndex === 4 && (
-          <div className="flex flex-wrap justify-end gap-2">
-              <ModusWcButton
-                variant="outlined"
-                color="tertiary"
-                size="sm"
-                disabled={cycleName.trim().length === 0}
-                onButtonClick={handleSaveDraft}
-              >
-                <ModusWcIcon name="save" size="xs" decorative />
-                Save Draft
-              </ModusWcButton>
-              <ModusWcButton
-                variant="filled"
-                color="primary"
-                size="sm"
-                disabled={!canAdvance()}
-                onButtonClick={handleLaunch}
-              >
-                <ModusWcIcon name="play" size="xs" decorative />
-                Confirm & Start Review Cycle
-              </ModusWcButton>
+        <footer className="tq-launch-wizard-page__footer">
+          <div className="tq-launch-wizard-page__footer-inner">
+            <ModusWcButton
+              variant="outlined"
+              color="tertiary"
+              size="sm"
+              onButtonClick={goBack}
+            >
+              {stepIndex === 0 ? 'Cancel' : 'Back'}
+            </ModusWcButton>
+
+            <div className="tq-launch-wizard-page__footer-actions">
+              {stepIndex !== 4 ? (
+                <ModusWcButton
+                  variant="filled"
+                  color="primary"
+                  size="sm"
+                  disabled={!canAdvance()}
+                  onButtonClick={goNext}
+                >
+                  Continue
+                </ModusWcButton>
+              ) : (
+                <>
+                  <ModusWcButton
+                    variant="outlined"
+                    color="tertiary"
+                    size="sm"
+                    disabled={cycleName.trim().length === 0}
+                    onButtonClick={handleSaveDraft}
+                  >
+                    <ModusWcIcon name="save" size="xs" decorative />
+                    Save Draft
+                  </ModusWcButton>
+                  <ModusWcButton
+                    variant="filled"
+                    color="primary"
+                    size="sm"
+                    disabled={!canAdvance()}
+                    onButtonClick={handleLaunch}
+                  >
+                    <ModusWcIcon name="play" size="xs" decorative />
+                    Confirm & Start Review Cycle
+                  </ModusWcButton>
+                </>
+              )}
+            </div>
           </div>
-        )}
+        </footer>
       </div>
     </TraqsperaPageBody>
   )

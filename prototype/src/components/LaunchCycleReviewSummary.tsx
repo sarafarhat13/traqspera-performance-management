@@ -1,6 +1,5 @@
 import {
   ModusWcAvatar,
-  ModusWcBadge,
   ModusWcCard,
   ModusWcDivider,
   ModusWcIcon,
@@ -9,6 +8,7 @@ import {
 import type { Person, RatingScaleConfig, ReviewTemplate, WorkflowStep, WorkflowStepType } from '../types'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { formatLongDate } from '../utils/status'
+import { TagBadge } from './TagBadge'
 import {
   getEnabledWorkflowSteps,
   RATING_SCALE_STEP_META,
@@ -199,9 +199,7 @@ export function LaunchCycleReviewSummary({
               label="Selected Team Members"
             />
           </div>
-          <ModusWcBadge variant="filled" color="secondary" size="sm">
-            {employeeCountLabel}
-          </ModusWcBadge>
+          <TagBadge label={employeeCountLabel} />
         </div>
         <div className="flex flex-col gap-3">
           <div>
@@ -242,9 +240,7 @@ export function LaunchCycleReviewSummary({
                       />
                     </div>
                   </div>
-                  <ModusWcBadge variant="filled" color="secondary" size="sm">
-                    {person.department}
-                  </ModusWcBadge>
+                  <TagBadge label={person.department} />
                 </li>
               ))}
             </ul>

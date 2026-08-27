@@ -1,5 +1,5 @@
 import type { CycleStatus, DemoRole, PerformanceReview, ReviewCycle, ReviewStatus } from '../types'
-import { CYCLE_STATUS_LABELS, cycleStatusBadgeColor, MANAGER_DASHBOARD_STATUS_LABELS, managerDashboardStatusBadgeColor, STATUS_LABELS, statusBadgeColor } from './status'
+import { CYCLE_STATUS_LABELS, cycleStatusBadgeColor, MANAGER_DASHBOARD_STATUS_LABELS, managerDashboardStatusBadgeColor, STATUS_LABELS, statusBadgeColor, statusBadgeCustomClass, type StatusBadgeSemanticColor } from './status'
 import { formatCurrentStageDue, isReviewActionRequired } from './workflow'
 
 type TableButtonColor = 'primary' | 'tertiary' | 'danger'
@@ -41,43 +41,44 @@ export function createTableActionButton(
   return button
 }
 
+function applyStatusBadgeStyle(badge: HTMLElement, color: StatusBadgeSemanticColor, label: string) {
+  badge.setAttribute('variant', 'outlined')
+  badge.setAttribute('color', color)
+  badge.setAttribute('size', 'sm')
+  badge.setAttribute('customClass', statusBadgeCustomClass(color))
+  badge.textContent = label
+}
+
 export function createCycleStatusBadge(status: CycleStatus) {
   const badge = document.createElement('modus-wc-badge')
-  badge.setAttribute('variant', 'filled')
-  badge.setAttribute('color', cycleStatusBadgeColor(status))
-  badge.setAttribute('size', 'sm')
-  if (status === 'draft') {
-    badge.setAttribute('customClass', 'tq-cycle-status-badge--draft')
-  }
-  badge.textContent = CYCLE_STATUS_LABELS[status]
+  applyStatusBadgeStyle(badge, cycleStatusBadgeColor(status), CYCLE_STATUS_LABELS[status])
   return badge
 }
 
 export function createReviewStatusBadge(status: ReviewStatus) {
   const badge = document.createElement('modus-wc-badge')
-  badge.setAttribute('variant', 'filled')
-  badge.setAttribute('color', statusBadgeColor(status))
-  badge.setAttribute('size', 'sm')
-  badge.textContent = STATUS_LABELS[status]
+  applyStatusBadgeStyle(badge, statusBadgeColor(status), STATUS_LABELS[status])
   return badge
 }
 
 export function createManagerReviewStatusBadge(status: ReviewStatus) {
   const badge = document.createElement('modus-wc-badge')
-  badge.setAttribute('variant', 'filled')
-  badge.setAttribute('color', managerDashboardStatusBadgeColor(status))
-  badge.setAttribute('size', 'sm')
-  badge.textContent = MANAGER_DASHBOARD_STATUS_LABELS[status]
+  applyStatusBadgeStyle(
+    badge,
+    managerDashboardStatusBadgeColor(status),
+    MANAGER_DASHBOARD_STATUS_LABELS[status],
+  )
+  return badge
+}
+
+export function createTagBadge(label: string, color: StatusBadgeSemanticColor = 'tertiary') {
+  const badge = document.createElement('modus-wc-badge')
+  applyStatusBadgeStyle(badge, color, label)
   return badge
 }
 
 export function createNeutralTagBadge(label: string) {
-  const badge = document.createElement('modus-wc-badge')
-  badge.setAttribute('variant', 'filled')
-  badge.setAttribute('color', 'secondary')
-  badge.setAttribute('size', 'sm')
-  badge.textContent = label
-  return badge
+  return createTagBadge(label, 'tertiary')
 }
 
 export function createTableActionGroup(children: HTMLElement[]) {

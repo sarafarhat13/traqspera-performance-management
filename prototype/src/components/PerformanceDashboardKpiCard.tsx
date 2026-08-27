@@ -1,4 +1,6 @@
-import { ModusWcBadge, ModusWcIcon, ModusWcTypography } from '@trimble-oss/moduswebcomponents-react'
+import { ModusWcIcon, ModusWcTypography } from '@trimble-oss/moduswebcomponents-react'
+import { TagBadge } from './TagBadge'
+import type { StatusBadgeSemanticColor } from '../utils/status'
 
 type KpiValueTone = 'primary' | 'warning' | 'danger'
 
@@ -25,6 +27,9 @@ export function PerformanceDashboardKpiCard({
   footerIcon = 'group',
   headerIcon,
 }: PerformanceDashboardKpiCardProps) {
+  const badgeColor: StatusBadgeSemanticColor =
+    valueTone === 'danger' ? 'danger' : valueTone === 'warning' ? 'warning' : 'tertiary'
+
   return (
     <article className="tq-dashboard-kpi-card">
       <div className="tq-dashboard-kpi-card__header">
@@ -44,9 +49,7 @@ export function PerformanceDashboardKpiCard({
             <ModusWcIcon name="check_circle" size="sm" decorative />
           </span>
         ) : (
-          <ModusWcBadge variant="outlined" color="tertiary" size="sm">
-            {badgeLabel}
-          </ModusWcBadge>
+          <TagBadge label={badgeLabel ?? ''} color={badgeColor} />
         )}
       </div>
 

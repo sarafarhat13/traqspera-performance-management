@@ -163,10 +163,22 @@ modus-wc-card [slot='title'] {
   text-align: left;
 }
 
+.tq-employee-view modus-wc-card [slot='title'].tq-review-card-title {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .tq-employee-view modus-wc-card [slot='title'] modus-wc-typography,
 .tq-employee-view modus-wc-card [slot='title'].tq-section-card-title modus-wc-typography {
   text-align: left;
   width: 100%;
+}
+
+.tq-employee-view modus-wc-card [slot='title'].tq-review-card-title modus-wc-typography {
+  width: auto;
+  min-width: 0;
+  flex: 1;
 }
 
 .tq-employee-view .tq-section-card h2,
@@ -374,6 +386,227 @@ modus-wc-card [slot='title'] {
   margin-top: var(--modus-wc-spacing-md, 1rem);
   padding: var(--modus-wc-spacing-md, 1rem);
   border-top: 1px solid var(--modus-wc-color-base-200, #e0e1e9);
+}
+
+/* Launch cycle wizard — unified panel width */
+.tq-launch-wizard-page {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 48px);
+}
+
+.tq-launch-wizard-page__close {
+  position: fixed;
+  top: 56px;
+  right: 24px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: var(--modus-wc-border-radius-md, 0.375rem);
+  background-color: #ffffff;
+  border: 1px solid var(--modus-wc-color-base-200, #e0e1e9);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.tq-launch-wizard-page__footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  flex-shrink: 0;
+  margin-top: auto;
+  margin-inline: -24px;
+  margin-bottom: -40px;
+  padding: 16px 24px;
+  background-color: #ffffff;
+  border-top: 1px solid var(--modus-wc-color-base-200, #e0e1e9);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.tq-launch-wizard-page__footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--modus-wc-spacing-sm, 0.75rem);
+  width: 100%;
+  max-width: var(--tq-launch-wizard-panel-width, 72rem);
+  margin-inline: auto;
+}
+
+.tq-launch-wizard-page__footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--modus-wc-spacing-sm, 0.75rem);
+  margin-left: auto;
+}
+
+.tq-launch-wizard {
+  --tq-launch-wizard-panel-width: 72rem;
+  width: 100%;
+  max-width: var(--tq-launch-wizard-panel-width);
+  margin-inline: auto;
+  flex: 1 1 auto;
+  padding-bottom: var(--modus-wc-spacing-md, 1rem);
+}
+
+.tq-launch-wizard__content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.tq-launch-wizard modus-wc-card.tq-launch-wizard__card {
+  display: block;
+  width: 100%;
+}
+
+.tq-launch-wizard__stepper-wrap {
+  width: 100%;
+}
+
+.tq-launch-wizard__stepper-wrap modus-wc-stepper {
+  display: block;
+  width: 100%;
+}
+
+/* Use Modus/DaisyUI default 1fr columns — no column-gap (breaks connector lines). */
+.tq-launch-wizard__stepper-wrap modus-wc-stepper .tq-launch-wizard__steps {
+  width: 100%;
+  grid-auto-columns: 1fr;
+}
+
+/* Blue connector after each completed (primary) step into the next step. */
+.tq-launch-wizard__stepper-wrap
+  modus-wc-stepper
+  .tq-launch-wizard__steps
+  .modus-wc-step-primary
+  + .modus-wc-step::before {
+  background-color: var(--modus-wc-color-primary, #0063a3) !important;
+}
+
+.tq-launch-wizard modus-wc-card.tq-launch-wizard__card.tq-table-card {
+  min-width: 0;
+}
+
+.tq-launch-wizard .tq-table-card .tq-data-table {
+  overflow-x: auto;
+}
+
+.tq-launch-wizard__content > .tq-create-template {
+  display: flex;
+  flex-direction: column;
+  gap: var(--modus-wc-spacing-md, 1rem);
+  width: 100%;
+}
+
+.tq-launch-wizard__content > .tq-create-template modus-wc-card {
+  display: block;
+  width: 100%;
+}
+
+.tq-launch-wizard__content > .tq-launch-review {
+  width: 100%;
+}
+
+.tq-launch-wizard modus-wc-card [slot='title'] {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.tq-launch-wizard modus-wc-card [slot='title'] modus-wc-typography {
+  text-align: left;
+  width: 100%;
+}
+
+/* Self-evaluation — fixed bottom actions */
+.tq-self-eval-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.tq-self-eval-page--viewport {
+  min-height: calc(100dvh - 48px);
+}
+
+.tq-self-eval-page--inset {
+  min-height: 100%;
+}
+
+.tq-self-eval-page--narrow .tq-self-eval-page__main {
+  width: 100%;
+  max-width: 28rem;
+  margin-inline: auto;
+}
+
+.tq-self-eval-page__main {
+  flex: 1 1 auto;
+  padding-bottom: var(--modus-wc-spacing-md, 1rem);
+}
+
+.tq-self-eval-page__footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  flex-shrink: 0;
+  margin-top: auto;
+  padding: 16px 24px;
+  background-color: #ffffff;
+  border-top: 1px solid var(--modus-wc-color-base-200, #e0e1e9);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.tq-self-eval-page--viewport .tq-self-eval-page__footer {
+  margin-inline: -24px;
+  margin-bottom: -40px;
+}
+
+.tq-self-eval-page--inset .tq-self-eval-page__footer {
+  margin-inline: -1rem;
+  margin-bottom: -1rem;
+  padding-inline: 16px;
+}
+
+.tq-self-eval-page__footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--modus-wc-spacing-sm, 0.75rem);
+  width: 100%;
+}
+
+/* Review detail — scrollable tabs on narrow viewports */
+.tq-review-detail-tabs {
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tq-review-detail-tabs modus-wc-tabs {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+}
+
+.tq-review-detail-tabs modus-wc-tabs .tq-review-detail-tabs__strip {
+  flex-wrap: nowrap;
+  width: max-content;
+  min-width: 100%;
+}
+
+.tq-review-detail-tabs modus-wc-tabs .modus-wc-tab {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.tq-review-detail-tabs modus-wc-tabs .modus-wc-tab span {
+  white-space: nowrap;
 }
 
 /* Launch cycle wizard — template picker */
@@ -1262,8 +1495,47 @@ modus-wc-card [slot='title'] {
   color: var(--modus-wc-color-base-content-low-contrast, #6a6e79);
 }
 
-.tq-cycle-status-badge--draft {
-  background-color: var(--modus-wc-color-base-200, #e0e1e9) !important;
+/* Status badges — outlined with light semantic backgrounds */
+modus-wc-badge .modus-wc-badge.modus-wc-badge-outlined.tq-status-badge--primary {
+  background-color: var(
+    --modus-wc-color-primary-pale,
+    color-mix(in srgb, var(--modus-wc-color-primary, #0063a3) 14%, var(--modus-wc-color-base-100, #fff))
+  ) !important;
+  border-color: var(--modus-wc-color-primary, #0063a3) !important;
+  color: var(--modus-wc-color-primary, #0063a3) !important;
+}
+
+modus-wc-badge .modus-wc-badge.modus-wc-badge-outlined.tq-status-badge--success {
+  background-color: var(
+    --modus-wc-color-success-pale,
+    color-mix(in srgb, var(--modus-wc-color-success, #1e8a44) 16%, var(--modus-wc-color-base-100, #fff))
+  ) !important;
+  border-color: var(--modus-wc-color-success, #1e8a44) !important;
+  color: var(--modus-wc-color-success, #1e8a44) !important;
+}
+
+modus-wc-badge .modus-wc-badge.modus-wc-badge-outlined.tq-status-badge--warning {
+  background-color: var(
+    --modus-wc-color-warning-pale,
+    color-mix(in srgb, var(--modus-wc-color-warning, #fbad26) 20%, var(--modus-wc-color-base-100, #fff))
+  ) !important;
+  border-color: var(--modus-wc-color-warning, #fbad26) !important;
+  color: var(--modus-wc-color-warning, #9a6700) !important;
+}
+
+modus-wc-badge .modus-wc-badge.modus-wc-badge-outlined.tq-status-badge--danger {
+  background-color: var(
+    --modus-wc-color-error-pale,
+    color-mix(in srgb, var(--modus-wc-color-error, #c81922) 14%, var(--modus-wc-color-base-100, #fff))
+  ) !important;
+  border-color: var(--modus-wc-color-error, #c81922) !important;
+  color: var(--modus-wc-color-error, #c81922) !important;
+}
+
+modus-wc-badge .modus-wc-badge.modus-wc-badge-outlined.tq-status-badge--secondary,
+modus-wc-badge .modus-wc-badge.modus-wc-badge-outlined.tq-status-badge--tertiary {
+  background-color: var(--modus-wc-color-base-200, #e8eaed) !important;
+  border-color: var(--modus-wc-color-base-300, #cdd0d9) !important;
   color: var(--modus-wc-color-base-content-low-contrast, #6a6e79) !important;
 }
 

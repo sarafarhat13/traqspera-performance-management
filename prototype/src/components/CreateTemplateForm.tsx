@@ -1,6 +1,5 @@
 import { useState, type DragEvent } from 'react'
 import {
-  ModusWcBadge,
   ModusWcButton,
   ModusWcCard,
   ModusWcCheckbox,
@@ -13,6 +12,7 @@ import { createEmptyQuestion } from '../data/seed'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import type { Question, ReviewTemplate } from '../types'
 import { readInputChecked, readInputString } from '../utils/modusFormEvents'
+import { TagBadge } from './TagBadge'
 
 export type CreateTemplateFormProps = {
   draft: ReviewTemplate
@@ -187,9 +187,7 @@ export function CreateTemplateForm({
               label="Add up to 10 questions with optional weights and rating scales"
             />
           </div>
-          <ModusWcBadge variant="filled" color="warning" size="sm">
-            {questionCount}/10 questions
-          </ModusWcBadge>
+          <TagBadge label={`${questionCount}/10 questions`} color="warning" />
         </div>
 
         <div className="flex flex-col gap-3">

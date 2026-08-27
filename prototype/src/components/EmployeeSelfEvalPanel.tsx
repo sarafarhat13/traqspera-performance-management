@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import {
-  ModusWcButton,
   ModusWcCard,
-  ModusWcIcon,
   ModusWcTextarea,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
@@ -10,6 +8,7 @@ import { usePerformance } from '../context/PerformanceContext'
 import { readInputString } from '../utils/modusFormEvents'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { PageBackButton } from './PageBackButton'
+import { SelfEvaluationFooter } from './SelfEvaluationFooter'
 
 type EmployeeSelfEvalPanelProps = {
   reviewId: string
@@ -44,51 +43,48 @@ export function EmployeeSelfEvalPanel({ reviewId, onBack, onSubmitted }: Employe
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex min-w-0 items-start gap-3">
-        <PageBackButton onBack={onBack} ariaLabel="Back to my reviews" />
-        <div className="min-w-0">
-          <ModusWcTypography hierarchy="h4" size="md" weight="semibold" label="Self-Evaluation" />
-          <ModusWcTypography
-            hierarchy="p"
-            size="sm"
-            customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-            label={template.description}
-          />
+    <div
+      className={`tq-self-eval-page${state.layoutMode === 'mobile' ? ' tq-self-eval-page--inset' : ''}`}
+    >
+      <div className="tq-self-eval-page__main flex flex-col gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <PageBackButton onBack={onBack} ariaLabel="Back to my reviews" />
+          <div className="min-w-0">
+            <ModusWcTypography hierarchy="h4" size="md" weight="semibold" label="Self-Evaluation" />
+            <ModusWcTypography
+              hierarchy="p"
+              size="sm"
+              customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+              label={template.description}
+            />
+          </div>
         </div>
+
+        <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
+          <div className="flex flex-col gap-4">
+            {template.questions.map((q, index) => (
+              <div key={q.id} className="flex flex-col gap-1">
+                <ModusWcTypography
+                  hierarchy="p"
+                  size="sm"
+                  weight="semibold"
+                  label={`${index + 1}. ${q.label}${q.required ? ' *' : ''}`}
+                />
+                <ModusWcTextarea
+                  rows={state.layoutMode === 'mobile' ? 4 : 3}
+                  value={answers[q.id] ?? ''}
+                  aria-label={q.label}
+                  onInputChange={(e) =>
+                    setAnswers((prev) => ({ ...prev, [q.id]: readInputString(e as CustomEvent) }))
+                  }
+                />
+              </div>
+            ))}
+          </div>
+        </ModusWcCard>
       </div>
 
-      <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
-        <div className="flex flex-col gap-4">
-          {template.questions.map((q, index) => (
-            <div key={q.id} className="flex flex-col gap-1">
-              <ModusWcTypography
-                hierarchy="p"
-                size="sm"
-                weight="semibold"
-                label={`${index + 1}. ${q.label}${q.required ? ' *' : ''}`}
-              />
-              <ModusWcTextarea
-                rows={state.layoutMode === 'mobile' ? 4 : 3}
-                value={answers[q.id] ?? ''}
-                aria-label={q.label}
-                onInputChange={(e) =>
-                  setAnswers((prev) => ({ ...prev, [q.id]: readInputString(e as CustomEvent) }))
-                }
-              />
-            </div>
-          ))}
-        </div>
-        <div slot="footer" className="flex justify-end gap-2 pt-4">
-          <ModusWcButton variant="outlined" color="tertiary" size="sm" onButtonClick={onBack}>
-            Save for later
-          </ModusWcButton>
-          <ModusWcButton variant="filled" color="primary" size="sm" onButtonClick={handleSubmit}>
-            <ModusWcIcon name="send" size="xs" decorative />
-            Submit
-          </ModusWcButton>
-        </div>
-      </ModusWcCard>
+      <SelfEvaluationFooter onSaveForLater={onBack} onSubmit={handleSubmit} />
     </div>
   )
 }

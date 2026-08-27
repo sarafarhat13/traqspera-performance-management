@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
-  ModusWcButton,
   ModusWcCard,
-  ModusWcIcon,
   ModusWcTextarea,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
@@ -10,6 +8,7 @@ import { usePerformance } from '../context/PerformanceContext'
 import { readInputString } from '../utils/modusFormEvents'
 import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
+import { SelfEvaluationFooter } from './SelfEvaluationFooter'
 
 function returnToEmployeePerformance(
   setView: ReturnType<typeof usePerformance>['setView'],
@@ -63,45 +62,40 @@ export function SelfEvaluationForm() {
 
   return (
     <TraqsperaPageBody>
-      <TraqsperaPageHeader
-        title="Self-evaluation"
-        subtitle={template.description}
-        onBack={handleBack}
-        backAriaLabel="Back"
-      />
+      <div className={`tq-self-eval-page tq-self-eval-page--viewport${isMobile ? ' tq-self-eval-page--narrow' : ''}`}>
+        <div className="tq-self-eval-page__main flex flex-col gap-3">
+          <TraqsperaPageHeader
+            title="Self-evaluation"
+            subtitle={template.description}
+            onBack={handleBack}
+            backAriaLabel="Back"
+          />
 
-      <div className={`flex flex-col gap-3 ${isMobile ? 'max-w-md mx-auto w-full' : ''}`}>
-      <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
-        <div className="flex flex-col gap-4">
-          {template.questions.map((q, index) => (
-            <div key={q.id} className="flex flex-col gap-1">
-              <ModusWcTypography
-                hierarchy="p"
-                size="sm"
-                weight="semibold"
-                label={`${index + 1}. ${q.label}${q.required ? ' *' : ''}`}
-              />
-              <ModusWcTextarea
-                rows={isMobile ? 4 : 3}
-                value={answers[q.id] ?? ''}
-                aria-label={q.label}
-                onInputChange={(e) =>
-                  setAnswers((prev) => ({ ...prev, [q.id]: readInputString(e as CustomEvent) }))
-                }
-              />
+          <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
+            <div className="flex flex-col gap-4">
+              {template.questions.map((q, index) => (
+                <div key={q.id} className="flex flex-col gap-1">
+                  <ModusWcTypography
+                    hierarchy="p"
+                    size="sm"
+                    weight="semibold"
+                    label={`${index + 1}. ${q.label}${q.required ? ' *' : ''}`}
+                  />
+                  <ModusWcTextarea
+                    rows={isMobile ? 4 : 3}
+                    value={answers[q.id] ?? ''}
+                    aria-label={q.label}
+                    onInputChange={(e) =>
+                      setAnswers((prev) => ({ ...prev, [q.id]: readInputString(e as CustomEvent) }))
+                    }
+                  />
+                </div>
+              ))}
             </div>
-          ))}
+          </ModusWcCard>
         </div>
-        <div slot="footer" className="flex justify-end gap-2 pt-4">
-          <ModusWcButton variant="outlined" color="tertiary" size="sm" onButtonClick={handleBack}>
-            Save for later
-          </ModusWcButton>
-          <ModusWcButton variant="filled" color="primary" size="sm" onButtonClick={handleSubmit}>
-            <ModusWcIcon name="send" size="xs" decorative />
-            Submit
-          </ModusWcButton>
-        </div>
-      </ModusWcCard>
+
+        <SelfEvaluationFooter onSaveForLater={handleBack} onSubmit={handleSubmit} />
       </div>
     </TraqsperaPageBody>
   )

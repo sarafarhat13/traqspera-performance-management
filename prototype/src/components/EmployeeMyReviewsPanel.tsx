@@ -44,9 +44,20 @@ function ReviewCard({
 
   return (
     <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
-      <div slot="title" className="tq-section-card-title mb-2 flex w-full min-w-0 flex-col items-start gap-1">
-        <ModusWcTypography hierarchy="h4" size="md" weight="semibold" label={cycle?.name ?? 'Review'} />
-        <StatusBadge status={review.status} />
+      <div
+        slot="title"
+        className="tq-review-card-title tq-section-card-title mb-2 flex w-full min-w-0 items-center justify-between gap-2"
+      >
+        <ModusWcTypography
+          hierarchy="h4"
+          size="md"
+          weight="semibold"
+          customClass="min-w-0 flex-1"
+          label={cycle?.name ?? 'Review'}
+        />
+        <span className="shrink-0">
+          <StatusBadge status={review.status} />
+        </span>
       </div>
       <div className="flex flex-col gap-2">
         <ModusWcTypography

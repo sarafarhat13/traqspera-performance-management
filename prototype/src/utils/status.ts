@@ -71,6 +71,18 @@ export function statusBadgeColor(status: ReviewStatus): 'primary' | 'warning' | 
   }
 }
 
+export type StatusBadgeSemanticColor =
+  | 'primary'
+  | 'warning'
+  | 'success'
+  | 'danger'
+  | 'secondary'
+  | 'tertiary'
+
+export function statusBadgeCustomClass(color: StatusBadgeSemanticColor): string {
+  return `tq-status-badge tq-status-badge--${color}`
+}
+
 export function formatDate(iso: string): string {
   try {
     return new Date(iso).toLocaleDateString(undefined, {

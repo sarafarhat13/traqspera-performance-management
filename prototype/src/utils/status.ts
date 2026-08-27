@@ -32,7 +32,7 @@ export const STATUS_LABELS: Record<ReviewStatus, string> = {
 export const MANAGER_DASHBOARD_STATUS_LABELS: Record<ReviewStatus, string> = {
   not_started: 'Not started',
   self_eval_pending: 'Self-evaluation pending',
-  manager_pending: 'Your Review Due',
+  manager_pending: 'Manager Review',
   acknowledgement_pending: 'Awaiting Acknowledgement',
   completed: 'Completed',
 }

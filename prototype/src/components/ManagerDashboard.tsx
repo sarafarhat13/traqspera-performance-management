@@ -9,6 +9,7 @@ import { usePerformance } from '../context/PerformanceContext'
 import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { PerformanceDashboardKpiCard } from './PerformanceDashboardKpiCard'
+import { PerformanceDashboardFilterBar } from './PerformanceDashboardFilterBar'
 import { ManagerTeamReviewRow } from './ManagerTeamReviewRow'
 import { PerformanceDataTable } from './PerformanceDataTable'
 import { formatDate, MANAGER_DASHBOARD_STATUS_LABELS } from '../utils/status'
@@ -17,6 +18,17 @@ import {
   createTableActionButton,
   createTableActionGroup,
 } from '../utils/modusTableCells'
+import {
+  countActiveDashboardFilters,
+  costCenterOptionsFromPeople,
+  createDefaultDashboardFilters,
+  departmentOptionsFromPeople,
+  filterReviewsForDashboard,
+  computeScopedDashboardReviewCounts,
+  titleOptionsFromPeople,
+  unionOptionsFromPeople,
+  type DashboardFilters,
+} from '../utils/dashboardFilters'
 import { getCurrentStageDeadline } from '../utils/workflow'
 import type { PerformanceReview, Person, ReviewCycle, ReviewStatus, ReviewTemplate } from '../types'
 
@@ -80,46 +92,13 @@ function buildReviewTableRows(
   })
 }
 
-function ManagerDashboardViewToggle({
-  viewMode,
-  onViewModeChange,
-}: {
-  viewMode: ManagerDashboardViewMode
-  onViewModeChange: (mode: ManagerDashboardViewMode) => void
-}) {
-  return (
-    <div className="tq-dashboard-filter-bar__view-toggle shrink-0" role="group" aria-label="View mode">
-      <ModusWcButton
-        variant={viewMode === 'card' ? 'filled' : 'outlined'}
-        color={viewMode === 'card' ? 'primary' : 'tertiary'}
-        shape="square"
-        size="sm"
-        aria-label="Card view"
-        aria-pressed={viewMode === 'card'}
-        onButtonClick={() => onViewModeChange('card')}
-      >
-        <ModusWcIcon name="view_grid" size="xs" decorative />
-      </ModusWcButton>
-      <ModusWcButton
-        variant={viewMode === 'table' ? 'filled' : 'outlined'}
-        color={viewMode === 'table' ? 'primary' : 'tertiary'}
-        shape="square"
-        size="sm"
-        aria-label="Table view"
-        aria-pressed={viewMode === 'table'}
-        onButtonClick={() => onViewModeChange('table')}
-      >
-        <ModusWcIcon name="view_list" size="xs" decorative />
-      </ModusWcButton>
-    </div>
-  )
-}
-
 export function ManagerDashboard() {
   const { state, setView, selectReview, openEmployeeReview, getPerson, getCycle, getTemplate } =
     usePerformance()
   const managerId = state.activePersonId
   const [viewMode, setViewMode] = useState<ManagerDashboardViewMode>('card')
+  const [filters, setFilters] = useState<DashboardFilters>(() => createDefaultDashboardFilters())
+  const [filterFieldsKey, setFilterFieldsKey] = useState(0)
 
   const directReports = useMemo(
     () => state.people.filter((person) => person.managerId === managerId),
@@ -156,9 +135,79 @@ export function ManagerDashboard() {
     })
   }, [state.reviews, managerId, directReports, getPerson])
 
+  const reportIds = useMemo(
+    () => new Set(directReports.map((person) => person.id)),
+    [directReports],
+  )
+
+  const departmentOptions = useMemo(
+    () => departmentOptionsFromPeople(directReports),
+    [directReports],
+  )
+
+  const costCenterOptions = useMemo(
+    () => costCenterOptionsFromPeople(directReports),
+    [directReports],
+  )
+
+  const titleOptions = useMemo(() => titleOptionsFromPeople(directReports), [directReports])
+
+  const unionOptions = useMemo(() => unionOptionsFromPeople(directReports), [directReports])
+
+  const directReportReviews = useMemo(
+    () => managerReviews.filter((review) => reportIds.has(review.employeeId)),
+    [managerReviews, reportIds],
+  )
+
+  const reviewCounts = useMemo(
+    () =>
+      computeScopedDashboardReviewCounts(
+        state.cycles,
+        directReportReviews,
+        state.people,
+        {
+          search: filters.search,
+          department: filters.department,
+          costCenter: filters.costCenter,
+          title: filters.title,
+          union: filters.union,
+        },
+        { employeeIds: reportIds },
+      ),
+    [
+      state.cycles,
+      directReportReviews,
+      state.people,
+      reportIds,
+      filters.search,
+      filters.department,
+      filters.costCenter,
+      filters.title,
+      filters.union,
+    ],
+  )
+
+  const activeFilterCount = useMemo(() => countActiveDashboardFilters(filters), [filters])
+
+  const filteredTeamReviews = useMemo(
+    () =>
+      filterReviewsForDashboard(teamReviews, state.cycles, state.people, filters, {
+        employeeIds: reportIds,
+      }),
+    [teamReviews, state.cycles, state.people, filters, reportIds],
+  )
+
   const reviewsRequiringAction = useMemo(
     () => managerReviews.filter((review) => review.status === 'manager_pending'),
     [managerReviews],
+  )
+
+  const filteredActionReviews = useMemo(
+    () =>
+      filterReviewsForDashboard(reviewsRequiringAction, state.cycles, state.people, filters, {
+        employeeIds: reportIds,
+      }),
+    [reviewsRequiringAction, state.cycles, state.people, filters, reportIds],
   )
 
   const reviewsDueCount = reviewsRequiringAction.length
@@ -186,13 +235,13 @@ export function ManagerDashboard() {
   )
 
   const actionTableData = useMemo(
-    () => buildReviewTableRows(reviewsRequiringAction, getPerson, getCycle, getTemplate),
-    [reviewsRequiringAction, getPerson, getCycle, getTemplate],
+    () => buildReviewTableRows(filteredActionReviews, getPerson, getCycle, getTemplate),
+    [filteredActionReviews, getPerson, getCycle, getTemplate],
   )
 
   const teamTableData = useMemo(
-    () => buildReviewTableRows(teamReviews, getPerson, getCycle, getTemplate),
-    [teamReviews, getPerson, getCycle, getTemplate],
+    () => buildReviewTableRows(filteredTeamReviews, getPerson, getCycle, getTemplate),
+    [filteredTeamReviews, getPerson, getCycle, getTemplate],
   )
 
   const tableColumns = useMemo(
@@ -249,6 +298,17 @@ export function ManagerDashboard() {
     [openEmployeeReview, openManagerReview],
   )
 
+  const updateFilters = useCallback((patch: Partial<DashboardFilters>) => {
+    setFilters((current) => ({ ...current, ...patch }))
+  }, [])
+
+  const clearFilters = useCallback(() => {
+    requestAnimationFrame(() => {
+      setFilters(createDefaultDashboardFilters())
+      setFilterFieldsKey((key) => key + 1)
+    })
+  }, [])
+
   const renderReviewRow = (review: PerformanceReview, showPrimaryAction: boolean) => {
     const employee = getPerson(review.employeeId)
     const cycle = getCycle(review.cycleId)
@@ -279,9 +339,6 @@ export function ManagerDashboard() {
         leadingActions={
           <ModusWcIcon name="description" size="sm" decorative customClass="text-[#252a2e]" />
         }
-        actions={
-          <ManagerDashboardViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
-        }
       />
 
       <div className="tq-manager-dashboard flex flex-col gap-3">
@@ -307,8 +364,7 @@ export function ManagerDashboard() {
                 : 'No reviews due'
             }
             status={reviewsDueCount > 0 ? 'badge' : 'complete'}
-            badgeLabel="Action needed"
-            headerIcon="calendar_clock"
+            badgeLabel={MANAGER_DASHBOARD_STATUS_LABELS.manager_pending}
             footerIcon="calendar_clock"
           />
           <PerformanceDashboardKpiCard
@@ -328,16 +384,33 @@ export function ManagerDashboard() {
           <PerformanceDashboardKpiCard
             title="Completed"
             value={completedThisQuarterCount}
-            valueTone="primary"
+            valueTone="success"
             metricLabel="This quarter"
             footerLabel={`${completedThisQuarterCount} completed this quarter`}
-            status="complete"
-            headerIcon="check_circle"
+            status="badge"
+            badgeLabel="Completed"
             footerIcon="check_circle"
           />
         </div>
 
-        {reviewsRequiringAction.length > 0 && (
+        <PerformanceDashboardFilterBar
+          filters={filters}
+          counts={reviewCounts}
+          departmentOptions={departmentOptions}
+          costCenterOptions={costCenterOptions}
+          titleOptions={titleOptions}
+          unionOptions={unionOptions}
+          activeFilterCount={activeFilterCount}
+          filterFieldsKey={filterFieldsKey}
+          viewMode={viewMode}
+          searchAriaLabel="Search by employee name, review cycle, department, or cost center"
+          filterPanelId="manager-dashboard-filter-panel"
+          onFiltersChange={updateFilters}
+          onClearFilters={clearFilters}
+          onViewModeChange={setViewMode}
+        />
+
+        {filteredActionReviews.length > 0 && (
           <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
             <div slot="title" className="tq-section-card-title mb-4 flex w-full min-w-0 flex-col gap-1">
               <ModusWcTypography
@@ -359,7 +432,7 @@ export function ManagerDashboard() {
               aria-hidden={viewMode !== 'card'}
               className="flex flex-col gap-2"
             >
-              {reviewsRequiringAction.map((review) => renderReviewRow(review, true))}
+              {filteredActionReviews.map((review) => renderReviewRow(review, true))}
             </div>
             <div hidden={viewMode !== 'table'} aria-hidden={viewMode !== 'table'} className="min-w-0">
               <PerformanceDataTable
@@ -388,13 +461,26 @@ export function ManagerDashboard() {
               label="Overview of all reviews for your direct reports."
             />
           </div>
-          {teamReviews.length === 0 ? (
-            <ModusWcTypography
-              hierarchy="p"
-              size="sm"
-              customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-              label="No performance reviews are assigned to your team yet."
-            />
+          {filteredTeamReviews.length === 0 ? (
+            <>
+              <ModusWcTypography
+                hierarchy="p"
+                size="sm"
+                customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                label={
+                  teamReviews.length === 0
+                    ? 'No performance reviews are assigned to your team yet.'
+                    : 'No team reviews match the current filters. Try adjusting search, department, or status.'
+                }
+              />
+              {activeFilterCount > 0 && teamReviews.length > 0 && (
+                <div className="mt-3">
+                  <ModusWcButton variant="outlined" color="tertiary" size="sm" onButtonClick={clearFilters}>
+                    Clear filters
+                  </ModusWcButton>
+                </div>
+              )}
+            </>
           ) : (
             <>
               <div
@@ -402,7 +488,7 @@ export function ManagerDashboard() {
                 aria-hidden={viewMode !== 'card'}
                 className="flex flex-col gap-2"
               >
-                {teamReviews.map((review) => renderReviewRow(review, true))}
+                {filteredTeamReviews.map((review) => renderReviewRow(review, true))}
               </div>
               <div hidden={viewMode !== 'table'} aria-hidden={viewMode !== 'table'} className="min-w-0">
                 <PerformanceDataTable

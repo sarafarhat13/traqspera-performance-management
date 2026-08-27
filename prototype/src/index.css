@@ -346,6 +346,10 @@ modus-wc-card [slot='title'] {
   color: var(--modus-wc-color-danger, #c81922);
 }
 
+.tq-dashboard-kpi-card__value--success {
+  color: var(--modus-wc-color-success, #1e8a44);
+}
+
 .tq-dashboard-kpi-card__footer {
   display: flex;
   align-items: center;

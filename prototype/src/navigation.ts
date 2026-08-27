@@ -45,7 +45,7 @@ export function navPageFromView(
     activePersonId &&
     selectedPersonId === activePersonId
   ) {
-    if (employeeDetailsTab === 'performance') return 'p_perf_my_reviews'
+    if (employeeDetailsTab === 'performance') return 'my_info_performance'
     return MY_INFO_PAGE_BY_TAB[employeeDetailsTab ?? 'personal'] ?? 'my_info_personal'
   }
 
@@ -56,7 +56,7 @@ export function navPageFromView(
   }
   if (view === 'cycle_details') {
     if (role === 'hr_admin') return 'p_perf_dashboard'
-    return 'p_perf_team'
+    return 'p_perf_dashboard'
   }
   if (view === 'employee_details') {
     if (role === 'hr_admin') return 'p_perf_dashboard'
@@ -67,16 +67,17 @@ export function navPageFromView(
     view === 'self_eval' ||
     view === 'acknowledgement'
   ) {
-    if (role === 'employee') return 'p_perf_my_reviews'
+    if (role === 'employee') return 'my_info_performance'
   }
   if (view === 'manager_dashboard' || view === 'manager_review') return 'p_perf_team'
+  if (view === 'hr_dashboard') return 'p_perf_dashboard'
   if (view === 'review_details') {
     if (role === 'hr_admin') return 'p_perf_dashboard'
-    if (role === 'employee') return 'p_perf_my_reviews'
+    if (role === 'employee') return 'my_info_performance'
     return 'p_perf_team'
   }
   if (role === 'hr_admin') return 'p_perf_dashboard'
-  if (role === 'employee') return 'p_perf_my_reviews'
+  if (role === 'employee') return 'my_info_performance'
   return 'p_perf_team'
 }
 
@@ -93,16 +94,9 @@ export function navTargetFromNavPage(page: TraqsperaNavPage, role: DemoRole, act
 
   switch (page) {
     case 'p_perf_dashboard':
-      if (role === 'hr_admin') return { view: 'hr_dashboard' }
-      return { view: 'manager_dashboard' }
+      return { view: 'hr_dashboard' }
     case 'p_perf_templates':
       return { view: 'templates' }
-    case 'p_perf_my_reviews':
-      return {
-        view: 'employee_details',
-        employeeDetailsTab: 'performance',
-        selectedPersonId: activePersonId,
-      }
     case 'p_perf_team':
       return { view: 'manager_dashboard' }
     default:

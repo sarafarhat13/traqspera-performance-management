@@ -2,7 +2,7 @@ import { ModusWcIcon, ModusWcTypography } from '@trimble-oss/moduswebcomponents-
 import { TagBadge } from './TagBadge'
 import type { StatusBadgeSemanticColor } from '../utils/status'
 
-type KpiValueTone = 'primary' | 'warning' | 'danger'
+type KpiValueTone = 'primary' | 'warning' | 'danger' | 'success'
 
 type PerformanceDashboardKpiCardProps = {
   title: string
@@ -28,7 +28,13 @@ export function PerformanceDashboardKpiCard({
   headerIcon,
 }: PerformanceDashboardKpiCardProps) {
   const badgeColor: StatusBadgeSemanticColor =
-    valueTone === 'danger' ? 'danger' : valueTone === 'warning' ? 'warning' : 'tertiary'
+    valueTone === 'danger'
+      ? 'danger'
+      : valueTone === 'warning'
+        ? 'warning'
+        : valueTone === 'success'
+          ? 'success'
+          : 'tertiary'
 
   return (
     <article className="tq-dashboard-kpi-card">

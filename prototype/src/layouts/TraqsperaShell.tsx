@@ -65,12 +65,17 @@ const NAV_SECTIONS: NavSection[] = [
     icon: <Award size={16} />,
     getChildren: (role) => {
       if (role === 'employee') {
-        return [{ key: 'p_perf_my_reviews', label: 'Reviews' }]
+        return []
       }
-      const reviewsKey: TraqsperaNavPage =
-        role === 'hr_admin' ? 'p_perf_dashboard' : 'p_perf_team'
+      if (role === 'hr_admin') {
+        return [
+          { key: 'p_perf_dashboard', label: 'Reviews Dashboard' },
+          { key: 'p_perf_templates', label: 'Templates' },
+        ]
+      }
       return [
-        { key: reviewsKey, label: 'Reviews' },
+        { key: 'p_perf_dashboard', label: 'Reviews Dashboard' },
+        { key: 'p_perf_team', label: 'Team Reviews' },
         { key: 'p_perf_templates', label: 'Templates' },
       ]
     },
@@ -228,7 +233,7 @@ function NavSidebar({
       }}
     >
       <div className="flex-1 overflow-y-auto py-[4px]" style={{ scrollbarWidth: 'none' }}>
-        {NAV_SECTIONS.map((section) => {
+        {NAV_SECTIONS.filter((section) => !(section.key === 'performance' && role === 'employee')).map((section) => {
           const children = section.getChildren?.(role)
           const myInfoActive = section.key === 'my_info' && MY_INFO_PAGES.has(activePage)
           const performanceActive = section.key === 'performance' && PERFORMANCE_PAGES.has(activePage)

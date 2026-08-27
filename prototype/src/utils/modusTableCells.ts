@@ -41,11 +41,23 @@ export function createTableActionButton(
   return button
 }
 
-function applyStatusBadgeStyle(badge: HTMLElement, color: StatusBadgeSemanticColor, label: string) {
+type ModusBadgeElement = HTMLElement & {
+  variant?: string
+  color?: string
+  size?: string
+  customClass?: string
+}
+
+function applyStatusBadgeStyle(badge: ModusBadgeElement, color: StatusBadgeSemanticColor, label: string) {
+  const customClass = statusBadgeCustomClass(color)
+  badge.variant = 'outlined'
+  badge.color = color
+  badge.size = 'sm'
+  badge.customClass = customClass
   badge.setAttribute('variant', 'outlined')
   badge.setAttribute('color', color)
   badge.setAttribute('size', 'sm')
-  badge.setAttribute('customClass', statusBadgeCustomClass(color))
+  badge.setAttribute('custom-class', customClass)
   badge.textContent = label
 }
 

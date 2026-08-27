@@ -197,6 +197,41 @@ export function computeDashboardReviewCounts(
   filters: Omit<DashboardFilters, 'status'>,
   now = new Date(),
 ): DashboardReviewCounts {
+  return computeScopedDashboardReviewCounts(cycles, reviews, people, filters, undefined, now)
+}
+
+export function filterReviewsForDashboard(
+  reviews: PerformanceReview[],
+  cycles: ReviewCycle[],
+  people: Person[],
+  filters: DashboardFilters,
+  options?: { employeeIds?: Set<string> },
+  now = new Date(),
+): PerformanceReview[] {
+  const employeeIds = options?.employeeIds
+
+  return reviews.filter((review) => {
+    if (employeeIds && !employeeIds.has(review.employeeId)) return false
+    const cycle = cycles.find((item) => item.id === review.cycleId)
+    if (!cycle) return false
+    const employee = people.find((person) => person.id === review.employeeId)
+    return reviewMatchesDashboardFilters(review, cycle, employee, filters, now)
+  })
+}
+
+export function computeScopedDashboardReviewCounts(
+  cycles: ReviewCycle[],
+  reviews: PerformanceReview[],
+  people: Person[],
+  filters: Omit<DashboardFilters, 'status'>,
+  options?: { employeeIds?: Set<string> },
+  now = new Date(),
+): DashboardReviewCounts {
+  const employeeIds = options?.employeeIds
+  const scopedReviews = employeeIds
+    ? reviews.filter((review) => employeeIds.has(review.employeeId))
+    : reviews
+
   const counts: DashboardReviewCounts = {
     all: 0,
     pending: 0,
@@ -206,7 +241,7 @@ export function computeDashboardReviewCounts(
   }
 
   for (const cycle of cycles) {
-    for (const review of reviews) {
+    for (const review of scopedReviews) {
       if (review.cycleId !== cycle.id) continue
       const employee = people.find((person) => person.id === review.employeeId)
       if (

@@ -20,7 +20,6 @@ export type TraqsperaNavPage =
   | 'global_admin'
   | 'p_perf_dashboard'
   | 'p_perf_templates'
-  | 'p_perf_my_reviews'
   | 'p_perf_team'
 
 export const MY_INFO_PAGES = new Set<TraqsperaNavPage>([
@@ -33,7 +32,6 @@ export const MY_INFO_PAGES = new Set<TraqsperaNavPage>([
 export const PERFORMANCE_PAGES = new Set<TraqsperaNavPage>([
   'p_perf_dashboard',
   'p_perf_templates',
-  'p_perf_my_reviews',
   'p_perf_team',
 ])
 

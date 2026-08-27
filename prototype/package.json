@@ -1,0 +1,35 @@
+{
+  "name": "traqspera-performance-management",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "homepage": "https://sarafarhat13.github.io/traqspera-performance-management",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist",
+    "postinstall": "mkdir -p public && cp -R node_modules/@trimble-oss/moduswebcomponents/assets public/ 2>/dev/null || true"
+  },
+  "dependencies": {
+    "@trimble-oss/moduswebcomponents": "1.15.1",
+    "@trimble-oss/moduswebcomponents-react": "1.15.1-react19",
+    "lucide-react": "^0.511.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "gh-pages": "^6.3.0",
+    "oxlint": "^1.75.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.0"
+  }
+}

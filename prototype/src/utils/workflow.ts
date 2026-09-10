@@ -8,6 +8,15 @@ export const WORKFLOW_STEP_LABELS: Record<WorkflowStepType, string> = {
   rating_scale: 'Scale Rating',
 }
 
+/** Steps the user may drag to reorder in the Launch Cycle wizard. */
+export const REORDERABLE_WORKFLOW_STEP_TYPES = ['employee', 'manager'] as const
+export type ReorderableWorkflowStepType = (typeof REORDERABLE_WORKFLOW_STEP_TYPES)[number]
+
+/** Always pinned after reorderable steps: rating_scale penultimate, acknowledgement last. */
+export const FIXED_TAIL_WORKFLOW_STEP_TYPES = ['rating_scale', 'acknowledgement'] as const
+export type FixedTailWorkflowStepType = (typeof FIXED_TAIL_WORKFLOW_STEP_TYPES)[number]
+
+/** @deprecated Use REORDERABLE_WORKFLOW_STEP_TYPES for ordering; kept for display metadata. */
 export const CORE_WORKFLOW_STEP_TYPES = ['employee', 'manager', 'acknowledgement'] as const
 export type CoreWorkflowStepType = (typeof CORE_WORKFLOW_STEP_TYPES)[number]
 
@@ -49,14 +58,15 @@ export const RATING_SCALE_STEP_META = {
   title: 'Scale Rating',
   description: 'Include 5-point performance rating scale (1-Unsatisfactory to 5-Outstanding)',
   icon: 'bar_graph',
+  flowBulletClass: 'tq-workflow-flow__bullet--primary',
 }
 
 export function createDefaultWorkflowSteps(): WorkflowStep[] {
   return [
     { id: 'wf-employee', type: 'employee', enabled: true, order: 0, deadline: '' },
     { id: 'wf-manager', type: 'manager', enabled: true, order: 1, deadline: '' },
-    { id: 'wf-ack', type: 'acknowledgement', enabled: true, order: 2, deadline: '' },
-    { id: 'wf-rating', type: 'rating_scale', enabled: true, order: 3, deadline: '' },
+    { id: 'wf-rating', type: 'rating_scale', enabled: true, order: 2, deadline: '' },
+    { id: 'wf-ack', type: 'acknowledgement', enabled: true, order: 3, deadline: '' },
   ]
 }
 
@@ -106,38 +116,71 @@ export function cycleIncludesRatingScale(cycle: ReviewCycle): boolean {
 /** Stored in managerReview.answers when the cycle includes a rating scale step. */
 export const MANAGER_OVERALL_RATING_KEY = '__overall_rating'
 
+export function hasManagerReviewDraft(review: PerformanceReview): boolean {
+  if (review.managerReview?.completedAt) return false
+  const answers = review.managerReview?.answers
+  if (!answers) return false
+  return Object.values(answers).some((value) => value.trim().length > 0)
+}
+
 export function cycleIncludesSelfEvaluation(cycle: ReviewCycle): boolean {
   if (cycle.workflow) return includesSelfEvaluationFromWorkflow(cycle.workflow)
   return cycle.includesSelfEvaluation
 }
 
-export function getCoreWorkflowSteps(workflow: WorkflowStep[]): WorkflowStep[] {
+export function getReorderableWorkflowSteps(workflow: WorkflowStep[]): WorkflowStep[] {
   return [...workflow]
-    .filter((step) => CORE_WORKFLOW_STEP_TYPES.includes(step.type as CoreWorkflowStepType))
+    .filter((step) =>
+      REORDERABLE_WORKFLOW_STEP_TYPES.includes(step.type as ReorderableWorkflowStepType),
+    )
     .sort((a, b) => a.order - b.order)
+}
+
+/** @deprecated Use getReorderableWorkflowSteps for ordering. */
+export function getCoreWorkflowSteps(workflow: WorkflowStep[]): WorkflowStep[] {
+  return getReorderableWorkflowSteps(workflow)
 }
 
 export function getRatingScaleWorkflowStep(workflow: WorkflowStep[]): WorkflowStep | undefined {
   return workflow.find((step) => step.type === 'rating_scale')
 }
 
-export function normalizeWorkflowOrder(steps: WorkflowStep[]): WorkflowStep[] {
-  const core = getCoreWorkflowSteps(steps)
-  const rating = steps.find((step) => step.type === 'rating_scale')
-  const ordered = rating ? [...core, rating] : core
+export function getAcknowledgementWorkflowStep(workflow: WorkflowStep[]): WorkflowStep | undefined {
+  return workflow.find((step) => step.type === 'acknowledgement')
+}
+
+function getFixedTailWorkflowSteps(steps: WorkflowStep[]): WorkflowStep[] {
+  const defaults = createDefaultWorkflowSteps()
+  return FIXED_TAIL_WORKFLOW_STEP_TYPES.map((type) => {
+    const existing = steps.find((step) => step.type === type)
+    const fallback = defaults.find((step) => step.type === type)!
+    if (type === 'acknowledgement') {
+      return { ...(existing ?? fallback), enabled: true }
+    }
+    return existing ?? fallback
+  })
+}
+
+function applyWorkflowOrder(reorderable: WorkflowStep[], tail: WorkflowStep[]): WorkflowStep[] {
+  const ordered = [...reorderable, ...tail]
   return ordered.map((step, index) => ({ ...step, order: index }))
+}
+
+export function normalizeWorkflowOrder(steps: WorkflowStep[]): WorkflowStep[] {
+  const reorderable = getReorderableWorkflowSteps(steps)
+  const tail = getFixedTailWorkflowSteps(steps)
+  return applyWorkflowOrder(reorderable, tail)
 }
 
 export function resetCoreWorkflowOrder(steps: WorkflowStep[]): WorkflowStep[] {
   const defaults = createDefaultWorkflowSteps()
-  const defaultCore = getCoreWorkflowSteps(defaults)
-  const rating = steps.find((step) => step.type === 'rating_scale')
-  const nextCore = defaultCore.map((defaultStep) => {
+  const defaultReorderable = getReorderableWorkflowSteps(defaults)
+  const nextReorderable = defaultReorderable.map((defaultStep) => {
     const existing = steps.find((step) => step.type === defaultStep.type)
     return existing ? { ...existing, order: defaultStep.order } : defaultStep
   })
-  const merged = rating ? [...nextCore, { ...rating, order: nextCore.length }] : nextCore
-  return normalizeWorkflowOrder(merged)
+  const tail = getFixedTailWorkflowSteps(steps)
+  return normalizeWorkflowOrder([...nextReorderable, ...tail])
 }
 
 export function moveCoreWorkflowStepToIndex(
@@ -145,17 +188,19 @@ export function moveCoreWorkflowStepToIndex(
   sourceId: string,
   targetIndex: number,
 ): WorkflowStep[] {
-  const core = getCoreWorkflowSteps(steps)
-  const fromIndex = core.findIndex((step) => step.id === sourceId)
+  const reorderable = getReorderableWorkflowSteps(steps)
+  const sourceStep = reorderable.find((step) => step.id === sourceId)
+  if (!sourceStep) return normalizeWorkflowOrder(steps)
+
+  const fromIndex = reorderable.findIndex((step) => step.id === sourceId)
   if (fromIndex < 0 || fromIndex === targetIndex) return steps
 
-  const nextCore = [...core]
-  const [item] = nextCore.splice(fromIndex, 1)
-  nextCore.splice(targetIndex, 0, item)
+  const nextReorderable = [...reorderable]
+  const [item] = nextReorderable.splice(fromIndex, 1)
+  nextReorderable.splice(targetIndex, 0, item)
 
-  const rating = steps.find((step) => step.type === 'rating_scale')
-  const merged = rating ? [...nextCore, rating] : nextCore
-  return normalizeWorkflowOrder(merged)
+  const tail = getFixedTailWorkflowSteps(steps)
+  return applyWorkflowOrder(nextReorderable, tail)
 }
 
 export function reorderWorkflowStep(steps: WorkflowStep[], id: string, direction: 'up' | 'down'): WorkflowStep[] {

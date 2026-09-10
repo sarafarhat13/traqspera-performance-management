@@ -29,7 +29,7 @@ import {
   unionOptionsFromPeople,
   type DashboardFilters,
 } from '../utils/dashboardFilters'
-import { getCurrentStageDeadline } from '../utils/workflow'
+import { getCurrentStageDeadline, hasManagerReviewDraft } from '../utils/workflow'
 import type { PerformanceReview, Person, ReviewCycle, ReviewStatus, ReviewTemplate } from '../types'
 
 type ManagerDashboardViewMode = 'card' | 'table'
@@ -281,13 +281,17 @@ export function ManagerDashboard() {
         cellRenderer: (value: unknown, row: unknown) => {
           const reviewId = String(value)
           const status = (row as { status: ReviewStatus }).status
+          const review = filteredActionReviews.find((item) => item.id === reviewId)
           const actions = [
             createTableActionButton('Details', () => openEmployeeReview(reviewId), 'tertiary'),
           ]
 
           if (status === 'manager_pending') {
             actions.unshift(
-              createTableActionButton('Start Review', () => openManagerReview(reviewId)),
+              createTableActionButton(
+                review && hasManagerReviewDraft(review) ? 'Continue review' : 'Start Review',
+                () => openManagerReview(reviewId),
+              ),
             )
           }
 
@@ -295,7 +299,7 @@ export function ManagerDashboard() {
         },
       },
     ],
-    [openEmployeeReview, openManagerReview],
+    [filteredActionReviews, openEmployeeReview, openManagerReview],
   )
 
   const updateFilters = useCallback((patch: Partial<DashboardFilters>) => {

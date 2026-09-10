@@ -112,6 +112,8 @@ export interface Person {
 export interface PhaseAnswers {
   answers: Record<string, string>
   completedAt?: string
+  /** Set when answers are saved without submitting (manager draft / live save). */
+  savedAt?: string
 }
 
 export interface PerformanceReview {

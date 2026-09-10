@@ -392,6 +392,22 @@ modus-wc-card [slot='title'] {
   border-top: 1px solid var(--modus-wc-color-base-200, #e0e1e9);
 }
 
+.tq-manager-review-footer {
+  justify-content: space-between;
+}
+
+.tq-manager-review-footer__cancel {
+  margin-right: auto;
+}
+
+.tq-manager-review-footer__primary-pair {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--modus-wc-spacing-sm, 0.75rem);
+}
+
 /* Launch cycle wizard — unified panel width */
 .tq-launch-wizard-page {
   display: flex;
@@ -446,6 +462,14 @@ modus-wc-card [slot='title'] {
   justify-content: flex-end;
   gap: var(--modus-wc-spacing-sm, 0.75rem);
   margin-left: auto;
+}
+
+.tq-launch-wizard-page__footer-final-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--modus-wc-spacing-sm, 0.75rem);
 }
 
 .tq-launch-wizard {
@@ -957,6 +981,19 @@ modus-wc-card [slot='title'] {
   padding-left: calc(1.5rem + var(--modus-wc-spacing-sm, 0.75rem) + 1.125rem + var(--modus-wc-spacing-sm, 0.75rem) + 2.25rem + var(--modus-wc-spacing-sm, 0.75rem));
 }
 
+.tq-workflow-step--no-handle .tq-workflow-step__due,
+.tq-workflow-step--handle-end .tq-workflow-step__due {
+  padding-left: calc(1.125rem + var(--modus-wc-spacing-sm, 0.75rem) + 2.25rem + var(--modus-wc-spacing-sm, 0.75rem));
+}
+
+.tq-workflow-step--handle-end .tq-workflow-step__top {
+  align-items: center;
+}
+
+.tq-workflow-step--handle-end .tq-workflow-step__handle {
+  margin-top: 0;
+}
+
 .tq-workflow-step--rating .tq-workflow-step__top {
   align-items: center;
 }
@@ -1157,6 +1194,19 @@ modus-wc-card [slot='title'] {
 
 .tq-workflow-step__due {
   padding-left: calc(1.5rem + var(--modus-wc-spacing-sm, 0.75rem) + 1.125rem + var(--modus-wc-spacing-sm, 0.75rem) + 2.25rem + var(--modus-wc-spacing-sm, 0.75rem));
+}
+
+.tq-workflow-step--no-handle .tq-workflow-step__due,
+.tq-workflow-step--handle-end .tq-workflow-step__due {
+  padding-left: calc(1.125rem + var(--modus-wc-spacing-sm, 0.75rem) + 2.25rem + var(--modus-wc-spacing-sm, 0.75rem));
+}
+
+.tq-workflow-step--handle-end .tq-workflow-step__top {
+  align-items: center;
+}
+
+.tq-workflow-step--handle-end .tq-workflow-step__handle {
+  margin-top: 0;
 }
 
 .tq-workflow-step--rating .tq-workflow-step__top {

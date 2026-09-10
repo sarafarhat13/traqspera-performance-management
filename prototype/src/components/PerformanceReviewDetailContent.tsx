@@ -129,7 +129,7 @@ export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string 
       <div hidden={activeTab !== 2} aria-hidden={activeTab !== 2}>
         <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
           <ModusWcTypography slot="title" hierarchy="h4" size="md" weight="semibold" label="Manager Review" />
-          {review.managerReview ? (
+          {review.managerReview?.completedAt ? (
             <div className="flex flex-col gap-4">
               {cycle?.ratingScale &&
                 review.managerReview.answers[MANAGER_OVERALL_RATING_KEY] && (
@@ -164,6 +164,12 @@ export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string 
                 </div>
               ))}
             </div>
+          ) : review.managerReview?.savedAt ? (
+            <ModusWcTypography
+              hierarchy="p"
+              size="sm"
+              label="Manager review is in progress. Feedback has been saved as a draft but not submitted yet."
+            />
           ) : (
             <ModusWcTypography hierarchy="p" size="sm" label="Manager review not completed." />
           )}

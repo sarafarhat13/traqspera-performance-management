@@ -6,13 +6,15 @@ import {
   ModusWcIcon,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
-import type { WorkflowStep } from '../types'
+import type { WorkflowStep, WorkflowStepType } from '../types'
 import { readInputChecked, readInputString } from '../utils/modusFormEvents'
 import {
   type CoreWorkflowStepType,
-  getCoreWorkflowSteps,
+  type ReorderableWorkflowStepType,
+  getAcknowledgementWorkflowStep,
   getEnabledWorkflowSteps,
   getRatingScaleWorkflowStep,
+  getReorderableWorkflowSteps,
   moveCoreWorkflowStepToIndex,
   RATING_SCALE_STEP_META,
   resetCoreWorkflowOrder,
@@ -25,15 +27,21 @@ type WorkflowStepConfigProps = {
   onWorkflowChange: (steps: WorkflowStep[]) => void
 }
 
+function flowBulletClass(type: WorkflowStepType): string {
+  if (type === 'rating_scale') return RATING_SCALE_STEP_META.flowBulletClass
+  return WORKFLOW_STEP_META[type as CoreWorkflowStepType].flowBulletClass
+}
+
 export function WorkflowStepConfig({ workflow, onWorkflowChange }: WorkflowStepConfigProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
 
-  const coreSteps = getCoreWorkflowSteps(workflow)
+  const reorderableSteps = getReorderableWorkflowSteps(workflow)
   const ratingStep = getRatingScaleWorkflowStep(workflow)
-  const enabledFlowSteps = getEnabledWorkflowSteps(workflow).filter(
-    (step) => step.type !== 'rating_scale',
-  )
+  const acknowledgementStep = getAcknowledgementWorkflowStep(workflow)
+  const enabledFlowSteps = getEnabledWorkflowSteps(workflow)
+  const ratingStepNumber = reorderableSteps.length + 1
+  const acknowledgementStepNumber = reorderableSteps.length + 2
 
   const updateStep = (id: string, patch: Partial<WorkflowStep>) => {
     onWorkflowChange(workflow.map((step) => (step.id === id ? { ...step, ...patch } : step)))
@@ -63,7 +71,7 @@ export function WorkflowStepConfig({ workflow, onWorkflowChange }: WorkflowStepC
       handleDragEnd()
       return
     }
-    const targetIndex = coreSteps.findIndex((step) => step.id === targetId)
+    const targetIndex = reorderableSteps.findIndex((step) => step.id === targetId)
     if (targetIndex < 0) {
       handleDragEnd()
       return
@@ -102,15 +110,14 @@ export function WorkflowStepConfig({ workflow, onWorkflowChange }: WorkflowStepC
           hierarchy="p"
           size="sm"
           customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
-          label="Drag enabled steps to reorder the review process sequence"
+          label="Drag Self Evaluation and Manager Evaluation to reorder them. Scale Rating and Employee Acknowledgment stay fixed at the end."
         />
       </div>
 
       <div className="flex flex-col gap-3">
-        {coreSteps.map((step, index) => {
-          const stepType = step.type as CoreWorkflowStepType
+        {reorderableSteps.map((step, index) => {
+          const stepType = step.type as ReorderableWorkflowStepType
           const meta = WORKFLOW_STEP_META[stepType]
-          const isAcknowledgement = stepType === 'acknowledgement'
           const isDraggable = step.enabled
 
           return (
@@ -118,6 +125,7 @@ export function WorkflowStepConfig({ workflow, onWorkflowChange }: WorkflowStepC
               key={step.id}
               className={[
                 'tq-workflow-step',
+                'tq-workflow-step--handle-end',
                 draggingId === step.id ? 'tq-workflow-step--dragging' : '',
                 dragOverId === step.id && draggingId !== step.id
                   ? 'tq-workflow-step--drag-over'
@@ -130,39 +138,14 @@ export function WorkflowStepConfig({ workflow, onWorkflowChange }: WorkflowStepC
               onDrop={isDraggable ? (event) => handleDrop(event, step.id) : undefined}
             >
               <div className="tq-workflow-step__top">
-                {isDraggable ? (
-                  <button
-                    type="button"
-                    className="tq-workflow-step__handle"
-                    draggable
-                    aria-label={`Drag to reorder ${meta.title}`}
-                    onDragStart={(event) => handleDragStart(event, step.id)}
-                    onDragEnd={handleDragEnd}
-                  >
-                    <ModusWcIcon name="drag_indicator" size="sm" decorative />
-                  </button>
-                ) : (
-                  <span className="tq-workflow-step__handle tq-workflow-step__handle--static" aria-hidden="true">
-                    <ModusWcIcon name="drag_indicator" size="sm" decorative />
-                  </span>
-                )}
-
-                {isAcknowledgement ? (
-                  <span
-                    className="tq-workflow-step__mandatory"
-                    aria-label="Always included"
-                    title="Always included"
-                  />
-                ) : (
-                  <ModusWcCheckbox
-                    size="sm"
-                    value={step.enabled}
-                    aria-label={`Include ${meta.title}`}
-                    onInputChange={(e) =>
-                      updateStep(step.id, { enabled: readInputChecked(e as CustomEvent) })
-                    }
-                  />
-                )}
+                <ModusWcCheckbox
+                  size="sm"
+                  value={step.enabled}
+                  aria-label={`Include ${meta.title}`}
+                  onInputChange={(e) =>
+                    updateStep(step.id, { enabled: readInputChecked(e as CustomEvent) })
+                  }
+                />
 
                 <span className={`tq-workflow-step__icon tq-workflow-step__icon--${stepType}`}>
                   <ModusWcIcon name={meta.icon} size="sm" decorative />
@@ -190,6 +173,19 @@ export function WorkflowStepConfig({ workflow, onWorkflowChange }: WorkflowStepC
                   customClass="!m-0 shrink-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
                   label={`Step ${index + 1}`}
                 />
+
+                {isDraggable ? (
+                  <button
+                    type="button"
+                    className="tq-workflow-step__handle"
+                    draggable
+                    aria-label={`Drag to reorder ${meta.title}`}
+                    onDragStart={(event) => handleDragStart(event, step.id)}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <ModusWcIcon name="drag_indicator" size="sm" decorative />
+                  </button>
+                ) : null}
               </div>
 
               <div className="tq-workflow-step__due">
@@ -207,12 +203,8 @@ export function WorkflowStepConfig({ workflow, onWorkflowChange }: WorkflowStepC
         })}
 
         {ratingStep && (
-          <div className="tq-workflow-step tq-workflow-step--rating">
+          <div className="tq-workflow-step tq-workflow-step--rating tq-workflow-step--no-handle">
             <div className="tq-workflow-step__top">
-              <span className="tq-workflow-step__handle tq-workflow-step__handle--static" aria-hidden="true">
-                <ModusWcIcon name="drag_indicator" size="sm" decorative />
-              </span>
-
               <ModusWcCheckbox
                 size="sm"
                 value={ratingStep.enabled}
@@ -241,6 +233,65 @@ export function WorkflowStepConfig({ workflow, onWorkflowChange }: WorkflowStepC
                   label={RATING_SCALE_STEP_META.description}
                 />
               </div>
+
+              <ModusWcTypography
+                hierarchy="p"
+                size="sm"
+                customClass="!m-0 shrink-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
+                label={`Step ${ratingStepNumber}`}
+              />
+            </div>
+          </div>
+        )}
+
+        {acknowledgementStep && (
+          <div className="tq-workflow-step tq-workflow-step--acknowledgement tq-workflow-step--no-handle">
+            <div className="tq-workflow-step__top">
+              <span
+                className="tq-workflow-step__mandatory"
+                aria-label="Always included"
+                title="Always included"
+              />
+
+              <span className="tq-workflow-step__icon tq-workflow-step__icon--acknowledgement">
+                <ModusWcIcon name={WORKFLOW_STEP_META.acknowledgement.icon} size="sm" decorative />
+              </span>
+
+              <div className="tq-workflow-step__copy min-w-0 flex-1">
+                <ModusWcTypography
+                  hierarchy="p"
+                  size="md"
+                  weight="semibold"
+                  customClass="!m-0"
+                  label={WORKFLOW_STEP_META.acknowledgement.title}
+                />
+                <ModusWcTypography
+                  hierarchy="p"
+                  size="sm"
+                  customClass="!m-0 mt-1 text-[var(--modus-wc-color-base-content-low-contrast)]"
+                  label={WORKFLOW_STEP_META.acknowledgement.description}
+                />
+              </div>
+
+              <ModusWcTypography
+                hierarchy="p"
+                size="sm"
+                customClass="!m-0 shrink-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
+                label={`Step ${acknowledgementStepNumber}`}
+              />
+            </div>
+
+            <div className="tq-workflow-step__due">
+              <ModusWcDate
+                label={WORKFLOW_STEP_META.acknowledgement.dueDateLabel}
+                size="sm"
+                value={acknowledgementStep.deadline}
+                onInputChange={(e) =>
+                  updateStep(acknowledgementStep.id, {
+                    deadline: readInputString(e as CustomEvent),
+                  })
+                }
+              />
             </div>
           </div>
         )}
@@ -258,35 +309,17 @@ export function WorkflowStepConfig({ workflow, onWorkflowChange }: WorkflowStepC
           />
         </div>
         <ol className="tq-workflow-flow__list">
-          {enabledFlowSteps.map((step, index) => {
-            const stepType = step.type as CoreWorkflowStepType
-            const meta = WORKFLOW_STEP_META[stepType]
-            return (
-              <li key={step.id} className="tq-workflow-flow__item">
-                <span className={`tq-workflow-flow__bullet ${meta.flowBulletClass}`} aria-hidden="true" />
-                <ModusWcTypography
-                  hierarchy="p"
-                  size="sm"
-                  customClass="!m-0"
-                  label={`${index + 1}. ${WORKFLOW_STEP_LABELS[step.type]}`}
-                />
-              </li>
-            )
-          })}
-          {ratingStep?.enabled && (
-            <li className="tq-workflow-flow__item">
-              <span
-                className="tq-workflow-flow__bullet tq-workflow-flow__bullet--primary"
-                aria-hidden="true"
-              />
+          {enabledFlowSteps.map((step, index) => (
+            <li key={step.id} className="tq-workflow-flow__item">
+              <span className={`tq-workflow-flow__bullet ${flowBulletClass(step.type)}`} aria-hidden="true" />
               <ModusWcTypography
                 hierarchy="p"
                 size="sm"
                 customClass="!m-0"
-                label="Performance rating scale included in evaluation"
+                label={`${index + 1}. ${WORKFLOW_STEP_LABELS[step.type]}`}
               />
             </li>
-          )}
+          ))}
         </ol>
       </div>
     </div>

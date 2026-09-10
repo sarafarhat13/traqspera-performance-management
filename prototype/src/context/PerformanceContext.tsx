@@ -196,6 +196,7 @@ interface PerformanceContextValue {
   updateCycle: (cycleId: string, patch: Pick<ReviewCycle, 'name' | 'dueDate'>) => void
   saveSelfEval: (reviewId: string, answers: Record<string, string>) => void
   saveManagerReview: (reviewId: string, answers: Record<string, string>) => void
+  saveManagerReviewDraft: (reviewId: string, answers: Record<string, string>) => void
   acknowledgeReview: (reviewId: string) => void
   updateReviewManager: (reviewId: string, managerId: string) => void
   getPerson: (id: string) => AppState['people'][0] | undefined
@@ -415,7 +416,25 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
     }))
   }, [])
 
+  const saveManagerReviewDraft = useCallback((reviewId: string, answers: Record<string, string>) => {
+    setState((s) => ({
+      ...s,
+      reviews: s.reviews.map((r) =>
+        r.id === reviewId
+          ? {
+              ...r,
+              managerReview: {
+                answers,
+                savedAt: new Date().toISOString(),
+              },
+            }
+          : r,
+      ),
+    }))
+  }, [])
+
   const saveManagerReview = useCallback((reviewId: string, answers: Record<string, string>) => {
+    const completedAt = new Date().toISOString()
     setState((s) => ({
       ...s,
       reviews: s.reviews.map((r) => {
@@ -427,7 +446,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
             : 'completed'
         return {
           ...r,
-          managerReview: { answers, completedAt: new Date().toISOString() },
+          managerReview: { answers, completedAt, savedAt: completedAt },
           status: nextStatus,
           acknowledgement:
             nextStatus === 'completed'
@@ -505,6 +524,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       updateCycle,
       saveSelfEval,
       saveManagerReview,
+      saveManagerReviewDraft,
       acknowledgeReview,
       updateReviewManager,
       getPerson,
@@ -531,6 +551,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       updateCycle,
       saveSelfEval,
       saveManagerReview,
+      saveManagerReviewDraft,
       acknowledgeReview,
       updateReviewManager,
       getPerson,

@@ -24,13 +24,19 @@ type LaunchCycleReviewSummaryProps = {
   selectedEmployees: Person[]
 }
 
-const TIMELINE_BULLET_CLASS: Record<CoreWorkflowStepType, string> = {
+const TIMELINE_BULLET_CLASS: Record<WorkflowStepType, string> = {
   employee: 'tq-launch-review__step-index--primary',
   manager: 'tq-launch-review__step-index--warning',
+  rating_scale: 'tq-launch-review__step-index--primary',
   acknowledgement: 'tq-launch-review__step-index--success',
 }
 
-function timelineStepLabel(type: WorkflowStepType): string {
+function timelineStepIcon(type: WorkflowStepType): string {
+  if (type === 'rating_scale') return RATING_SCALE_STEP_META.icon
+  return WORKFLOW_STEP_META[type as CoreWorkflowStepType].icon
+}
+
+function timelineStepLabel(type: WorkflowStepType, ratingScaleMax: number): string {
   switch (type) {
     case 'employee':
       return 'Employee Self-Evaluation'
@@ -38,6 +44,8 @@ function timelineStepLabel(type: WorkflowStepType): string {
       return 'Manager Evaluation'
     case 'acknowledgement':
       return 'Employee Acknowledgment'
+    case 'rating_scale':
+      return `${ratingScaleMax}-Point Scale Rating`
     default:
       return 'Scale Rating'
   }
@@ -68,7 +76,7 @@ export function LaunchCycleReviewSummary({
   ratingScale,
   selectedEmployees,
 }: LaunchCycleReviewSummaryProps) {
-  const timelineSteps = getEnabledWorkflowSteps(workflow).filter((step) => step.type !== 'rating_scale')
+  const timelineSteps = getEnabledWorkflowSteps(workflow)
   const ratingEnabled = workflow.some((step) => step.enabled && step.type === 'rating_scale')
   const employeeCount = selectedEmployees.length
   const employeeCountLabel =
@@ -154,20 +162,18 @@ export function LaunchCycleReviewSummary({
         <SummaryCardHeader icon="calendar" title="Review Process Timeline" />
         <ol className="tq-launch-review__timeline">
           {timelineSteps.map((step, index) => {
-            const coreType = step.type as CoreWorkflowStepType
-            const meta = WORKFLOW_STEP_META[coreType]
-            const bulletClass = TIMELINE_BULLET_CLASS[coreType]
+            const bulletClass = TIMELINE_BULLET_CLASS[step.type]
             return (
               <li key={step.id} className="tq-launch-review__timeline-row">
                 <span className={`tq-launch-review__step-index ${bulletClass}`}>{index + 1}</span>
                 <div className="tq-launch-review__timeline-main min-w-0 flex-1">
                   <div className="flex min-w-0 items-center gap-2">
-                    <ModusWcIcon name={meta.icon} size="sm" decorative />
+                    <ModusWcIcon name={timelineStepIcon(step.type)} size="sm" decorative />
                     <ModusWcTypography
                       hierarchy="p"
                       size="sm"
                       weight="semibold"
-                      label={timelineStepLabel(step.type)}
+                      label={timelineStepLabel(step.type, ratingScale.max)}
                     />
                   </div>
                 </div>

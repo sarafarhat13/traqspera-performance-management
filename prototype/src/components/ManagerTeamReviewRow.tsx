@@ -6,7 +6,7 @@ import {
 } from '@trimble-oss/moduswebcomponents-react'
 import type { PerformanceReview, Person, ReviewCycle } from '../types'
 import { formatDate } from '../utils/status'
-import { getCurrentStageDeadline } from '../utils/workflow'
+import { getCurrentStageDeadline, hasManagerReviewDraft } from '../utils/workflow'
 import { ManagerReviewStatusBadge } from './ManagerReviewStatusBadge'
 
 function employeeInitials(name: string): string {
@@ -38,6 +38,7 @@ export function ManagerTeamReviewRow({
   const dueDate = cycle ? getCurrentStageDeadline(cycle, review) : undefined
   const selfEvalCompletedAt = review.selfEval?.completedAt
   const completedAt = review.acknowledgement?.completedAt ?? review.managerReview?.completedAt
+  const hasDraft = hasManagerReviewDraft(review)
 
   return (
     <div className="tq-manager-review-row">
@@ -87,6 +88,17 @@ export function ManagerTeamReviewRow({
                 />
               </div>
             )}
+            {hasDraft && review.managerReview?.savedAt && (
+              <div className="flex items-center gap-1">
+                <ModusWcIcon name="document" size="xs" decorative />
+                <ModusWcTypography
+                  hierarchy="p"
+                  size="xs"
+                  customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
+                  label={`Draft saved: ${formatDate(review.managerReview.savedAt)}`}
+                />
+              </div>
+            )}
             {review.status === 'completed' && completedAt && (
               <div className="flex items-center gap-1">
                 <ModusWcIcon name="check_circle" size="xs" decorative />
@@ -105,7 +117,7 @@ export function ManagerTeamReviewRow({
         {onStartReview && (
           <ModusWcButton variant="filled" color="primary" size="sm" onButtonClick={onStartReview}>
             <ModusWcIcon name="pencil" size="xs" decorative />
-            Start Review
+            {hasDraft ? 'Continue review' : 'Start Review'}
           </ModusWcButton>
         )}
         <ModusWcButton variant="borderless" color="tertiary" size="sm" onButtonClick={onDetails}>

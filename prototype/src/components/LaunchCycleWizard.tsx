@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ModusWcButton,
   ModusWcCard,
@@ -71,6 +71,10 @@ function defaultStartDate(): string {
 
 function defaultDueDate(): string {
   return new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
+}
+
+function rowIdsEqual(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index])
 }
 
 export function LaunchCycleWizard() {
@@ -270,13 +274,32 @@ export function LaunchCycleWizard() {
     })
   }
 
-  const handleEmployeeRowSelectionChange = (
-    event: CustomEvent<{ selectedRowIds: string[] }>,
-  ) => {
-    const newIds = event.detail.selectedRowIds
-    setSelectedEmployeeIds(newIds)
-    applyReviewerAssignmentsForIds(newIds)
-  }
+  const handleEmployeeRowSelectionChange = useCallback(
+    (event: CustomEvent<{ selectedRowIds: string[] }>) => {
+      const newIds = event.detail?.selectedRowIds ?? []
+      setSelectedEmployeeIds((prev) => {
+        if (rowIdsEqual(prev, newIds)) return prev
+        return newIds
+      })
+      setReviewerAssignments((prev) => {
+        const bulkAssignment = assignmentForBulk()
+        const next: Record<string, EmployeeReviewerAssignment> = {}
+        newIds.forEach((id) => {
+          next[id] = prev[id] ?? bulkAssignment
+        })
+        const prevKeys = Object.keys(prev).sort()
+        const nextKeys = Object.keys(next).sort()
+        if (
+          rowIdsEqual(prevKeys, nextKeys) &&
+          nextKeys.every((id) => prev[id] === next[id])
+        ) {
+          return prev
+        }
+        return next
+      })
+    },
+    [bulkReviewerType],
+  )
 
   const mergeEmployeeSelection = (idsToAdd: string[]) => {
     setSelectedEmployeeIds((prev) => [...new Set([...prev, ...idsToAdd])])
@@ -415,6 +438,8 @@ export function LaunchCycleWizard() {
     setTemplateMode('select')
   }
 
+  const canSaveDraft = () => cycleName.trim().length > 0 && isTemplateValid()
+
   const canAdvance = () => {
     switch (stepIndex) {
       case 0:
@@ -468,8 +493,9 @@ export function LaunchCycleWizard() {
   }
 
   const handleSaveDraft = () => {
+    if (!canSaveDraft()) return
     const cycleInput = buildCycleInput()
-    if (!cycleInput || cycleInput.name.length === 0) return
+    if (!cycleInput) return
     saveCycleDraft(cycleInput, { reviewerAssignments: reviewerAssignmentsForLaunch })
   }
 
@@ -890,15 +916,14 @@ export function LaunchCycleWizard() {
                   Continue
                 </ModusWcButton>
               ) : (
-                <>
+                <div className="tq-launch-wizard-page__footer-final-actions">
                   <ModusWcButton
                     variant="outlined"
                     color="tertiary"
                     size="sm"
-                    disabled={cycleName.trim().length === 0}
+                    disabled={!canSaveDraft()}
                     onButtonClick={handleSaveDraft}
                   >
-                    <ModusWcIcon name="save" size="xs" decorative />
                     Save Draft
                   </ModusWcButton>
                   <ModusWcButton
@@ -911,7 +936,7 @@ export function LaunchCycleWizard() {
                     <ModusWcIcon name="play" size="xs" decorative />
                     Confirm & Start Review Cycle
                   </ModusWcButton>
-                </>
+                </div>
               )}
             </div>
           </div>

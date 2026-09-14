@@ -6,12 +6,33 @@ import {
   ModusWcTextInput,
 } from '@trimble-oss/moduswebcomponents-react'
 import { readInputString } from '../utils/modusFormEvents'
-import type { DashboardFilters, DashboardReviewCounts, DashboardStatusFilter } from '../utils/dashboardFilters'
+import type {
+  DashboardFilters,
+  DashboardPackageCounts,
+  DashboardPackageStatusFilter,
+  DashboardReviewCounts,
+  DashboardReviewStatusFilter,
+} from '../utils/dashboardFilters'
 import { countActivePanelFilters } from '../utils/dashboardFilters'
 
 type DashboardViewMode = 'card' | 'table'
 
-const STATUS_FILTERS: { id: DashboardStatusFilter; label: string; countClass: string }[] = [
+const PACKAGE_STATUS_FILTERS: {
+  id: DashboardPackageStatusFilter
+  label: string
+  countClass: string
+}[] = [
+  { id: 'all', label: 'All', countClass: 'tq-dashboard-filter-chip__count--primary' },
+  { id: 'draft', label: 'Draft', countClass: 'tq-dashboard-filter-chip__count--draft' },
+  { id: 'active', label: 'Active', countClass: 'tq-dashboard-filter-chip__count--primary' },
+  { id: 'completed', label: 'Complete', countClass: 'tq-dashboard-filter-chip__count--success' },
+]
+
+const REVIEW_STATUS_FILTERS: {
+  id: DashboardReviewStatusFilter
+  label: string
+  countClass: string
+}[] = [
   { id: 'all', label: 'All', countClass: 'tq-dashboard-filter-chip__count--primary' },
   { id: 'draft', label: 'Draft', countClass: 'tq-dashboard-filter-chip__count--draft' },
   { id: 'pending', label: 'Pending', countClass: 'tq-dashboard-filter-chip__count--warning' },
@@ -19,9 +40,20 @@ const STATUS_FILTERS: { id: DashboardStatusFilter; label: string; countClass: st
   { id: 'overdue', label: 'Overdue', countClass: 'tq-dashboard-filter-chip__count--danger' },
 ]
 
+const MANAGER_TEAM_STATUS_FILTERS: {
+  id: DashboardReviewStatusFilter
+  label: string
+  countClass: string
+}[] = [
+  { id: 'all', label: 'All', countClass: 'tq-dashboard-filter-chip__count--primary' },
+  { id: 'pending', label: 'Pending', countClass: 'tq-dashboard-filter-chip__count--warning' },
+  { id: 'completed', label: 'Completed', countClass: 'tq-dashboard-filter-chip__count--success' },
+  { id: 'overdue', label: 'Overdue', countClass: 'tq-dashboard-filter-chip__count--danger' },
+]
+
 type PerformanceDashboardFilterBarProps = {
   filters: DashboardFilters
-  counts: DashboardReviewCounts
+  counts?: DashboardPackageCounts | DashboardReviewCounts
   departmentOptions: { label: string; value: string }[]
   costCenterOptions: { label: string; value: string }[]
   titleOptions: { label: string; value: string }[]
@@ -30,6 +62,8 @@ type PerformanceDashboardFilterBarProps = {
   filterFieldsKey: number
   viewMode?: DashboardViewMode
   showViewToggle?: boolean
+  showStatusChips?: boolean
+  statusFilterMode?: 'package' | 'review' | 'managerTeam'
   searchAriaLabel?: string
   filterPanelId?: string
   onFiltersChange: (patch: Partial<DashboardFilters>) => void
@@ -48,6 +82,8 @@ export function PerformanceDashboardFilterBar({
   filterFieldsKey,
   viewMode = 'table',
   showViewToggle = true,
+  showStatusChips = true,
+  statusFilterMode = 'package',
   searchAriaLabel = 'Search by cycle name, employee, department, or cost center',
   filterPanelId = 'dashboard-filter-panel',
   onFiltersChange,
@@ -56,6 +92,12 @@ export function PerformanceDashboardFilterBar({
 }: PerformanceDashboardFilterBarProps) {
   const [panelOpen, setPanelOpen] = useState(false)
   const panelFilterCount = countActivePanelFilters(filters)
+  const statusFilters =
+    statusFilterMode === 'package'
+      ? PACKAGE_STATUS_FILTERS
+      : statusFilterMode === 'managerTeam'
+        ? MANAGER_TEAM_STATUS_FILTERS
+        : REVIEW_STATUS_FILTERS
 
   return (
     <div className="tq-dashboard-filter">
@@ -72,24 +114,32 @@ export function PerformanceDashboardFilterBar({
           />
         </div>
 
-        <div className="tq-dashboard-filter-bar__chips" role="group" aria-label="Filter by review status">
-          {STATUS_FILTERS.map(({ id, label, countClass }) => {
-            const active = filters.status === id
-            const count = counts[id]
-            return (
-              <button
-                key={id}
-                type="button"
-                className={`tq-dashboard-filter-chip${active ? ' tq-dashboard-filter-chip--active' : ''}`}
-                aria-pressed={active}
-                onClick={() => onFiltersChange({ status: id })}
-              >
-                <span>{label}</span>
-                <span className={`tq-dashboard-filter-chip__count ${countClass}`}>{count}</span>
-              </button>
-            )
-          })}
-        </div>
+        {showStatusChips && counts && (
+          <div
+            className="tq-dashboard-filter-bar__chips"
+            role="group"
+            aria-label={
+              statusFilterMode === 'package' ? 'Filter by package status' : 'Filter by review status'
+            }
+          >
+            {statusFilters.map(({ id, label, countClass }) => {
+              const active = filters.status === id
+              const count = counts[id as keyof typeof counts] ?? 0
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  className={`tq-dashboard-filter-chip${active ? ' tq-dashboard-filter-chip--active' : ''}`}
+                  aria-pressed={active}
+                  onClick={() => onFiltersChange({ status: id })}
+                >
+                  <span>{label}</span>
+                  <span className={`tq-dashboard-filter-chip__count ${countClass}`}>{count}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         <ModusWcButton
           variant={panelOpen ? 'filled' : 'outlined'}

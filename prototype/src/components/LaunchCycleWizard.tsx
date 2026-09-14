@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  ModusWcAutocomplete,
   ModusWcButton,
   ModusWcCard,
   ModusWcDate,
@@ -97,6 +98,7 @@ export function LaunchCycleWizard() {
     Record<string, EmployeeReviewerAssignment>
   >({})
   const [bulkReviewerType, setBulkReviewerType] = useState<ReviewerRoleType>('crew_manager')
+  const [bulkCustomManagerId, setBulkCustomManagerId] = useState('')
   const [filterDepartment, setFilterDepartment] = useState(FILTER_ALL)
   const [filterCostCenter, setFilterCostCenter] = useState(FILTER_ALL)
   const [filterTitle, setFilterTitle] = useState(FILTER_ALL)
@@ -244,14 +246,28 @@ export function LaunchCycleWizard() {
     [filteredEmployees],
   )
 
-  const assignmentForBulk = (): EmployeeReviewerAssignment => {
+  const assignmentForBulk = useCallback((): EmployeeReviewerAssignment => {
     if (bulkReviewerType === 'custom') {
-      return { type: 'custom', customManagerId: '' }
+      return { type: 'custom', customManagerId: bulkCustomManagerId }
     }
     return { type: bulkReviewerType }
-  }
+  }, [bulkReviewerType, bulkCustomManagerId])
 
   const managerOptions = useMemo(() => buildManagerOptions(state.people), [state.people])
+
+  const bulkManagerItems = useMemo(
+    () =>
+      managerOptions.map((option) => ({
+        label: option.label,
+        value: option.value,
+        visibleInMenu: true,
+        selected: option.value === bulkCustomManagerId,
+      })),
+    [managerOptions, bulkCustomManagerId],
+  )
+
+  const bulkCustomManagerLabel =
+    managerOptions.find((option) => option.value === bulkCustomManagerId)?.label ?? ''
 
   const applyReviewerAssignmentsForIds = (
     ids: string[],
@@ -298,7 +314,7 @@ export function LaunchCycleWizard() {
         return next
       })
     },
-    [bulkReviewerType],
+    [assignmentForBulk],
   )
 
   const mergeEmployeeSelection = (idsToAdd: string[]) => {
@@ -312,7 +328,9 @@ export function LaunchCycleWizard() {
       [employeeId]: {
         type,
         customManagerId:
-          type === 'custom' ? prev[employeeId]?.customManagerId ?? '' : undefined,
+          type === 'custom'
+            ? prev[employeeId]?.customManagerId || bulkCustomManagerId || ''
+            : undefined,
       },
     }))
   }
@@ -327,20 +345,30 @@ export function LaunchCycleWizard() {
     }))
   }
 
-  const applyBulkReviewer = (type: ReviewerRoleType) => {
-    setBulkReviewerType(type)
+  const applyAssignmentToSelected = (assignment: EmployeeReviewerAssignment) => {
     if (selectedEmployeeIds.length === 0) return
     setReviewerAssignments((prev) => {
       const next = { ...prev }
       selectedEmployeeIds.forEach((id) => {
-        next[id] = {
-          type,
-          customManagerId:
-            type === 'custom' ? prev[id]?.customManagerId ?? '' : undefined,
-        }
+        next[id] = assignment
       })
       return next
     })
+  }
+
+  const applyBulkReviewer = (type: ReviewerRoleType) => {
+    setBulkReviewerType(type)
+    applyAssignmentToSelected(
+      type === 'custom'
+        ? { type: 'custom', customManagerId: bulkCustomManagerId }
+        : { type },
+    )
+  }
+
+  const applyBulkCustomManager = (managerId: string) => {
+    setBulkCustomManagerId(managerId)
+    setBulkReviewerType('custom')
+    applyAssignmentToSelected({ type: 'custom', customManagerId: managerId })
   }
 
   const selectAllFiltered = () => mergeEmployeeSelection(filteredEmployeeIds)
@@ -815,7 +843,9 @@ export function LaunchCycleWizard() {
             </div>
             <div className="flex flex-col gap-3">
               <div
-                className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4"
+                className={`grid grid-cols-1 gap-3 md:grid-cols-2 ${
+                  bulkReviewerType === 'custom' ? 'xl:grid-cols-5' : 'lg:grid-cols-4'
+                }`}
               >
                 <ModusWcSelect
                   label="Department"
@@ -847,6 +877,25 @@ export function LaunchCycleWizard() {
                     applyBulkReviewer(readInputString(e as CustomEvent) as ReviewerRoleType)
                   }
                 />
+                <div
+                  hidden={bulkReviewerType !== 'custom'}
+                  aria-hidden={bulkReviewerType !== 'custom'}
+                >
+                  <ModusWcAutocomplete
+                    label="Custom reviewer for all selected"
+                    size="sm"
+                    placeholder="Search managers"
+                    includeSearch
+                    showMenuOnFocus
+                    value={bulkCustomManagerLabel}
+                    items={bulkManagerItems}
+                    onItemSelect={(e) => {
+                      const managerId =
+                        (e as CustomEvent<{ value?: string }>).detail?.value ?? ''
+                      if (managerId) applyBulkCustomManager(managerId)
+                    }}
+                  />
+                </div>
               </div>
               <ModusWcTypography
                 hierarchy="p"
@@ -857,7 +906,7 @@ export function LaunchCycleWizard() {
                 hierarchy="p"
                 size="sm"
                 customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                label="Select employees with row checkboxes or Select all in the table header. For Custom (select manager), search and pick a manager from the list. Reviewer for selected applies Crew Manager, Supervisor, or Custom to every selected row."
+                label="Select employees with row checkboxes or Select all in the table header. Reviewer for selected applies Crew Manager, Supervisor, or Custom to every selected employee. For Custom, pick one manager to apply to all selected employees. You can still change the reviewer for an individual employee in the table."
               />
               <PerformanceDataTable
                 caption="Employees Available for This Review Cycle"

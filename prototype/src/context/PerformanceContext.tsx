@@ -32,10 +32,11 @@ import {
   includesSelfEvaluationFromWorkflow,
   workflowFromLegacy,
 } from '../utils/workflow'
+import { resolveManagerDashboardPersonId } from '../utils/managerDashboardContext'
 
 const STORAGE_KEY = 'traqspera-performance-management-v3'
 /** Bump when bundled seed cycles/reviews change so stale localStorage is refreshed. */
-const SEED_VERSION = 4
+const SEED_VERSION = 9
 
 const DEFAULT_ACTIVE_PERSON_ID = 'mgr-1'
 
@@ -100,6 +101,12 @@ function resolveCycles(persisted: Partial<PersistedState>): ReviewCycle[] {
   return (persisted.cycles ?? seedCycles).map(normalizeCycle)
 }
 
+function mergeMissingSeedReviews(stored: PerformanceReview[]): PerformanceReview[] {
+  const storedIds = new Set(stored.map((review) => review.id))
+  const missing = seedReviews.filter((review) => !storedIds.has(review.id))
+  return missing.length > 0 ? [...stored, ...missing] : stored
+}
+
 function resolveReviews(persisted: Partial<PersistedState>): PerformanceReview[] {
   if (shouldRefreshSeedData(persisted)) {
     const customReviews = (persisted.reviews ?? []).filter(
@@ -107,7 +114,9 @@ function resolveReviews(persisted: Partial<PersistedState>): PerformanceReview[]
     )
     return [...seedReviews, ...customReviews]
   }
-  return persisted.reviews ?? seedReviews
+  const stored = persisted.reviews ?? seedReviews
+  if (stored.length === 0) return seedReviews
+  return mergeMissingSeedReviews(stored)
 }
 
 function loadPersisted(): Partial<PersistedState> {
@@ -174,6 +183,8 @@ function reviewsForCycleLaunch(
 interface PerformanceContextValue {
   state: AppState
   setView: (view: ViewId) => void
+  setActivePersonId: (personId: string) => void
+  openManagerTeamReviews: () => void
   setLayoutMode: (mode: 'desktop' | 'mobile') => void
   selectTemplate: (id: string | null) => void
   selectCycle: (id: string | null) => void
@@ -241,6 +252,20 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
 
   const setView = useCallback((view: ViewId) => {
     setState((s) => ({ ...s, view }))
+  }, [])
+
+  const setActivePersonId = useCallback((personId: string) => {
+    setState((s) => ({ ...s, activePersonId: personId }))
+  }, [])
+
+  const openManagerTeamReviews = useCallback(() => {
+    setState((s) => ({
+      ...s,
+      activePersonId: resolveManagerDashboardPersonId(s.people, s.activePersonId),
+      view: 'manager_dashboard',
+      selectedCycleId: null,
+      selectedReviewId: null,
+    }))
   }, [])
 
   const setLayoutMode = useCallback((layoutMode: 'desktop' | 'mobile') => {
@@ -524,6 +549,8 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
     () => ({
       state,
       setView,
+      setActivePersonId,
+      openManagerTeamReviews,
       setLayoutMode,
       selectTemplate,
       selectCycle,
@@ -551,6 +578,8 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
     [
       state,
       setView,
+      setActivePersonId,
+      openManagerTeamReviews,
       setLayoutMode,
       selectTemplate,
       selectCycle,

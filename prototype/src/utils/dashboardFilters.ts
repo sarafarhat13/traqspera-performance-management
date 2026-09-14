@@ -5,7 +5,11 @@ export const DASHBOARD_FILTER_ALL = '__all__'
 /** @deprecated Use DASHBOARD_FILTER_ALL */
 export const DASHBOARD_DEPARTMENT_ALL = DASHBOARD_FILTER_ALL
 
-export type DashboardStatusFilter = 'all' | 'pending' | 'completed' | 'overdue' | 'draft'
+export type DashboardPackageStatusFilter = 'all' | 'draft' | 'active' | 'completed'
+
+export type DashboardReviewStatusFilter = 'all' | 'pending' | 'completed' | 'overdue' | 'draft'
+
+export type DashboardStatusFilter = DashboardPackageStatusFilter | DashboardReviewStatusFilter
 
 export type DashboardFilters = {
   search: string
@@ -27,6 +31,13 @@ export function createDefaultDashboardFilters(): DashboardFilters {
   }
 }
 
+export type DashboardPackageCounts = {
+  all: number
+  draft: number
+  active: number
+  completed: number
+}
+
 export type DashboardReviewCounts = {
   all: number
   pending: number
@@ -37,7 +48,40 @@ export type DashboardReviewCounts = {
 
 type ReviewBucket = 'pending' | 'completed' | 'overdue'
 
+export type DashboardReviewFilterOptions = {
+  employeeIds?: Set<string>
+  /** Manager Team Reviews: Pending follows workflow status, not calendar due alone. */
+  managerTeamReviewStatus?: boolean
+}
+
 type PersonFilterKey = 'department' | 'costCenter' | 'title' | 'union'
+
+function isCyclePastDue(cycle: ReviewCycle, now: Date): boolean {
+  const due = new Date(cycle.dueDate)
+  due.setHours(23, 59, 59, 999)
+  return due < now
+}
+
+/** In-flight review on the manager team dashboard (Pending chip / filter). */
+export function isManagerTeamInProgressReview(review: PerformanceReview): boolean {
+  return (
+    review.status === 'manager_pending' ||
+    review.status === 'self_eval_pending' ||
+    review.status === 'acknowledgement_pending' ||
+    review.status === 'not_started'
+  )
+}
+
+/** Mutually exclusive status for manager team review chips and filters. */
+export function managerTeamReviewStatusCategory(
+  review: PerformanceReview,
+  cycle: ReviewCycle,
+  now = new Date(),
+): Exclude<DashboardReviewStatusFilter, 'all' | 'draft'> {
+  if (review.status === 'completed') return 'completed'
+  if (isCyclePastDue(cycle, now)) return 'overdue'
+  return 'pending'
+}
 
 function reviewBucket(
   review: PerformanceReview,
@@ -45,10 +89,16 @@ function reviewBucket(
   now = new Date(),
 ): ReviewBucket {
   if (review.status === 'completed') return 'completed'
-  const due = new Date(cycle.dueDate)
-  due.setHours(23, 59, 59, 999)
-  if (due < now) return 'overdue'
+  if (isCyclePastDue(cycle, now)) return 'overdue'
   return 'pending'
+}
+
+function statusBucketForReview(
+  review: PerformanceReview,
+  cycle: ReviewCycle,
+  now: Date,
+): ReviewBucket {
+  return reviewBucket(review, cycle, now)
 }
 
 function employeeMatchesSearch(employee: Person | undefined, query: string): boolean {
@@ -129,6 +179,7 @@ export function reviewMatchesDashboardFilters(
   employee: Person | undefined,
   filters: DashboardFilters,
   now = new Date(),
+  options?: Pick<DashboardReviewFilterOptions, 'managerTeamReviewStatus'>,
 ): boolean {
   const query = filters.search.trim().toLowerCase()
 
@@ -142,11 +193,53 @@ export function reviewMatchesDashboardFilters(
     return false
   }
 
-  if (filters.status !== 'all' && filters.status !== 'draft' && reviewBucket(review, cycle, now) !== filters.status) {
+  if (filters.status === 'draft') {
+    return false
+  }
+
+  if (options?.managerTeamReviewStatus) {
+    if (filters.status === 'all') return true
+    const category = managerTeamReviewStatusCategory(review, cycle, now)
+    return category === filters.status
+  }
+
+  const reviewStatusFilters: DashboardReviewStatusFilter[] = ['pending', 'completed', 'overdue']
+  if (
+    reviewStatusFilters.includes(filters.status as DashboardReviewStatusFilter) &&
+    statusBucketForReview(review, cycle, now) !== filters.status
+  ) {
     return false
   }
 
   return true
+}
+
+function cycleMatchesListFilters(
+  cycle: ReviewCycle,
+  reviews: PerformanceReview[],
+  people: Person[],
+  filters: Omit<DashboardFilters, 'status'>,
+): boolean {
+  const listFilters: DashboardFilters = { ...filters, status: 'all' }
+
+  if (cycle.status === 'draft') {
+    return draftCycleMatchesListFilters(cycle, people, filters)
+  }
+
+  const query = filters.search.trim().toLowerCase()
+  if (!query && !hasActiveEmployeeFieldFilters(listFilters)) {
+    return true
+  }
+
+  if (query && cycleMatchesSearch(cycle, query) && !hasActiveEmployeeFieldFilters(listFilters)) {
+    return true
+  }
+
+  const cycleReviews = reviews.filter((review) => review.cycleId === cycle.id)
+  return cycleReviews.some((review) => {
+    const employee = people.find((person) => person.id === review.employeeId)
+    return reviewMatchesDashboardFilters(review, cycle, employee, { ...filters, status: 'all' })
+  })
 }
 
 export function filterDashboardCycles(
@@ -154,42 +247,39 @@ export function filterDashboardCycles(
   reviews: PerformanceReview[],
   people: Person[],
   filters: DashboardFilters,
-  now = new Date(),
 ): ReviewCycle[] {
-  const query = filters.search.trim().toLowerCase()
+  const packageStatuses: DashboardPackageStatusFilter[] = ['draft', 'active', 'completed']
 
   return cycles.filter((cycle) => {
-    if (cycle.status === 'draft') {
-      if (filters.status !== 'all' && filters.status !== 'draft') return false
-      return draftCycleMatchesListFilters(cycle, people, filters)
-    }
-
-    if (filters.status === 'draft') return false
-
-    const cycleReviews = reviews.filter((review) => review.cycleId === cycle.id)
-
-    if (cycleReviews.length === 0) {
-      if (!query && !hasActiveEmployeeFieldFilters(filters) && filters.status === 'all') {
-        return true
-      }
-      if (
-        query &&
-        cycleMatchesSearch(cycle, query) &&
-        !hasActiveEmployeeFieldFilters(filters) &&
-        filters.status === 'all'
-      ) {
-        return true
-      }
+    if (
+      packageStatuses.includes(filters.status as DashboardPackageStatusFilter) &&
+      filters.status !== 'all' &&
+      cycle.status !== filters.status
+    ) {
       return false
     }
 
-    return cycleReviews.some((review) => {
-      const employee = people.find((person) => person.id === review.employeeId)
-      return reviewMatchesDashboardFilters(review, cycle, employee, filters, now)
-    })
+    return cycleMatchesListFilters(cycle, reviews, people, filters)
   })
 }
 
+export function computeDashboardPackageCounts(
+  cycles: ReviewCycle[],
+  reviews: PerformanceReview[],
+  people: Person[],
+  filters: Omit<DashboardFilters, 'status'>,
+): DashboardPackageCounts {
+  const listFiltered = filterDashboardCycles(cycles, reviews, people, { ...filters, status: 'all' })
+
+  return {
+    all: listFiltered.length,
+    draft: listFiltered.filter((cycle) => cycle.status === 'draft').length,
+    active: listFiltered.filter((cycle) => cycle.status === 'active').length,
+    completed: listFiltered.filter((cycle) => cycle.status === 'completed').length,
+  }
+}
+
+/** @deprecated Use computeDashboardPackageCounts for HR cycle dashboards. */
 export function computeDashboardReviewCounts(
   cycles: ReviewCycle[],
   reviews: PerformanceReview[],
@@ -205,7 +295,7 @@ export function filterReviewsForDashboard(
   cycles: ReviewCycle[],
   people: Person[],
   filters: DashboardFilters,
-  options?: { employeeIds?: Set<string> },
+  options?: DashboardReviewFilterOptions,
   now = new Date(),
 ): PerformanceReview[] {
   const employeeIds = options?.employeeIds
@@ -215,7 +305,7 @@ export function filterReviewsForDashboard(
     const cycle = cycles.find((item) => item.id === review.cycleId)
     if (!cycle) return false
     const employee = people.find((person) => person.id === review.employeeId)
-    return reviewMatchesDashboardFilters(review, cycle, employee, filters, now)
+    return reviewMatchesDashboardFilters(review, cycle, employee, filters, now, options)
   })
 }
 
@@ -224,7 +314,7 @@ export function computeScopedDashboardReviewCounts(
   reviews: PerformanceReview[],
   people: Person[],
   filters: Omit<DashboardFilters, 'status'>,
-  options?: { employeeIds?: Set<string> },
+  options?: DashboardReviewFilterOptions,
   now = new Date(),
 ): DashboardReviewCounts {
   const employeeIds = options?.employeeIds
@@ -237,22 +327,31 @@ export function computeScopedDashboardReviewCounts(
     pending: 0,
     completed: 0,
     overdue: 0,
-    draft: countDraftCycles(cycles, people, filters),
+    draft: options?.managerTeamReviewStatus
+      ? 0
+      : countDraftCycles(cycles, people, filters),
   }
 
-  for (const cycle of cycles) {
-    for (const review of scopedReviews) {
-      if (review.cycleId !== cycle.id) continue
-      const employee = people.find((person) => person.id === review.employeeId)
-      if (
-        !reviewMatchesDashboardFilters(review, cycle, employee, { ...filters, status: 'all' }, now)
-      ) {
-        continue
-      }
-      const bucket = reviewBucket(review, cycle, now)
-      counts.all += 1
-      counts[bucket] += 1
+  for (const review of scopedReviews) {
+    const cycle = cycles.find((item) => item.id === review.cycleId)
+    if (!cycle) continue
+    const employee = people.find((person) => person.id === review.employeeId)
+    if (
+      !reviewMatchesDashboardFilters(review, cycle, employee, { ...filters, status: 'all' }, now, options)
+    ) {
+      continue
     }
+
+    counts.all += 1
+
+    if (options?.managerTeamReviewStatus) {
+      const category = managerTeamReviewStatusCategory(review, cycle, now)
+      counts[category] += 1
+      continue
+    }
+
+    const bucket = statusBucketForReview(review, cycle, now)
+    counts[bucket] += 1
   }
 
   return counts

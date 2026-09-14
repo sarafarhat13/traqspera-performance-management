@@ -94,9 +94,9 @@ export function ReviewCycleCard({
 
         <div className="flex flex-wrap items-center gap-4">
           <StatusMetric
-            icon="check_circle"
-            label={`${stats.completed} Completed`}
-            toneClass="text-[var(--modus-wc-color-success,#0d7a5c)]"
+            icon="remove_circle"
+            label={`${stats.notStarted} Not started`}
+            toneClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
           />
           <StatusMetric
             icon="calendar"
@@ -104,9 +104,9 @@ export function ReviewCycleCard({
             toneClass="text-[var(--modus-wc-color-warning,#b45309)]"
           />
           <StatusMetric
-            icon="error"
-            label={`${stats.overdue} Overdue`}
-            toneClass="text-[var(--modus-wc-color-danger,#c81922)]"
+            icon="check_circle"
+            label={`${stats.completed} Complete`}
+            toneClass="text-[var(--modus-wc-color-success,#0d7a5c)]"
           />
         </div>
 

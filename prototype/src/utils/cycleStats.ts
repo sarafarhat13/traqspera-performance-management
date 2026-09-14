@@ -4,6 +4,7 @@ export interface CycleStats {
   totalEmployees: number
   completed: number
   pending: number
+  notStarted: number
   overdue: number
   percentComplete: number
 }
@@ -31,6 +32,7 @@ export function computeCycleStats(
   const totalEmployees = cycle.employeeIds.length
   let completed = 0
   let pending = 0
+  let notStarted = 0
   let overdue = 0
 
   for (const review of cycleReviews) {
@@ -38,11 +40,13 @@ export function computeCycleStats(
       completed += 1
       continue
     }
-    if (isOverdueReview(review, cycle.dueDate, now)) {
-      overdue += 1
-    } else {
-      pending += 1
+    if (review.status === 'not_started') {
+      notStarted += 1
+      if (isOverdueReview(review, cycle.dueDate, now)) overdue += 1
+      continue
     }
+    pending += 1
+    if (isOverdueReview(review, cycle.dueDate, now)) overdue += 1
   }
 
   const tracked = cycleReviews.length
@@ -53,6 +57,7 @@ export function computeCycleStats(
     totalEmployees,
     completed,
     pending,
+    notStarted,
     overdue,
     percentComplete,
   }

@@ -19,13 +19,12 @@ import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import {
   createManagerSelectCell,
-  createReviewStatusBadge,
   createStageDueCell,
   createTableActionButton,
+  createWorkflowReviewStageBadge,
 } from '../utils/modusTableCells'
 import { reviewReviewerDisplayName } from '../utils/reviewer'
 import {
-  computeDashboardReviewCounts,
   costCenterOptionsFromPeople,
   countActiveDashboardFilters,
   createDefaultDashboardFilters,
@@ -35,8 +34,10 @@ import {
   unionOptionsFromPeople,
   type DashboardFilters,
 } from '../utils/dashboardFilters'
+import { getReviewWorkflowStage, type WorkflowReviewStage } from '../utils/workflow'
+import { CycleWorkflowStageCards } from './CycleWorkflowStageCards'
 import { PerformanceDashboardFilterBar } from './PerformanceDashboardFilterBar'
-import type { Person, ReviewStatus } from '../types'
+import type { Person } from '../types'
 
 const CYCLE_EDIT_MODAL_ID = 'cycle-edit-modal'
 
@@ -98,19 +99,6 @@ export function CycleDetailView() {
   const titleOptions = useMemo(() => titleOptionsFromPeople(cyclePeople), [cyclePeople])
 
   const unionOptions = useMemo(() => unionOptionsFromPeople(cyclePeople), [cyclePeople])
-
-  const reviewCounts = useMemo(() => {
-    if (!cycle) {
-      return { all: 0, pending: 0, completed: 0, overdue: 0, draft: 0 }
-    }
-    return computeDashboardReviewCounts([cycle], state.reviews, state.people, {
-      search: filters.search,
-      department: filters.department,
-      costCenter: filters.costCenter,
-      title: filters.title,
-      union: filters.union,
-    })
-  }, [cycle, state.reviews, state.people, filters])
 
   const activeFilterCount = useMemo(() => countActiveDashboardFilters(filters), [filters])
 
@@ -189,8 +177,10 @@ export function CycleDetailView() {
           managerId: review.managerId,
           managerName: reviewReviewerDisplayName(review, getPerson),
           reviewerType: review.reviewerType,
-          status: review.status,
-          statusLabel: review.status,
+          workflowStage: (cycle ? getReviewWorkflowStage(cycle, review) : 'not_started') as
+            | WorkflowReviewStage
+            | 'complete',
+          statusLabel: cycle ? getReviewWorkflowStage(cycle, review) : 'not_started',
         }
       })
   }, [cycle, state.reviews, getPerson, filters])
@@ -234,8 +224,10 @@ export function CycleDetailView() {
         header: 'Status',
         accessor: 'statusLabel',
         sortable: true,
-        cellRenderer: (_v: unknown, row: unknown) =>
-          createReviewStatusBadge((row as { status: ReviewStatus }).status),
+        cellRenderer: (_value: unknown, row: unknown) =>
+          createWorkflowReviewStageBadge(
+            (row as { workflowStage: WorkflowReviewStage | 'complete' }).workflowStage,
+          ),
       },
       {
         id: 'stageDue',
@@ -419,11 +411,13 @@ export function CycleDetailView() {
                 hierarchy="p"
                 size="xs"
                 customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                label={`${stats.percentComplete}% complete • ${stats.completed} completed, ${stats.pending} pending, ${stats.overdue} overdue`}
+                label={`${stats.percentComplete}% complete`}
               />
             </div>
           )}
         </ModusWcCard>
+
+        <CycleWorkflowStageCards cycle={cycle} reviews={state.reviews} />
 
         <ModusWcCard bordered padding="compact" customClass={`${TRAQ_CARD_CLASS} tq-table-card`}>
           <div slot="title" className="flex w-full min-w-0 items-center gap-2 mb-4">
@@ -433,7 +427,6 @@ export function CycleDetailView() {
           <div className="flex flex-col gap-3">
             <PerformanceDashboardFilterBar
               filters={filters}
-              counts={reviewCounts}
               departmentOptions={departmentOptions}
               costCenterOptions={costCenterOptions}
               titleOptions={titleOptions}
@@ -441,6 +434,7 @@ export function CycleDetailView() {
               activeFilterCount={activeFilterCount}
               filterFieldsKey={filterFieldsKey}
               showViewToggle={false}
+              showStatusChips={false}
               searchAriaLabel="Search by employee name, department, cost center, or title"
               filterPanelId="cycle-detail-filter-panel"
               onFiltersChange={updateFilters}
@@ -452,7 +446,7 @@ export function CycleDetailView() {
                   hierarchy="p"
                   size="sm"
                   customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                  label="No employees match the current filters. Try adjusting search, department, or status."
+                  label="No employees match the current filters. Try adjusting search or department."
                 />
                 {activeFilterCount > 0 && (
                   <ModusWcButton variant="outlined" color="tertiary" size="sm" onButtonClick={clearFilters}>

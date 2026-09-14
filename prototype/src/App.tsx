@@ -17,7 +17,8 @@ import { navPageFromView, navTargetFromNavPage } from './navigation'
 import type { TraqsperaNavPage } from './layouts/traqsperaShellConstants'
 
 function PerformanceApp() {
-  const { state, setView, setEmployeeDetailsTab, selectPerson, openMyPerformance } = usePerformance()
+  const { state, setView, setEmployeeDetailsTab, selectPerson, openMyPerformance, openManagerTeamReviews } =
+    usePerformance()
   const [myPerformanceVisit, setMyPerformanceVisit] = useState(0)
 
   const activeNavPage = navPageFromView(state.view, {
@@ -31,6 +32,11 @@ function PerformanceApp() {
     if (page === 'my_info_performance') {
       openMyPerformance()
       setMyPerformanceVisit((visit) => visit + 1)
+      return
+    }
+
+    if (page === 'p_perf_team') {
+      openManagerTeamReviews()
       return
     }
 

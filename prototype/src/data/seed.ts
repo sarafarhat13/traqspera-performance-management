@@ -208,9 +208,56 @@ function generateAdditionalEmployees(): Omit<Person, 'union'>[] {
   })
 }
 
-const ADDITIONAL_EMPLOYEES = generateAdditionalEmployees()
+const ADDITIONAL_EMPLOYEES = generateAdditionalEmployees().map((person) => {
+  // Demo: keep each manager dashboard (Team Reviews) at 15+ direct-report reviews.
+  if (person.id === 'emp-21' || person.id === 'emp-22' || person.id === 'emp-23') {
+    return {
+      ...person,
+      department: 'Information Technology',
+      costCenter: 'CC-450',
+      title: 'Software Engineer',
+      managerId: 'mgr-3',
+    }
+  }
+  return person
+})
 
 const CYCLE_2025_EMPLOYEE_IDS = Array.from({ length: 50 }, (_, index) => `emp-${index + 1}`)
+
+/** Mike Chen (mgr-1) direct reports used for rich manager-dashboard demo data. */
+const MGR1_CORE_TEAM_EMPLOYEE_IDS = [
+  'emp-1',
+  'emp-2',
+  'emp-3',
+  'emp-4',
+  'emp-5',
+  'emp-6',
+  'emp-7',
+  'emp-16',
+  'emp-17',
+  'emp-18',
+] as const
+
+/**
+ * Primary 2025 review status shown on Mike Chen's manager dashboard (one row per direct report;
+ * highest-priority review across cycles wins — keep older cycle reviews completed when needed).
+ */
+const MGR1_2025_DASHBOARD_STATUS: Partial<Record<string, PerformanceReview['status']>> = {
+  'emp-1': 'manager_pending',
+  'emp-2': 'manager_pending',
+  'emp-4': 'acknowledgement_pending',
+  'emp-5': 'manager_pending',
+  'emp-6': 'not_started',
+  'emp-7': 'manager_pending',
+  'emp-3': 'not_started',
+  'emp-16': 'completed',
+  'emp-17': 'acknowledgement_pending',
+  'emp-18': 'acknowledgement_pending',
+  'emp-24': 'completed',
+  'emp-25': 'not_started',
+  'emp-30': 'completed',
+  'emp-31': 'not_started',
+}
 
 function create2025AnnualReviews(people: Person[]): PerformanceReview[] {
   const statusPlan: PerformanceReview['status'][] = [
@@ -243,7 +290,11 @@ function create2025AnnualReviews(people: Person[]): PerformanceReview[] {
 
   return CYCLE_2025_EMPLOYEE_IDS.map((employeeId, index) => {
     const person = people.find((entry) => entry.id === employeeId)
-    const status = statusPlan[index]
+    let status = statusPlan[index]
+    const mgr1Status = MGR1_2025_DASHBOARD_STATUS[employeeId]
+    if (mgr1Status) {
+      status = mgr1Status
+    }
     const review: PerformanceReview = {
       id: `rev-2025-${String(index + 1).padStart(2, '0')}`,
       cycleId: 'cycle-2025',
@@ -252,7 +303,12 @@ function create2025AnnualReviews(people: Person[]): PerformanceReview[] {
       status,
     }
 
-    if (status === 'manager_pending' || status === 'acknowledgement_pending' || status === 'completed') {
+    if (
+      status === 'manager_pending' ||
+      status === 'acknowledgement_pending' ||
+      status === 'completed' ||
+      status === 'self_eval_pending'
+    ) {
       review.selfEval = sampleSelfEval
     }
 
@@ -534,7 +590,7 @@ export const seedCycles: ReviewCycle[] = [
     }),
     ratingScale: defaultRatingScale,
     status: 'active',
-    employeeIds: ['emp-1', 'emp-2', 'emp-3', 'mgr-1'],
+    employeeIds: [...MGR1_CORE_TEAM_EMPLOYEE_IDS, 'mgr-1'],
   },
   {
     id: 'cycle-2025',
@@ -542,13 +598,13 @@ export const seedCycles: ReviewCycle[] = [
     description: 'Year-end performance reviews with self-evaluation and manager feedback.',
     createdBy: 'Hannah Reed',
     templateId: 'tpl-annual',
-    startDate: '2025-10-01',
-    dueDate: '2025-12-15',
+    startDate: '2026-06-01',
+    dueDate: '2026-12-15',
     includesSelfEvaluation: true,
     workflow: workflowWithDeadlines(createDefaultWorkflowSteps(), {
-      employee: '2025-10-31',
-      manager: '2025-11-30',
-      acknowledgement: '2025-12-10',
+      employee: '2026-08-31',
+      manager: '2026-10-31',
+      acknowledgement: '2026-12-10',
     }),
     ratingScale: defaultRatingScale,
     status: 'active',
@@ -642,7 +698,198 @@ export const seedReviews: PerformanceReview[] = [
     cycleId: 'cycle-2024',
     employeeId: 'emp-3',
     managerId: 'mgr-1',
-    status: 'self_eval_pending',
+    status: 'completed',
+    selfEval: {
+      answers: {
+        q1: 'Closed monthly close on time each quarter.',
+        q2: 'One reconciliation backlog item carried over.',
+        q3: 'Partnered with operations on cost reporting.',
+        q4: 'Pursuing CPA study hours.',
+      },
+      completedAt: '2024-02-11T10:00:00Z',
+    },
+    managerReview: {
+      answers: {
+        q1: 'Reliable accounting support for the operations team.',
+        q2: 'Backlog item tracked with clear owners.',
+        q3: 'Strong cross-functional communication.',
+        q4: 'Encourage CPA progress.',
+      },
+      completedAt: '2024-02-26T14:00:00Z',
+    },
+    acknowledgement: {
+      acknowledged: true,
+      completedAt: '2024-03-02T09:00:00Z',
+    },
+  },
+  {
+    id: 'rev-2024-4',
+    cycleId: 'cycle-2024',
+    employeeId: 'emp-4',
+    managerId: 'mgr-1',
+    status: 'acknowledgement_pending',
+    selfEval: {
+      answers: {
+        q1: 'Kept inbound and outbound logistics on schedule through peak season.',
+        q2: 'Vendor onboarding slipped by one week.',
+        q3: 'Partnered with warehouse and finance teams daily.',
+        q4: 'Interested in supply-chain certification.',
+      },
+      completedAt: '2024-02-12T10:00:00Z',
+    },
+    managerReview: {
+      answers: {
+        q1: 'Reliable logistics execution with strong attention to detail.',
+        q2: 'Vendor onboarding delay is documented with a recovery plan.',
+        q3: 'Collaborates well across teams.',
+        q4: 'Support certification goals next cycle.',
+      },
+      completedAt: '2024-02-28T16:00:00Z',
+    },
+  },
+  {
+    id: 'rev-2024-5',
+    cycleId: 'cycle-2024',
+    employeeId: 'emp-5',
+    managerId: 'mgr-1',
+    status: 'manager_pending',
+    selfEval: {
+      answers: {
+        q1: 'Maintained crew schedules with fewer last-minute changes.',
+        q2: 'Overtime crept up during two holiday weekends.',
+        q3: 'Coordinated closely with field supervisors.',
+        q4: 'Want to improve workforce planning tools.',
+      },
+      completedAt: '2024-02-19T09:00:00Z',
+    },
+  },
+  {
+    id: 'rev-2024-6',
+    cycleId: 'cycle-2024',
+    employeeId: 'emp-6',
+    managerId: 'mgr-1',
+    status: 'completed',
+    selfEval: {
+      answers: {
+        q1: 'Maintained site safety metrics above target.',
+        q2: 'Staffing gaps on night shift persisted in Q4.',
+        q3: 'Coordinated with safety and HR on training.',
+        q4: 'Focused on supervisor certification.',
+      },
+      completedAt: '2024-02-09T11:00:00Z',
+    },
+    managerReview: {
+      answers: {
+        q1: 'Strong site leadership and safety culture.',
+        q2: 'Night shift staffing plan approved for next quarter.',
+        q3: 'Effective partner to HR and safety teams.',
+        q4: 'Support certification timeline.',
+      },
+      completedAt: '2024-02-25T15:00:00Z',
+    },
+    acknowledgement: {
+      acknowledged: true,
+      completedAt: '2024-03-06T10:00:00Z',
+    },
+  },
+  {
+    id: 'rev-2024-7',
+    cycleId: 'cycle-2024',
+    employeeId: 'emp-7',
+    managerId: 'mgr-1',
+    status: 'manager_pending',
+    selfEval: {
+      answers: {
+        q1: 'Led monthly safety stand-downs and reduced near-miss reports.',
+        q2: 'Two audit findings remain open from Q3.',
+        q3: 'Worked with operations and HR on compliance training.',
+        q4: 'Focused on advanced safety leadership coursework.',
+      },
+      completedAt: '2024-02-21T11:30:00Z',
+    },
+  },
+  {
+    id: 'rev-2024-8',
+    cycleId: 'cycle-2024',
+    employeeId: 'emp-16',
+    managerId: 'mgr-1',
+    status: 'completed',
+    selfEval: {
+      answers: {
+        q1: 'Exceeded quota on two enterprise accounts.',
+        q2: 'Pipeline hygiene needs improvement in CRM.',
+        q3: 'Partnered with marketing on regional campaigns.',
+        q4: 'Building executive presentation skills.',
+      },
+      completedAt: '2024-02-10T14:00:00Z',
+    },
+    managerReview: {
+      answers: {
+        q1: 'Strong sales outcomes with consistent client follow-up.',
+        q2: 'CRM discipline should be a Q2 focus.',
+        q3: 'Effective collaborator with marketing.',
+        q4: 'Encourage continued presentation coaching.',
+      },
+      completedAt: '2024-02-27T13:00:00Z',
+    },
+    acknowledgement: {
+      acknowledged: true,
+      completedAt: '2024-03-04T10:00:00Z',
+    },
+  },
+  {
+    id: 'rev-2024-9',
+    cycleId: 'cycle-2024',
+    employeeId: 'emp-17',
+    managerId: 'mgr-1',
+    status: 'completed',
+    selfEval: {
+      answers: {
+        q1: 'Supported four concurrent RFP responses on time.',
+        q2: 'Handoff delays occurred on one enterprise deal.',
+        q3: 'Aligned sales ops with account executives weekly.',
+        q4: 'Interested in sales operations analytics.',
+      },
+      completedAt: '2024-02-22T08:00:00Z',
+    },
+    managerReview: {
+      answers: {
+        q1: 'Dependable sales ops partner during a heavy RFP season.',
+        q2: 'Handoff issue resolved with new checklist.',
+        q3: 'Strong alignment with account executives.',
+        q4: 'Analytics training approved.',
+      },
+      completedAt: '2024-03-01T12:00:00Z',
+    },
+    acknowledgement: {
+      acknowledged: true,
+      completedAt: '2024-03-07T09:30:00Z',
+    },
+  },
+  {
+    id: 'rev-2024-10',
+    cycleId: 'cycle-2024',
+    employeeId: 'emp-18',
+    managerId: 'mgr-1',
+    status: 'acknowledgement_pending',
+    selfEval: {
+      answers: {
+        q1: 'Grew regional revenue 8% year over year.',
+        q2: 'Two key accounts renewed late in the quarter.',
+        q3: 'Coached two account executives through complex deals.',
+        q4: 'Prioritizing strategic account planning.',
+      },
+      completedAt: '2024-02-14T12:00:00Z',
+    },
+    managerReview: {
+      answers: {
+        q1: 'Solid regional leadership with measurable growth.',
+        q2: 'Renewal timing created unnecessary end-of-quarter pressure.',
+        q3: 'Strong coach to the sales team.',
+        q4: 'Continue strategic planning focus.',
+      },
+      completedAt: '2024-03-03T15:00:00Z',
+    },
   },
   ...cycle2025Reviews,
   {

@@ -84,6 +84,7 @@ export function EmployeeDetails({ myPerformanceVisit = 0 }: { myPerformanceVisit
     getPerson,
     getCycle,
     getTemplate,
+    openManagerTeamReviews,
   } = usePerformance()
 
   const person = state.selectedPersonId ? getPerson(state.selectedPersonId) : undefined
@@ -158,7 +159,7 @@ export function EmployeeDetails({ myPerformanceVisit = 0 }: { myPerformanceVisit
       }
       return
     }
-    setView('manager_dashboard')
+    openManagerTeamReviews()
   }
 
   const selectTab = (tab: EmployeeDetailsTab) => {

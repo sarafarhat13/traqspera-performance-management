@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ModusWcButton,
   ModusWcCard,
@@ -31,6 +31,7 @@ import {
 } from '../utils/dashboardFilters'
 import { getCurrentStageDeadline, hasManagerReviewDraft } from '../utils/workflow'
 import type { PerformanceReview, Person, ReviewCycle, ReviewStatus, ReviewTemplate } from '../types'
+import { resolveManagerDashboardPersonId } from '../utils/managerDashboardContext'
 
 type ManagerDashboardViewMode = 'card' | 'table'
 
@@ -88,17 +89,42 @@ function buildReviewTableRows(
       selfEvalCompleted: review.selfEval?.completedAt
         ? formatDate(review.selfEval.completedAt)
         : '—',
+      managerReviewDraft: hasManagerReviewDraft(review),
     }
   })
 }
 
 export function ManagerDashboard() {
-  const { state, setView, selectReview, openEmployeeReview, getPerson, getCycle, getTemplate } =
-    usePerformance()
-  const managerId = state.activePersonId
+  const {
+    state,
+    setView,
+    setActivePersonId,
+    selectReview,
+    openEmployeeReview,
+    getPerson,
+    getCycle,
+    getTemplate,
+  } = usePerformance()
+
+  const managerId = useMemo(
+    () => resolveManagerDashboardPersonId(state.people, state.activePersonId),
+    [state.people, state.activePersonId],
+  )
+
+  useEffect(() => {
+    if (managerId !== state.activePersonId) {
+      setActivePersonId(managerId)
+    }
+  }, [managerId, state.activePersonId, setActivePersonId])
   const [viewMode, setViewMode] = useState<ManagerDashboardViewMode>('card')
   const [filters, setFilters] = useState<DashboardFilters>(() => createDefaultDashboardFilters())
   const [filterFieldsKey, setFilterFieldsKey] = useState(0)
+
+  useEffect(() => {
+    if (filters.status === 'draft' || filters.status === 'active') {
+      setFilters((current) => ({ ...current, status: 'all' }))
+    }
+  }, [filters.status])
 
   const directReports = useMemo(
     () => state.people.filter((person) => person.managerId === managerId),
@@ -154,16 +180,16 @@ export function ManagerDashboard() {
 
   const unionOptions = useMemo(() => unionOptionsFromPeople(directReports), [directReports])
 
-  const directReportReviews = useMemo(
-    () => managerReviews.filter((review) => reportIds.has(review.employeeId)),
-    [managerReviews, reportIds],
+  const managerReviewFilterOptions = useMemo(
+    () => ({ employeeIds: reportIds, managerTeamReviewStatus: true as const }),
+    [reportIds],
   )
 
   const reviewCounts = useMemo(
     () =>
       computeScopedDashboardReviewCounts(
         state.cycles,
-        directReportReviews,
+        teamReviews,
         state.people,
         {
           search: filters.search,
@@ -172,13 +198,13 @@ export function ManagerDashboard() {
           title: filters.title,
           union: filters.union,
         },
-        { employeeIds: reportIds },
+        managerReviewFilterOptions,
       ),
     [
       state.cycles,
-      directReportReviews,
+      teamReviews,
       state.people,
-      reportIds,
+      managerReviewFilterOptions,
       filters.search,
       filters.department,
       filters.costCenter,
@@ -191,39 +217,27 @@ export function ManagerDashboard() {
 
   const filteredTeamReviews = useMemo(
     () =>
-      filterReviewsForDashboard(teamReviews, state.cycles, state.people, filters, {
-        employeeIds: reportIds,
-      }),
-    [teamReviews, state.cycles, state.people, filters, reportIds],
+      filterReviewsForDashboard(teamReviews, state.cycles, state.people, filters, managerReviewFilterOptions),
+    [teamReviews, state.cycles, state.people, filters, managerReviewFilterOptions],
   )
 
-  const reviewsRequiringAction = useMemo(
-    () => managerReviews.filter((review) => review.status === 'manager_pending'),
-    [managerReviews],
+  const reviewsDueCount = useMemo(
+    () => teamReviews.filter((review) => review.status === 'manager_pending').length,
+    [teamReviews],
   )
-
-  const filteredActionReviews = useMemo(
-    () =>
-      filterReviewsForDashboard(reviewsRequiringAction, state.cycles, state.people, filters, {
-        employeeIds: reportIds,
-      }),
-    [reviewsRequiringAction, state.cycles, state.people, filters, reportIds],
-  )
-
-  const reviewsDueCount = reviewsRequiringAction.length
 
   const pendingAcknowledgementCount = useMemo(
-    () => managerReviews.filter((review) => review.status === 'acknowledgement_pending').length,
-    [managerReviews],
+    () => teamReviews.filter((review) => review.status === 'acknowledgement_pending').length,
+    [teamReviews],
   )
 
   const completedThisQuarterCount = useMemo(
     () =>
-      managerReviews.filter((review) => {
+      teamReviews.filter((review) => {
         if (review.status !== 'completed') return false
         return isCompletedThisQuarter(reviewCompletedAt(review))
       }).length,
-    [managerReviews],
+    [teamReviews],
   )
 
   const openManagerReview = useCallback(
@@ -232,11 +246,6 @@ export function ManagerDashboard() {
       setView('manager_review')
     },
     [selectReview, setView],
-  )
-
-  const actionTableData = useMemo(
-    () => buildReviewTableRows(filteredActionReviews, getPerson, getCycle, getTemplate),
-    [filteredActionReviews, getPerson, getCycle, getTemplate],
   )
 
   const teamTableData = useMemo(
@@ -280,16 +289,15 @@ export function ManagerDashboard() {
         sortable: false,
         cellRenderer: (value: unknown, row: unknown) => {
           const reviewId = String(value)
-          const status = (row as { status: ReviewStatus }).status
-          const review = filteredActionReviews.find((item) => item.id === reviewId)
+          const rowData = row as { status: ReviewStatus; managerReviewDraft: boolean }
           const actions = [
             createTableActionButton('Details', () => openEmployeeReview(reviewId), 'tertiary'),
           ]
 
-          if (status === 'manager_pending') {
+          if (rowData.status === 'manager_pending') {
             actions.unshift(
               createTableActionButton(
-                review && hasManagerReviewDraft(review) ? 'Continue review' : 'Start Review',
+                rowData.managerReviewDraft ? 'Continue review' : 'Start Review',
                 () => openManagerReview(reviewId),
               ),
             )
@@ -299,8 +307,14 @@ export function ManagerDashboard() {
         },
       },
     ],
-    [filteredActionReviews, openEmployeeReview, openManagerReview],
+    [openEmployeeReview, openManagerReview],
   )
+
+  const teamReviewsFilteredEmpty = filteredTeamReviews.length === 0
+  const teamEmptyMessage =
+    teamReviews.length === 0
+      ? 'No performance reviews are assigned to your team yet.'
+      : 'No team reviews match the current filters. Try adjusting search, department, or status.'
 
   const updateFilters = useCallback((patch: Partial<DashboardFilters>) => {
     setFilters((current) => ({ ...current, ...patch }))
@@ -407,47 +421,13 @@ export function ManagerDashboard() {
           activeFilterCount={activeFilterCount}
           filterFieldsKey={filterFieldsKey}
           viewMode={viewMode}
+          statusFilterMode="managerTeam"
           searchAriaLabel="Search by employee name, review cycle, department, or cost center"
           filterPanelId="manager-dashboard-filter-panel"
           onFiltersChange={updateFilters}
           onClearFilters={clearFilters}
           onViewModeChange={setViewMode}
         />
-
-        {filteredActionReviews.length > 0 && (
-          <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
-            <div slot="title" className="tq-section-card-title mb-4 flex w-full min-w-0 flex-col gap-1">
-              <ModusWcTypography
-                hierarchy="h4"
-                size="md"
-                weight="semibold"
-                customClass="!m-0"
-                label="Reviews Requiring Your Action"
-              />
-              <ModusWcTypography
-                hierarchy="p"
-                size="sm"
-                customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
-                label="Employee self-evaluations ready for your review."
-              />
-            </div>
-            <div
-              hidden={viewMode !== 'card'}
-              aria-hidden={viewMode !== 'card'}
-              className="flex flex-col gap-2"
-            >
-              {filteredActionReviews.map((review) => renderReviewRow(review, true))}
-            </div>
-            <div hidden={viewMode !== 'table'} aria-hidden={viewMode !== 'table'} className="min-w-0">
-              <PerformanceDataTable
-                key="manager-action-reviews-table"
-                caption="Reviews requiring your action"
-                columns={tableColumns}
-                data={actionTableData}
-              />
-            </div>
-          </ModusWcCard>
-        )}
 
         <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
           <div slot="title" className="tq-section-card-title mb-4 flex w-full min-w-0 flex-col gap-1">
@@ -462,49 +442,49 @@ export function ManagerDashboard() {
               hierarchy="p"
               size="sm"
               customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
-              label="Overview of all reviews for your direct reports."
+              label="One review per direct report. Items needing your manager feedback are listed first."
             />
           </div>
-          {filteredTeamReviews.length === 0 ? (
-            <>
-              <ModusWcTypography
-                hierarchy="p"
-                size="sm"
-                customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                label={
-                  teamReviews.length === 0
-                    ? 'No performance reviews are assigned to your team yet.'
-                    : 'No team reviews match the current filters. Try adjusting search, department, or status.'
-                }
-              />
-              {activeFilterCount > 0 && teamReviews.length > 0 && (
-                <div className="mt-3">
-                  <ModusWcButton variant="outlined" color="tertiary" size="sm" onButtonClick={clearFilters}>
-                    Clear filters
-                  </ModusWcButton>
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <div
-                hidden={viewMode !== 'card'}
-                aria-hidden={viewMode !== 'card'}
-                className="flex flex-col gap-2"
-              >
-                {filteredTeamReviews.map((review) => renderReviewRow(review, true))}
+          <div
+            hidden={!teamReviewsFilteredEmpty}
+            aria-hidden={!teamReviewsFilteredEmpty}
+            className={teamReviewsFilteredEmpty ? 'flex flex-col gap-2' : undefined}
+          >
+            <ModusWcTypography
+              hierarchy="p"
+              size="sm"
+              customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+              label={teamEmptyMessage}
+            />
+            {activeFilterCount > 0 && teamReviews.length > 0 && (
+              <div className="mt-1">
+                <ModusWcButton variant="outlined" color="tertiary" size="sm" onButtonClick={clearFilters}>
+                  Clear filters
+                </ModusWcButton>
               </div>
-              <div hidden={viewMode !== 'table'} aria-hidden={viewMode !== 'table'} className="min-w-0">
-                <PerformanceDataTable
-                  key="manager-team-reviews-table"
-                  caption="Team performance reviews"
-                  columns={tableColumns}
-                  data={teamTableData}
-                />
-              </div>
-            </>
-          )}
+            )}
+          </div>
+          <div
+            hidden={viewMode !== 'card' || teamReviewsFilteredEmpty}
+            aria-hidden={viewMode !== 'card' || teamReviewsFilteredEmpty}
+            className={
+              viewMode === 'card' && !teamReviewsFilteredEmpty ? 'flex flex-col gap-2' : undefined
+            }
+          >
+            {filteredTeamReviews.map((review) => renderReviewRow(review, true))}
+          </div>
         </ModusWcCard>
+
+        {viewMode === 'table' && !teamReviewsFilteredEmpty ? (
+          <ModusWcCard bordered padding="compact" customClass={`${TRAQ_CARD_CLASS} tq-table-card`}>
+            <PerformanceDataTable
+              key="manager-team-reviews-table"
+              caption="Team performance reviews"
+              columns={tableColumns}
+              data={teamTableData}
+            />
+          </ModusWcCard>
+        ) : null}
       </div>
     </TraqsperaPageBody>
   )

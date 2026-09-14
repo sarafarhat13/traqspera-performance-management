@@ -3,7 +3,7 @@ import type { CycleStatus, ReviewStatus } from '../types'
 export const CYCLE_STATUS_LABELS: Record<CycleStatus, string> = {
   draft: 'Draft',
   active: 'Active',
-  completed: 'Completed',
+  completed: 'Complete',
 }
 
 export function cycleStatusBadgeColor(

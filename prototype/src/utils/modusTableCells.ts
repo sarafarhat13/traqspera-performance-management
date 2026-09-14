@@ -1,6 +1,12 @@
 import type { CycleStatus, PerformanceReview, ReviewCycle, ReviewStatus } from '../types'
 import { CYCLE_STATUS_LABELS, cycleStatusBadgeColor, MANAGER_DASHBOARD_STATUS_LABELS, managerDashboardStatusBadgeColor, STATUS_LABELS, statusBadgeColor, statusBadgeCustomClass, type StatusBadgeSemanticColor } from './status'
-import { formatCurrentStageDue, isReviewActionRequired } from './workflow'
+import {
+  formatCurrentStageDue,
+  isReviewActionRequired,
+  WORKFLOW_REVIEW_STAGE_LABELS,
+  workflowReviewStageBadgeColor,
+  type WorkflowReviewStage,
+} from './workflow'
 
 type TableButtonColor = 'primary' | 'tertiary' | 'danger'
 
@@ -79,6 +85,16 @@ export function createManagerReviewStatusBadge(status: ReviewStatus) {
     badge,
     managerDashboardStatusBadgeColor(status),
     MANAGER_DASHBOARD_STATUS_LABELS[status],
+  )
+  return badge
+}
+
+export function createWorkflowReviewStageBadge(stage: WorkflowReviewStage | 'complete') {
+  const badge = document.createElement('modus-wc-badge')
+  applyStatusBadgeStyle(
+    badge,
+    workflowReviewStageBadgeColor(stage),
+    WORKFLOW_REVIEW_STAGE_LABELS[stage],
   )
   return badge
 }

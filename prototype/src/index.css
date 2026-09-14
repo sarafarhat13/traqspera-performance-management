@@ -143,6 +143,16 @@ modus-wc-card [slot='title'] {
   width: 100%;
 }
 
+/* View toggle: Tailwind flex on the same node breaks [hidden]; table host may still paint inside cards. */
+.tq-manager-dashboard modus-wc-card [hidden] {
+  display: none !important;
+}
+
+.tq-manager-dashboard modus-wc-card [hidden] modus-wc-table,
+.tq-manager-dashboard modus-wc-card [hidden] .tq-data-table {
+  display: none !important;
+}
+
 .tq-manager-dashboard .tq-data-table modus-wc-table .modus-wc-table th,
 .tq-manager-dashboard .tq-data-table modus-wc-table .modus-wc-table td {
   text-align: left;
@@ -1764,6 +1774,38 @@ modus-wc-badge .modus-wc-badge.modus-wc-badge-outlined.tq-status-badge--tertiary
   background-color: var(--modus-wc-color-success, #1e8a44);
 }
 
+.tq-cycle-stage-cards {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--modus-wc-spacing-sm, 0.75rem);
+}
+
+.tq-cycle-stage-cards > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.tq-cycle-stage-card {
+  gap: var(--modus-wc-spacing-xs, 0.5rem);
+  min-height: 0;
+  padding: var(--modus-wc-spacing-sm, 0.75rem);
+}
+
+.tq-cycle-stage-card__metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.tq-cycle-stage-card__value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
 .tq-review-step-cards-host {
   container-type: inline-size;
   container-name: review-step-cards;
@@ -1809,4 +1851,17 @@ modus-wc-badge .modus-wc-badge.modus-wc-badge-outlined.tq-status-badge--tertiary
 .tq-review-step-cards--stacked > .tq-review-step-cards__item {
   flex: none;
   width: 100%;
+}
+
+@media (max-width: 767px) {
+  .tq-cycle-stage-cards {
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    scroll-snap-type: x proximity;
+  }
+
+  .tq-cycle-stage-cards > * {
+    flex: 0 0 8.5rem;
+    scroll-snap-align: start;
+  }
 }

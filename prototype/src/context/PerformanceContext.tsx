@@ -307,14 +307,30 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const saveTemplate = useCallback((template: ReviewTemplate, options?: { silent?: boolean }) => {
-    setState((s) => ({
-      ...s,
-      templates: s.templates.some((t) => t.id === template.id)
-        ? s.templates.map((t) => (t.id === template.id ? template : t))
-        : [...s.templates, template],
-      editingTemplateId: options?.silent ? s.editingTemplateId : null,
-      view: options?.silent ? s.view : 'templates',
-    }))
+    setState((s) => {
+      const existing = s.templates.find((t) => t.id === template.id)
+      const activePerson = s.people.find((p) => p.id === s.activePersonId)
+      const defaultCreator =
+        activePerson?.role === 'hr_admin'
+          ? activePerson.name
+          : (activePerson?.name ?? 'HR Admin')
+      const withMetadata: ReviewTemplate = {
+        ...template,
+        createdBy: existing?.createdBy ?? template.createdBy ?? defaultCreator,
+        createdAt:
+          existing?.createdAt ??
+          template.createdAt ??
+          new Date().toISOString().slice(0, 10),
+      }
+      return {
+        ...s,
+        templates: s.templates.some((t) => t.id === template.id)
+          ? s.templates.map((t) => (t.id === template.id ? withMetadata : t))
+          : [...s.templates, withMetadata],
+        editingTemplateId: options?.silent ? s.editingTemplateId : null,
+        view: options?.silent ? s.view : 'templates',
+      }
+    })
   }, [])
 
   const deleteTemplate = useCallback((id: string) => {

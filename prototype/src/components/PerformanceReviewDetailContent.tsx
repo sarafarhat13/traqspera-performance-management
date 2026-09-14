@@ -5,6 +5,7 @@ import { formatDate, formatReviewPeriod } from '../utils/status'
 import { MANAGER_OVERALL_RATING_KEY } from '../utils/workflow'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { CurrentStageDueLine } from './CurrentStageDueLine'
+import { ReviewWorkflowStepCards } from './ReviewWorkflowStepCards'
 
 const REVIEW_DETAIL_TAB_LABELS = {
   desktop: ['Overview', 'Self evaluation', 'Manager review', 'Side-by-side'],
@@ -36,6 +37,13 @@ export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string 
 
   return (
     <div className="flex flex-col gap-3">
+      {cycle && (
+        <div className="flex flex-col gap-2">
+          <ModusWcTypography hierarchy="h4" size="md" weight="semibold" label="Statuses" />
+          <ReviewWorkflowStepCards cycle={cycle} review={review} stacked={isMobile} />
+        </div>
+      )}
+
       <div className="tq-review-detail-tabs">
         <ModusWcTabs
           tabs={tabs}

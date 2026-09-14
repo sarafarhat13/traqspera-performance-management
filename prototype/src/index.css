@@ -1731,3 +1731,82 @@ modus-wc-badge .modus-wc-badge.modus-wc-badge-outlined.tq-status-badge--tertiary
   max-width: 6rem;
   margin: 0 auto;
 }
+
+.tq-review-step-card--current {
+  background-color: var(--modus-wc-color-base-100, #f8f8fb);
+}
+
+.tq-review-step-card--pending {
+  opacity: 0.85;
+}
+
+.tq-review-step-card__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--modus-wc-color-base-content, #252a2e);
+  background-color: var(--modus-wc-color-base-200, #f1f1f6);
+  flex-shrink: 0;
+}
+
+.tq-review-step-card--current .tq-review-step-card__index {
+  color: #fff;
+  background-color: var(--modus-wc-color-primary, #0063a3);
+}
+
+.tq-review-step-card--complete .tq-review-step-card__index {
+  color: #fff;
+  background-color: var(--modus-wc-color-success, #1e8a44);
+}
+
+.tq-review-step-cards-host {
+  container-type: inline-size;
+  container-name: review-step-cards;
+  min-width: 0;
+  width: 100%;
+}
+
+.tq-review-step-cards {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--modus-wc-spacing-sm, 0.75rem);
+}
+
+.tq-review-step-cards > .tq-review-step-cards__item {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.tq-review-step-cards > .tq-review-step-cards__item > modus-wc-card {
+  display: block;
+  width: 100%;
+}
+
+@container review-step-cards (max-width: 36rem) {
+  .tq-review-step-cards:not(.tq-review-step-cards--stacked) {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    overflow-x: visible;
+  }
+
+  .tq-review-step-cards:not(.tq-review-step-cards--stacked) > .tq-review-step-cards__item {
+    flex: none;
+    width: 100%;
+  }
+}
+
+.tq-review-step-cards--stacked {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  overflow-x: visible;
+}
+
+.tq-review-step-cards--stacked > .tq-review-step-cards__item {
+  flex: none;
+  width: 100%;
+}

@@ -13,6 +13,7 @@ import {
   createTableActionButton,
   createTableActionGroup,
 } from '../utils/modusTableCells'
+import { formatDate } from '../utils/status'
 
 export function TemplateList() {
   const { state, setView, selectTemplate, startNewTemplate, deleteTemplate } = usePerformance()
@@ -22,12 +23,15 @@ export function TemplateList() {
       state.templates
         .filter((t) => t.name.trim().length > 0)
         .map((t) => ({
-        id: t.id,
-        name: t.name,
-        description: t.description,
-        questions: String(t.questions.length),
-        type: t.isPrebuilt ? 'Prebuilt' : 'Custom',
-      })),
+          id: t.id,
+          name: t.name,
+          description: t.description,
+          questions: String(t.questions.length),
+          createdBy: t.createdBy ?? (t.isPrebuilt ? 'Traqspera' : '—'),
+          createdAt: t.createdAt ? formatDate(t.createdAt) : '—',
+          createdAtSort: t.createdAt ?? '',
+          type: t.isPrebuilt ? 'Prebuilt' : 'Custom',
+        })),
     [state.templates],
   )
 
@@ -53,6 +57,14 @@ export function TemplateList() {
             { id: 'name', header: 'Name', accessor: 'name', sortable: true },
             { id: 'desc', header: 'Description', accessor: 'description', sortable: true },
             { id: 'q', header: 'Questions', accessor: 'questions', sortable: true },
+            { id: 'createdBy', header: 'Created by', accessor: 'createdBy', sortable: true },
+            {
+              id: 'createdAt',
+              header: 'Created',
+              accessor: 'createdAtSort',
+              sortable: true,
+              cellRenderer: (_value, row) => String((row as { createdAt: string }).createdAt),
+            },
             {
               id: 'type',
               header: 'Type',

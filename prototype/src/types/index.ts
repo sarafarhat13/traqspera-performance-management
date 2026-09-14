@@ -66,6 +66,9 @@ export interface ReviewTemplate {
   description: string
   questions: Question[]
   isPrebuilt?: boolean
+  createdBy?: string
+  /** ISO date (YYYY-MM-DD) */
+  createdAt?: string
 }
 
 export interface ReviewCycle {

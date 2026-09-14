@@ -217,7 +217,152 @@ export function reorderWorkflowStep(steps: WorkflowStep[], id: string, direction
   return next.map((s, i) => ({ ...s, order: i }))
 }
 
-function isWorkflowStepComplete(step: WorkflowStep, review: PerformanceReview): boolean {
+export type WorkflowStepState = 'complete' | 'current' | 'pending'
+
+export type WorkflowReviewStage =
+  | 'not_started'
+  | 'employee_review'
+  | 'manager_review'
+  | 'employee_acknowledgment'
+
+export const WORKFLOW_REVIEW_STAGE_LABELS: Record<WorkflowReviewStage | 'complete', string> = {
+  not_started: 'Not started',
+  employee_review: 'Employee review',
+  manager_review: 'Manager Review',
+  employee_acknowledgment: 'Employee Acknowledgment',
+  complete: 'Complete',
+}
+
+export function workflowReviewStageBadgeColor(
+  stage: WorkflowReviewStage | 'complete',
+): 'primary' | 'warning' | 'success' | 'tertiary' | 'secondary' {
+  switch (stage) {
+    case 'complete':
+      return 'success'
+    case 'employee_review':
+    case 'employee_acknowledgment':
+      return 'warning'
+    case 'manager_review':
+      return 'primary'
+    case 'not_started':
+      return 'tertiary'
+    default:
+      return 'secondary'
+  }
+}
+
+const WORKFLOW_STEP_STATUS_LABELS: Partial<Record<WorkflowStepType, string>> = {
+  employee: WORKFLOW_REVIEW_STAGE_LABELS.employee_review,
+  manager: WORKFLOW_REVIEW_STAGE_LABELS.manager_review,
+  rating_scale: WORKFLOW_REVIEW_STAGE_LABELS.manager_review,
+  acknowledgement: WORKFLOW_REVIEW_STAGE_LABELS.employee_acknowledgment,
+}
+
+export function getWorkflowStepCardStatusLabel(
+  stepType: WorkflowStepType,
+  state: WorkflowStepState,
+): string {
+  if (state === 'complete') return WORKFLOW_REVIEW_STAGE_LABELS.complete
+  if (state === 'pending') return WORKFLOW_REVIEW_STAGE_LABELS.not_started
+  return WORKFLOW_STEP_STATUS_LABELS[stepType] ?? WORKFLOW_REVIEW_STAGE_LABELS.not_started
+}
+
+export function getReviewWorkflowStage(
+  cycle: ReviewCycle,
+  review: PerformanceReview,
+): WorkflowReviewStage | 'complete' {
+  switch (review.status) {
+    case 'not_started':
+      return 'not_started'
+    case 'self_eval_pending':
+      return 'employee_review'
+    case 'manager_pending':
+      return 'manager_review'
+    case 'acknowledgement_pending':
+      return 'employee_acknowledgment'
+    case 'completed':
+      return 'complete'
+    default: {
+      const step = getCurrentWorkflowStep(cycle, review)
+      if (!step) return 'complete'
+      switch (step.type) {
+        case 'employee':
+          return 'employee_review'
+        case 'manager':
+        case 'rating_scale':
+          return 'manager_review'
+        case 'acknowledgement':
+          return 'employee_acknowledgment'
+        default:
+          return 'not_started'
+      }
+    }
+  }
+}
+
+export function getCycleWorkflowStageCards(cycle: ReviewCycle): WorkflowReviewStage[] {
+  const workflow = cycle.workflow ?? workflowFromLegacy(cycle.includesSelfEvaluation)
+  const enabled = getEnabledWorkflowSteps(workflow)
+  const cards: WorkflowReviewStage[] = ['not_started']
+
+  if (enabled.some((step) => step.type === 'employee')) {
+    cards.push('employee_review')
+  }
+  if (enabled.some((step) => step.type === 'manager' || step.type === 'rating_scale')) {
+    cards.push('manager_review')
+  }
+  if (enabled.some((step) => step.type === 'acknowledgement')) {
+    cards.push('employee_acknowledgment')
+  }
+
+  return cards
+}
+
+export function computeCycleWorkflowStageCounts(
+  cycle: ReviewCycle,
+  reviews: PerformanceReview[],
+): Record<WorkflowReviewStage, number> {
+  const counts: Record<WorkflowReviewStage, number> = {
+    not_started: 0,
+    employee_review: 0,
+    manager_review: 0,
+    employee_acknowledgment: 0,
+  }
+
+  for (const review of reviews) {
+    if (review.cycleId !== cycle.id) continue
+    const stage = getReviewWorkflowStage(cycle, review)
+    if (stage === 'complete') continue
+    counts[stage] += 1
+  }
+
+  return counts
+}
+
+export function workflowStepDisplayLabel(
+  type: WorkflowStepType,
+  ratingScaleMax = 5,
+): string {
+  switch (type) {
+    case 'employee':
+      return WORKFLOW_STEP_LABELS.employee
+    case 'manager':
+      return WORKFLOW_STEP_LABELS.manager
+    case 'acknowledgement':
+      return WORKFLOW_STEP_LABELS.acknowledgement
+    case 'rating_scale':
+      return `${ratingScaleMax}-Point Scale Rating`
+    default:
+      return 'Scale Rating'
+  }
+}
+
+export function workflowStepIcon(type: WorkflowStepType): string {
+  if (type === 'rating_scale') return RATING_SCALE_STEP_META.icon
+  return WORKFLOW_STEP_META[type as CoreWorkflowStepType].icon
+}
+
+export function isWorkflowStepComplete(step: WorkflowStep, review: PerformanceReview): boolean {
   switch (step.type) {
     case 'employee':
       return Boolean(review.selfEval?.completedAt)
@@ -230,6 +375,25 @@ function isWorkflowStepComplete(step: WorkflowStep, review: PerformanceReview): 
     default:
       return false
   }
+}
+
+export function getWorkflowStepStates(
+  cycle: ReviewCycle,
+  review: PerformanceReview,
+): { step: WorkflowStep; state: WorkflowStepState }[] {
+  const workflow = cycle.workflow ?? workflowFromLegacy(cycle.includesSelfEvaluation)
+  const enabled = getEnabledWorkflowSteps(workflow)
+  const current = getCurrentWorkflowStep(cycle, review)
+
+  return enabled.map((step) => {
+    if (review.status === 'completed' || isWorkflowStepComplete(step, review)) {
+      return { step, state: 'complete' as const }
+    }
+    if (current?.id === step.id) {
+      return { step, state: 'current' as const }
+    }
+    return { step, state: 'pending' as const }
+  })
 }
 
 /** First enabled workflow step that is not yet complete for this review. */

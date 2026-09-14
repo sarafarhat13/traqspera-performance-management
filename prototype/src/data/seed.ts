@@ -119,6 +119,8 @@ export const seedTemplates: ReviewTemplate[] = [
     name: 'Annual Performance Review',
     description: 'Standard year-end review with accomplishments, goals, and development focus.',
     questions: annualQuestions,
+    createdBy: 'Hannah Reed',
+    createdAt: '2024-02-10',
   },
   {
     id: 'tpl-new-hire',
@@ -126,6 +128,8 @@ export const seedTemplates: ReviewTemplate[] = [
     description: 'Early onboarding conversation to support new employees in their first weeks.',
     questions: newHireCheckInQuestions,
     isPrebuilt: true,
+    createdBy: 'Traqspera',
+    createdAt: '2023-06-01',
   },
   {
     id: 'tpl-90-days',
@@ -133,6 +137,8 @@ export const seedTemplates: ReviewTemplate[] = [
     description: 'Structured check-in at the 90-day mark to review progress, goals, and support needs.',
     questions: ninetyDayQuestions,
     isPrebuilt: true,
+    createdBy: 'Traqspera',
+    createdAt: '2023-06-01',
   },
 ]
 

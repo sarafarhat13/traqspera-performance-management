@@ -124,6 +124,13 @@ body {
   background-color: #ffffff;
 }
 
+/* Review group members — fullscreen modal body scroll */
+.review-group-members-modal-content {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
 modus-wc-card [slot='title'] {
   display: flex;
   align-items: center;

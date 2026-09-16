@@ -5,7 +5,15 @@ import {
   ModusWcIcon,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
-import type { Person, RatingScaleConfig, ReviewTemplate, WorkflowStep, WorkflowStepType } from '../types'
+import type {
+  Person,
+  RatingScaleConfig,
+  ReviewEmployeeGroup,
+  ReviewTemplate,
+  WorkflowStep,
+  WorkflowStepType,
+} from '../types'
+import { reviewerPreviewLabel } from '../utils/reviewer'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { formatLongDate } from '../utils/status'
 import { TagBadge } from './TagBadge'
@@ -22,6 +30,9 @@ type LaunchCycleReviewSummaryProps = {
   workflow: WorkflowStep[]
   ratingScale: RatingScaleConfig
   selectedEmployees: Person[]
+  attachedGroups?: ReviewEmployeeGroup[]
+  conflictsWereResolved?: boolean
+  getPerson?: (id: string) => Person | undefined
 }
 
 const TIMELINE_BULLET_CLASS: Record<WorkflowStepType, string> = {
@@ -75,6 +86,9 @@ export function LaunchCycleReviewSummary({
   workflow,
   ratingScale,
   selectedEmployees,
+  attachedGroups = [],
+  conflictsWereResolved = false,
+  getPerson,
 }: LaunchCycleReviewSummaryProps) {
   const timelineSteps = getEnabledWorkflowSteps(workflow)
   const ratingEnabled = workflow.some((step) => step.enabled && step.type === 'rating_scale')
@@ -194,6 +208,39 @@ export function LaunchCycleReviewSummary({
         </ol>
       </ModusWcCard>
 
+      {attachedGroups.length > 0 ? (
+        <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
+          <SummaryCardHeader icon="people_group" title="Review groups" />
+          <ul className="tq-launch-review__member-list">
+            {attachedGroups.map((group) => {
+              const previewPerson =
+                (group.memberIds[0] && getPerson?.(group.memberIds[0])) ??
+                selectedEmployees[0]
+              const reviewerLabel = previewPerson
+                ? reviewerPreviewLabel(
+                    previewPerson,
+                    group.defaultReviewerAssignment,
+                    getPerson ?? (() => undefined),
+                  )
+                : '—'
+              return (
+                <li key={group.id} className="tq-launch-review__member-row">
+                  <div className="min-w-0 flex-1">
+                    <ModusWcTypography hierarchy="p" size="sm" weight="semibold" label={group.name} />
+                    <ModusWcTypography
+                      hierarchy="p"
+                      size="xs"
+                      customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                      label={`${group.memberIds.length} employees · ${reviewerLabel}`}
+                    />
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </ModusWcCard>
+      ) : null}
+
       <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
         <div className="tq-launch-review__card-header tq-launch-review__card-header--split">
           <div className="flex min-w-0 items-center gap-2">
@@ -269,6 +316,14 @@ export function LaunchCycleReviewSummary({
             customClass="text-[var(--modus-wc-color-primary)]"
             label="Ready to Start Review Cycle"
           />
+          {conflictsWereResolved ? (
+            <ModusWcTypography
+              hierarchy="p"
+              size="xs"
+              customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+              label="All reviewer assignments are confirmed."
+            />
+          ) : null}
           <ModusWcTypography
             hierarchy="p"
             size="xs"

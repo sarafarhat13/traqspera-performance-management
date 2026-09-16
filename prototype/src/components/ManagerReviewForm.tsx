@@ -15,7 +15,13 @@ import {
 } from '../utils/workflow'
 import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
+import { seedQuestionAnswerKeys } from '../utils/questionReview'
 import { PerformanceRatingScaleField } from './PerformanceRatingScaleField'
+import {
+  ReviewQuestionMeta,
+  ReviewQuestionScoringInputs,
+  ReviewQuestionScoringSummary,
+} from './ReviewQuestionScoring'
 
 const AUTO_SAVE_MS = 800
 
@@ -52,13 +58,9 @@ export function ManagerReviewForm() {
   const includesRatingScale = cycle ? cycleIncludesRatingScale(cycle) : false
   const ratingScale = cycle?.ratingScale
 
-  const [answers, setAnswers] = useState<Record<string, string>>(() => {
-    const seed: Record<string, string> = {}
-    template?.questions.forEach((q) => {
-      seed[q.id] = review?.managerReview?.answers?.[q.id] ?? ''
-    })
-    return seed
-  })
+  const [answers, setAnswers] = useState<Record<string, string>>(() =>
+    seedQuestionAnswerKeys(template?.questions ?? [], review?.managerReview?.answers),
+  )
 
   const [overallRating, setOverallRating] = useState(() =>
     readStoredRating(review?.managerReview?.answers),
@@ -100,10 +102,7 @@ export function ManagerReviewForm() {
 
   useEffect(() => {
     if (!review || !template) return
-    const seed: Record<string, string> = {}
-    template.questions.forEach((q) => {
-      seed[q.id] = review.managerReview?.answers?.[q.id] ?? ''
-    })
+    const seed = seedQuestionAnswerKeys(template.questions, review.managerReview?.answers)
     if (includesRatingScale) {
       const rating = readStoredRating(review.managerReview?.answers)
       if (rating > 0) {
@@ -111,6 +110,7 @@ export function ManagerReviewForm() {
       }
     }
     lastPersistedRef.current = seed
+    setAnswers(seed)
     setDraftDirty(false)
     setDraftSaveState('idle')
   }, [review?.id, template, includesRatingScale])
@@ -188,20 +188,37 @@ export function ManagerReviewForm() {
 
             {template.questions.map((q, index) => (
               <div key={q.id} className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <div className="flex flex-col gap-1 rounded-lg bg-[var(--modus-wc-color-base-100)] p-3">
+                <div className="flex flex-col gap-2 rounded-lg bg-[var(--modus-wc-color-base-100)] p-3">
                   <ModusWcTypography hierarchy="p" size="xs" weight="semibold" label="Employee response" />
+                  <ModusWcTypography hierarchy="p" size="sm" weight="semibold" label={q.label} />
+                  <ReviewQuestionScoringSummary
+                    question={q}
+                    answers={review.selfEval?.answers}
+                    ratingScale={ratingScale}
+                  />
                   <ModusWcTypography
                     hierarchy="p"
                     size="sm"
                     label={review.selfEval?.answers?.[q.id] ?? 'Not submitted'}
                   />
                 </div>
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-2">
                   <ModusWcTypography
                     hierarchy="p"
                     size="sm"
                     weight="semibold"
                     label={`${index + 1}. Manager feedback${q.required ? ' *' : ''}`}
+                  />
+                  <ReviewQuestionMeta question={q} answers={answers} />
+                  <ReviewQuestionScoringInputs
+                    question={q}
+                    ratingScale={ratingScale}
+                    answers={answers}
+                    fieldLabelPrefix="Manager"
+                    onAnswersChange={(next) => {
+                      markDirty()
+                      setAnswers(next)
+                    }}
                   />
                   <ModusWcTextarea
                     rows={3}

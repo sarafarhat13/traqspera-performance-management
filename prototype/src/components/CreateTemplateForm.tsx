@@ -244,7 +244,7 @@ export function CreateTemplateForm({
                     }
                   />
                   <ModusWcCheckbox
-                    label="Enable weight (value set during review)"
+                    label="Default weight % (reviewers can adjust during the review)"
                     size="sm"
                     value={Boolean(q.enableWeight)}
                     onInputChange={(e) =>
@@ -252,7 +252,7 @@ export function CreateTemplateForm({
                     }
                   />
                   <ModusWcCheckbox
-                    label="Enable rating scale (value set during review)"
+                    label="Highlight per-question rating in template (reviewers always set a rating)"
                     size="sm"
                     value={Boolean(q.enableRatingScale)}
                     onInputChange={(e) =>

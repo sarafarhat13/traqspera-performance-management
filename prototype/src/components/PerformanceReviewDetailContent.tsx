@@ -5,6 +5,7 @@ import { formatDate, formatReviewPeriod } from '../utils/status'
 import { MANAGER_OVERALL_RATING_KEY } from '../utils/workflow'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { CurrentStageDueLine } from './CurrentStageDueLine'
+import { ReviewQuestionScoringSummary } from './ReviewQuestionScoring'
 import { ReviewWorkflowStepCards } from './ReviewWorkflowStepCards'
 
 const REVIEW_DETAIL_TAB_LABELS = {
@@ -117,8 +118,13 @@ export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string 
           {review.selfEval ? (
             <div className="flex flex-col gap-4">
               {template.questions.map((q) => (
-                <div key={q.id}>
+                <div key={q.id} className="flex flex-col gap-1">
                   <ModusWcTypography hierarchy="p" size="sm" weight="semibold" label={q.label} />
+                  <ReviewQuestionScoringSummary
+                    question={q}
+                    answers={review.selfEval?.answers}
+                    ratingScale={cycle?.ratingScale}
+                  />
                   <ModusWcTypography
                     hierarchy="p"
                     size="sm"
@@ -161,8 +167,13 @@ export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string 
                   </div>
                 )}
               {template.questions.map((q) => (
-                <div key={q.id}>
+                <div key={q.id} className="flex flex-col gap-1">
                   <ModusWcTypography hierarchy="p" size="sm" weight="semibold" label={q.label} />
+                  <ReviewQuestionScoringSummary
+                    question={q}
+                    answers={review.managerReview?.answers}
+                    ratingScale={cycle?.ratingScale}
+                  />
                   <ModusWcTypography
                     hierarchy="p"
                     size="sm"
@@ -193,6 +204,11 @@ export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string 
                 <div className="rounded-lg bg-[var(--modus-wc-color-base-100)] p-3">
                   <ModusWcTypography hierarchy="p" size="xs" weight="semibold" label="Employee" />
                   <ModusWcTypography hierarchy="p" size="sm" weight="semibold" label={q.label} />
+                  <ReviewQuestionScoringSummary
+                    question={q}
+                    answers={review.selfEval?.answers}
+                    ratingScale={cycle?.ratingScale}
+                  />
                   <ModusWcTypography
                     hierarchy="p"
                     size="sm"
@@ -202,6 +218,11 @@ export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string 
                 <div className="rounded-lg border border-[var(--modus-wc-color-base-200)] p-3">
                   <ModusWcTypography hierarchy="p" size="xs" weight="semibold" label="Manager" />
                   <ModusWcTypography hierarchy="p" size="sm" weight="semibold" label={q.label} />
+                  <ReviewQuestionScoringSummary
+                    question={q}
+                    answers={review.managerReview?.answers}
+                    ratingScale={cycle?.ratingScale}
+                  />
                   <ModusWcTypography
                     hierarchy="p"
                     size="sm"

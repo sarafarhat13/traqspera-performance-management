@@ -50,6 +50,7 @@ export function navPageFromView(
   }
 
   if (view === 'templates' || view === 'template_editor') return 'p_perf_templates'
+  if (view === 'review_groups') return 'p_perf_review_groups'
   if (view === 'launch_cycle_wizard' || view === 'cycle_details') return 'p_perf_dashboard'
   if (view === 'employee_details') {
     return selectedCycleId ? 'p_perf_dashboard' : 'p_perf_team'
@@ -88,6 +89,8 @@ export function navTargetFromNavPage(page: TraqsperaNavPage, activePersonId: str
       return { view: 'hr_dashboard' }
     case 'p_perf_templates':
       return { view: 'templates' }
+    case 'p_perf_review_groups':
+      return { view: 'review_groups' }
     case 'p_perf_team':
       return { view: 'manager_dashboard' }
     default:

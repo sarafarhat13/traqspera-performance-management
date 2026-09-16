@@ -160,6 +160,14 @@ export function HRAdminDashboard() {
               variant="outlined"
               color="tertiary"
               size="sm"
+              onButtonClick={() => setView('review_groups')}
+            >
+              Review groups
+            </ModusWcButton>
+            <ModusWcButton
+              variant="outlined"
+              color="tertiary"
+              size="sm"
               onButtonClick={() => setView('templates')}
             >
               Templates

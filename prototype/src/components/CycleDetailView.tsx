@@ -23,7 +23,7 @@ import {
   createTableActionButton,
   createWorkflowReviewStageBadge,
 } from '../utils/modusTableCells'
-import { reviewReviewerDisplayName } from '../utils/reviewer'
+import { reviewReviewerDisplayName, reviewerPreviewLabel } from '../utils/reviewer'
 import {
   costCenterOptionsFromPeople,
   countActiveDashboardFilters,
@@ -49,6 +49,7 @@ export function CycleDetailView() {
     getCycle,
     getTemplate,
     getPerson,
+    getReviewGroup,
     selectCycle,
     updateReviewManager,
     updateCycle,
@@ -77,6 +78,13 @@ export function CycleDetailView() {
   )
 
   const template = cycle ? getTemplate(cycle.templateId) : undefined
+
+  const cycleAttachedGroups = useMemo(() => {
+    if (!cycle?.attachedGroupIds?.length) return []
+    return cycle.attachedGroupIds
+      .map((id) => getReviewGroup(id))
+      .filter((group): group is NonNullable<typeof group> => Boolean(group))
+  }, [cycle?.attachedGroupIds, getReviewGroup])
 
   const cyclePeople = useMemo(() => {
     if (!cycle) return [] as Person[]
@@ -418,6 +426,54 @@ export function CycleDetailView() {
         </ModusWcCard>
 
         <CycleWorkflowStageCards cycle={cycle} reviews={state.reviews} />
+
+        {cycleAttachedGroups.length > 0 ? (
+          <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
+            <div slot="title" className="flex w-full min-w-0 items-center gap-2 mb-4">
+              <ModusWcIcon name="people_group" decorative />
+              <ModusWcTypography
+                hierarchy="h4"
+                size="md"
+                weight="semibold"
+                label="Review groups in this cycle"
+              />
+            </div>
+            <ul className="flex list-none flex-col gap-2 p-0">
+              {cycleAttachedGroups.map((group) => {
+                const previewPerson =
+                  (group.memberIds[0] ? getPerson(group.memberIds[0]) : undefined) ??
+                  cyclePeople[0]
+                const reviewerLabel = previewPerson
+                  ? reviewerPreviewLabel(
+                      previewPerson,
+                      group.defaultReviewerAssignment,
+                      getPerson,
+                    )
+                  : '—'
+                const membersInCycle = group.memberIds.filter((id) =>
+                  cycle.employeeIds.includes(id),
+                ).length
+                return (
+                  <li key={group.id}>
+                    <ModusWcTypography hierarchy="p" size="sm" weight="semibold" label={group.name} />
+                    <ModusWcTypography
+                      hierarchy="p"
+                      size="xs"
+                      customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                      label={`${membersInCycle} employees in cycle · ${reviewerLabel}`}
+                    />
+                  </li>
+                )
+              })}
+            </ul>
+            <ModusWcTypography
+              hierarchy="p"
+              size="xs"
+              customClass="mt-3 text-[var(--modus-wc-color-base-content-low-contrast)]"
+              label="The participant list below includes all employees in this cycle, including those added individually."
+            />
+          </ModusWcCard>
+        ) : null}
 
         <ModusWcCard bordered padding="compact" customClass={`${TRAQ_CARD_CLASS} tq-table-card`}>
           <div slot="title" className="flex w-full min-w-0 items-center gap-2 mb-4">

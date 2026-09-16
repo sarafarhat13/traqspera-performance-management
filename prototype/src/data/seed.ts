@@ -3,6 +3,7 @@ import type {
   PerformanceReview,
   Question,
   ReviewCycle,
+  ReviewEmployeeGroup,
   ReviewTemplate,
   RatingScaleConfig,
   WorkflowStep,
@@ -20,11 +21,13 @@ function workflowWithDeadlines(
   }))
 }
 
-const defaultRatingScale: RatingScaleConfig = {
+export const DEFAULT_RATING_SCALE: RatingScaleConfig = {
   min: 1,
   max: 5,
   labels: ['Unsatisfactory', 'Needs improvement', 'Meets expectations', 'Exceeds', 'Outstanding'],
 }
+
+const defaultRatingScale = DEFAULT_RATING_SCALE
 
 const annualQuestions: Question[] = [
   { id: 'q1', label: 'What were your key accomplishments this period?', required: true, weight: 25, order: 1, type: 'textarea' },
@@ -570,6 +573,36 @@ export const seedPeople: Person[] = SEED_PEOPLE_BASE.map((person) => ({
     person.supervisorId ??
     (person.role === 'employee' ? defaultSupervisorId(person) : undefined),
 }))
+
+export const seedReviewGroups: ReviewEmployeeGroup[] = [
+  {
+    id: 'rgrp-mgr1-core',
+    name: 'Mike Chen — Core Team',
+    description: 'Direct reports used for field operations reviews',
+    memberIds: [...MGR1_CORE_TEAM_EMPLOYEE_IDS],
+    defaultReviewerAssignment: { type: 'crew_manager' },
+    createdBy: 'HR Admin',
+    createdAt: '2025-01-10',
+  },
+  {
+    id: 'rgrp-electrical-north',
+    name: 'Electrical — North Region',
+    description: 'Northern electrical crew cohort',
+    memberIds: ['emp-1', 'emp-2', 'emp-3', 'emp-8', 'emp-9'],
+    defaultReviewerAssignment: { type: 'supervisor' },
+    createdBy: 'HR Admin',
+    createdAt: '2025-02-01',
+  },
+  {
+    id: 'rgrp-project-beta',
+    name: 'Project Beta',
+    description: 'Cross-functional project team',
+    memberIds: ['emp-4', 'emp-5', 'emp-10', 'emp-11'],
+    defaultReviewerAssignment: { type: 'custom', customManagerId: 'mgr-2' },
+    createdBy: 'HR Admin',
+    createdAt: '2025-02-15',
+  },
+]
 
 const cycle2025Reviews = create2025AnnualReviews(seedPeople)
 

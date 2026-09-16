@@ -8,6 +8,8 @@ import { usePerformance } from '../context/PerformanceContext'
 import { readInputString } from '../utils/modusFormEvents'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { PageBackButton } from './PageBackButton'
+import { seedQuestionAnswerKeys } from '../utils/questionReview'
+import { ReviewQuestionMeta, ReviewQuestionScoringInputs } from './ReviewQuestionScoring'
 import { SelfEvaluationFooter } from './SelfEvaluationFooter'
 
 type EmployeeSelfEvalPanelProps = {
@@ -22,14 +24,9 @@ export function EmployeeSelfEvalPanel({ reviewId, onBack, onSubmitted }: Employe
   const cycle = review ? getCycle(review.cycleId) : undefined
   const template = cycle ? getTemplate(cycle.templateId) : undefined
 
-  const [answers, setAnswers] = useState<Record<string, string>>(() => {
-    if (review?.selfEval?.answers) return { ...review.selfEval.answers }
-    const seed: Record<string, string> = {}
-    template?.questions.forEach((q) => {
-      seed[q.id] = ''
-    })
-    return seed
-  })
+  const [answers, setAnswers] = useState<Record<string, string>>(() =>
+    seedQuestionAnswerKeys(template?.questions ?? [], review?.selfEval?.answers),
+  )
 
   if (!review || !template) {
     return (
@@ -63,12 +60,21 @@ export function EmployeeSelfEvalPanel({ reviewId, onBack, onSubmitted }: Employe
         <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
           <div className="flex flex-col gap-4">
             {template.questions.map((q, index) => (
-              <div key={q.id} className="flex flex-col gap-1">
-                <ModusWcTypography
-                  hierarchy="p"
-                  size="sm"
-                  weight="semibold"
-                  label={`${index + 1}. ${q.label}${q.required ? ' *' : ''}`}
+              <div key={q.id} className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1">
+                  <ModusWcTypography
+                    hierarchy="p"
+                    size="sm"
+                    weight="semibold"
+                    label={`${index + 1}. ${q.label}${q.required ? ' *' : ''}`}
+                  />
+                  <ReviewQuestionMeta question={q} answers={answers} />
+                </div>
+                <ReviewQuestionScoringInputs
+                  question={q}
+                  ratingScale={cycle?.ratingScale}
+                  answers={answers}
+                  onAnswersChange={setAnswers}
                 />
                 <ModusWcTextarea
                   rows={state.layoutMode === 'mobile' ? 4 : 3}

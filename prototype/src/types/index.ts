@@ -25,6 +25,7 @@ export type ViewId =
   | 'employee_details'
   | 'templates'
   | 'template_editor'
+  | 'review_groups'
   | 'launch_cycle_wizard'
   | 'employee_dashboard'
   | 'self_eval'
@@ -86,8 +87,22 @@ export interface ReviewCycle {
   ratingScale?: RatingScaleConfig
   status: CycleStatus
   employeeIds: string[]
+  /** Library groups attached when the cycle was configured */
+  attachedGroupIds?: string[]
   /** Saved reviewer picks when cycle is still a draft */
   reviewerAssignments?: Record<string, EmployeeReviewerAssignment>
+}
+
+export interface ReviewEmployeeGroup {
+  id: string
+  name: string
+  description?: string
+  memberIds: string[]
+  defaultReviewerAssignment: EmployeeReviewerAssignment
+  createdBy?: string
+  /** ISO date (YYYY-MM-DD) */
+  createdAt?: string
+  updatedAt?: string
 }
 
 export type ReviewerRoleType = 'crew_manager' | 'supervisor' | 'custom'
@@ -143,6 +158,7 @@ export interface AppState {
   editingTemplateId: string | null
   layoutMode: 'desktop' | 'mobile'
   templates: ReviewTemplate[]
+  reviewGroups: ReviewEmployeeGroup[]
   cycles: ReviewCycle[]
   reviews: PerformanceReview[]
   people: Person[]

@@ -10,6 +10,7 @@ import { AcknowledgementScreen } from './components/AcknowledgementScreen'
 import { ManagerDashboard } from './components/ManagerDashboard'
 import { ManagerReviewForm } from './components/ManagerReviewForm'
 import { LaunchCycleWizard } from './components/LaunchCycleWizard'
+import { ReviewGroupsAdmin } from './components/ReviewGroupsAdmin'
 import { CycleDetailView } from './components/CycleDetailView'
 import { EmployeeDetails } from './components/EmployeeDetails'
 import { PerformanceReviewDetails } from './components/PerformanceReviewDetails'
@@ -71,6 +72,8 @@ function PerformanceApp() {
         return <TemplateList />
       case 'template_editor':
         return <TemplateEditor />
+      case 'review_groups':
+        return <ReviewGroupsAdmin />
       case 'launch_cycle_wizard':
         return <LaunchCycleWizard />
       case 'employee_dashboard':

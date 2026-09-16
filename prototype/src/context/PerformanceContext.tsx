@@ -12,6 +12,7 @@ import {
   DEPRECATED_TEMPLATE_IDS,
   seedCycles,
   seedPeople,
+  seedReviewGroups,
   seedReviews,
   seedTemplates,
 } from '../data/seed'
@@ -22,6 +23,7 @@ import type {
   PerformanceReview,
   Person,
   ReviewCycle,
+  ReviewEmployeeGroup,
   ReviewTemplate,
   ReviewStatus,
   ViewId,
@@ -36,7 +38,7 @@ import { resolveManagerDashboardPersonId } from '../utils/managerDashboardContex
 
 const STORAGE_KEY = 'traqspera-performance-management-v3'
 /** Bump when bundled seed cycles/reviews change so stale localStorage is refreshed. */
-const SEED_VERSION = 9
+const SEED_VERSION = 10
 
 const DEFAULT_ACTIVE_PERSON_ID = 'mgr-1'
 
@@ -44,7 +46,7 @@ const SEED_CYCLE_IDS = new Set(seedCycles.map((cycle) => cycle.id))
 
 type PersistedState = Pick<
   AppState,
-  'templates' | 'cycles' | 'reviews' | 'activePersonId'
+  'templates' | 'reviewGroups' | 'cycles' | 'reviews' | 'activePersonId'
 > & {
   seedVersion?: number
 }
@@ -87,6 +89,16 @@ function resolveTemplates(persisted?: ReviewTemplate[]): ReviewTemplate[] {
   )
   const custom = stored.filter((t) => !seedIds.has(t.id))
   return [...seedTemplates, ...custom].map(normalizeTemplate)
+}
+
+function resolveReviewGroups(persisted: Partial<PersistedState>): ReviewEmployeeGroup[] {
+  const seedIds = new Set(seedReviewGroups.map((g) => g.id))
+  if (shouldRefreshSeedData(persisted)) {
+    const custom = (persisted.reviewGroups ?? []).filter((g) => !seedIds.has(g.id))
+    return [...seedReviewGroups, ...custom]
+  }
+  const stored = persisted.reviewGroups ?? []
+  return stored.length > 0 ? stored : seedReviewGroups
 }
 
 function shouldRefreshSeedData(persisted: Partial<PersistedState>): boolean {
@@ -196,6 +208,8 @@ interface PerformanceContextValue {
   startNewTemplate: () => void
   saveTemplate: (template: ReviewTemplate, options?: { silent?: boolean }) => void
   deleteTemplate: (id: string) => void
+  saveReviewGroup: (group: ReviewEmployeeGroup) => void
+  deleteReviewGroup: (id: string) => void
   launchCycle: (
     cycle: Omit<ReviewCycle, 'id' | 'status'>,
     options?: { reviewerAssignments?: Record<string, EmployeeReviewerAssignment> },
@@ -212,6 +226,7 @@ interface PerformanceContextValue {
   updateReviewManager: (reviewId: string, managerId: string) => void
   getPerson: (id: string) => AppState['people'][0] | undefined
   getTemplate: (id: string) => ReviewTemplate | undefined
+  getReviewGroup: (id: string) => ReviewEmployeeGroup | undefined
   getCycle: (id: string) => ReviewCycle | undefined
   getReview: (id: string) => PerformanceReview | undefined
 }
@@ -234,6 +249,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
     editingTemplateId: null,
     layoutMode: 'desktop',
     templates: resolveTemplates(persisted.templates),
+    reviewGroups: resolveReviewGroups(persisted),
     cycles: initialCycles,
     reviews: initialReviews,
     people: seedPeople,
@@ -243,6 +259,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
     const payload: PersistedState = {
       activePersonId: state.activePersonId,
       templates: state.templates,
+      reviewGroups: state.reviewGroups,
       cycles: state.cycles,
       reviews: state.reviews,
       seedVersion: SEED_VERSION,
@@ -363,6 +380,40 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       ...s,
       templates: s.templates.filter((t) => t.id !== id),
       editingTemplateId: s.editingTemplateId === id ? null : s.editingTemplateId,
+    }))
+  }, [])
+
+  const saveReviewGroup = useCallback((group: ReviewEmployeeGroup) => {
+    const today = new Date().toISOString().slice(0, 10)
+    setState((s) => {
+      const existing = s.reviewGroups.find((g) => g.id === group.id)
+      const normalized: ReviewEmployeeGroup = {
+        ...group,
+        name: group.name.trim(),
+        memberIds: [...new Set(group.memberIds)],
+        updatedAt: today,
+        createdAt: existing?.createdAt ?? group.createdAt ?? today,
+        createdBy: existing?.createdBy ?? group.createdBy ?? 'HR Admin',
+      }
+      const reviewGroups = existing
+        ? s.reviewGroups.map((g) => (g.id === group.id ? normalized : g))
+        : [...s.reviewGroups, normalized]
+      return { ...s, reviewGroups }
+    })
+  }, [])
+
+  const deleteReviewGroup = useCallback((id: string) => {
+    setState((s) => ({
+      ...s,
+      reviewGroups: s.reviewGroups.filter((g) => g.id !== id),
+      cycles: s.cycles.map((cycle) =>
+        cycle.attachedGroupIds?.includes(id)
+          ? {
+              ...cycle,
+              attachedGroupIds: cycle.attachedGroupIds.filter((gid) => gid !== id),
+            }
+          : cycle,
+      ),
     }))
   }, [])
 
@@ -535,6 +586,11 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
     [state.templates],
   )
 
+  const getReviewGroup = useCallback(
+    (id: string) => state.reviewGroups.find((g) => g.id === id),
+    [state.reviewGroups],
+  )
+
   const getCycle = useCallback(
     (id: string) => state.cycles.find((c) => c.id === id),
     [state.cycles],
@@ -562,6 +618,8 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       startNewTemplate,
       saveTemplate,
       deleteTemplate,
+      saveReviewGroup,
+      deleteReviewGroup,
       launchCycle,
       saveCycleDraft,
       updateCycle,
@@ -572,6 +630,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       updateReviewManager,
       getPerson,
       getTemplate,
+      getReviewGroup,
       getCycle,
       getReview,
     }),
@@ -591,6 +650,8 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       startNewTemplate,
       saveTemplate,
       deleteTemplate,
+      saveReviewGroup,
+      deleteReviewGroup,
       launchCycle,
       saveCycleDraft,
       updateCycle,
@@ -601,6 +662,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       updateReviewManager,
       getPerson,
       getTemplate,
+      getReviewGroup,
       getCycle,
       getReview,
     ],

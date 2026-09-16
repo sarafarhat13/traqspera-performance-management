@@ -46,6 +46,7 @@ const PERFORMANCE_NAV_CHILDREN: { key: TraqsperaNavPage; label: string }[] = [
   { key: 'p_perf_dashboard', label: 'Reviews Dashboard' },
   { key: 'p_perf_team', label: 'Team Reviews' },
   { key: 'p_perf_templates', label: 'Templates' },
+  { key: 'p_perf_review_groups', label: 'Review Groups' },
 ]
 
 const NAV_SECTIONS: NavSection[] = [

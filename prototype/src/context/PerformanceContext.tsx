@@ -9,6 +9,7 @@ import {
 } from 'react'
 import {
   createEmptyTemplate,
+  DEMO_LISA_FINAL_APPROVAL_CYCLE_ID,
   DEPRECATED_TEMPLATE_IDS,
   seedCycles,
   seedPeople,
@@ -23,6 +24,7 @@ import type {
   PerformanceReview,
   Person,
   ReviewCycle,
+  ReviewCycleCompletionAttestation,
   ReviewEmployeeGroup,
   ReviewTemplate,
   ReviewStatus,
@@ -38,7 +40,7 @@ import { resolveManagerDashboardPersonId } from '../utils/managerDashboardContex
 
 const STORAGE_KEY = 'traqspera-performance-management-v3'
 /** Bump when bundled seed cycles/reviews change so stale localStorage is refreshed. */
-const SEED_VERSION = 10
+const SEED_VERSION = 15
 
 const DEFAULT_ACTIVE_PERSON_ID = 'mgr-1'
 
@@ -105,12 +107,31 @@ function shouldRefreshSeedData(persisted: Partial<PersistedState>): boolean {
   return (persisted.seedVersion ?? 0) < SEED_VERSION
 }
 
+function mergeMissingSeedCycles(stored: ReviewCycle[]): ReviewCycle[] {
+  const storedIds = new Set(stored.map((cycle) => cycle.id))
+  const missing = seedCycles.filter((cycle) => !storedIds.has(cycle.id))
+  return missing.length > 0 ? [...stored, ...missing] : stored
+}
+
+/** Keeps the Lisa final-approval walkthrough cycle active until HR completes it in-session. */
+function pinLisaFinalApprovalDemoCycle(stored: ReviewCycle[]): ReviewCycle[] {
+  const seedDemo = seedCycles.find((cycle) => cycle.id === DEMO_LISA_FINAL_APPROVAL_CYCLE_ID)
+  if (!seedDemo) return stored
+  const hasDemo = stored.some((cycle) => cycle.id === DEMO_LISA_FINAL_APPROVAL_CYCLE_ID)
+  const merged = hasDemo ? stored : [...stored, seedDemo]
+  return merged.map((cycle) =>
+    cycle.id === DEMO_LISA_FINAL_APPROVAL_CYCLE_ID ? { ...seedDemo } : cycle,
+  )
+}
+
 function resolveCycles(persisted: Partial<PersistedState>): ReviewCycle[] {
   if (shouldRefreshSeedData(persisted)) {
     const customCycles = (persisted.cycles ?? []).filter((cycle) => !SEED_CYCLE_IDS.has(cycle.id))
-    return [...seedCycles, ...customCycles].map(normalizeCycle)
+    return pinLisaFinalApprovalDemoCycle([...seedCycles, ...customCycles]).map(normalizeCycle)
   }
-  return (persisted.cycles ?? seedCycles).map(normalizeCycle)
+  const stored = persisted.cycles ?? []
+  if (stored.length === 0) return seedCycles.map(normalizeCycle)
+  return pinLisaFinalApprovalDemoCycle(mergeMissingSeedCycles(stored)).map(normalizeCycle)
 }
 
 function mergeMissingSeedReviews(stored: PerformanceReview[]): PerformanceReview[] {
@@ -119,16 +140,27 @@ function mergeMissingSeedReviews(stored: PerformanceReview[]): PerformanceReview
   return missing.length > 0 ? [...stored, ...missing] : stored
 }
 
+function pinLisaFinalApprovalDemoReviews(stored: PerformanceReview[]): PerformanceReview[] {
+  const demoReviews = seedReviews.filter(
+    (review) => review.cycleId === DEMO_LISA_FINAL_APPROVAL_CYCLE_ID,
+  )
+  if (demoReviews.length === 0) return stored
+  const withoutDemo = stored.filter(
+    (review) => review.cycleId !== DEMO_LISA_FINAL_APPROVAL_CYCLE_ID,
+  )
+  return [...withoutDemo, ...demoReviews]
+}
+
 function resolveReviews(persisted: Partial<PersistedState>): PerformanceReview[] {
   if (shouldRefreshSeedData(persisted)) {
     const customReviews = (persisted.reviews ?? []).filter(
       (review) => !SEED_CYCLE_IDS.has(review.cycleId),
     )
-    return [...seedReviews, ...customReviews]
+    return pinLisaFinalApprovalDemoReviews([...seedReviews, ...customReviews])
   }
   const stored = persisted.reviews ?? seedReviews
   if (stored.length === 0) return seedReviews
-  return mergeMissingSeedReviews(stored)
+  return pinLisaFinalApprovalDemoReviews(mergeMissingSeedReviews(stored))
 }
 
 function loadPersisted(): Partial<PersistedState> {
@@ -210,6 +242,8 @@ interface PerformanceContextValue {
   deleteTemplate: (id: string) => void
   saveReviewGroup: (group: ReviewEmployeeGroup) => void
   deleteReviewGroup: (id: string) => void
+  addEmployeesToReviewGroup: (groupId: string, employeeIds: string[]) => void
+  addEmployeesToCycle: (cycleId: string, employeeIds: string[]) => void
   launchCycle: (
     cycle: Omit<ReviewCycle, 'id' | 'status'>,
     options?: { reviewerAssignments?: Record<string, EmployeeReviewerAssignment> },
@@ -219,6 +253,8 @@ interface PerformanceContextValue {
     options?: { reviewerAssignments?: Record<string, EmployeeReviewerAssignment> },
   ) => void
   updateCycle: (cycleId: string, patch: Pick<ReviewCycle, 'name' | 'dueDate'>) => void
+  setCycleFinalApprover: (cycleId: string, finalApproverId: string | undefined) => void
+  closeReviewCycle: (cycleId: string, attestation: ReviewCycleCompletionAttestation) => boolean
   saveSelfEval: (reviewId: string, answers: Record<string, string>) => void
   saveManagerReview: (reviewId: string, answers: Record<string, string>) => void
   saveManagerReviewDraft: (reviewId: string, answers: Record<string, string>) => void
@@ -417,6 +453,55 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
     }))
   }, [])
 
+  const addEmployeesToReviewGroup = useCallback((groupId: string, employeeIds: string[]) => {
+    const unique = [...new Set(employeeIds)].filter(Boolean)
+    if (unique.length === 0) return
+    const today = new Date().toISOString().slice(0, 10)
+    setState((s) => {
+      const group = s.reviewGroups.find((g) => g.id === groupId)
+      if (!group) return s
+      const memberIds = [...new Set([...group.memberIds, ...unique])]
+      const normalized: ReviewEmployeeGroup = {
+        ...group,
+        memberIds,
+        updatedAt: today,
+      }
+      return {
+        ...s,
+        reviewGroups: s.reviewGroups.map((g) => (g.id === groupId ? normalized : g)),
+      }
+    })
+  }, [])
+
+  const addEmployeesToCycle = useCallback((cycleId: string, employeeIds: string[]) => {
+    const unique = [...new Set(employeeIds)].filter(Boolean)
+    if (unique.length === 0) return
+    setState((s) => {
+      const cycle = s.cycles.find((c) => c.id === cycleId)
+      if (!cycle) return s
+      const toAdd = unique.filter((id) => !cycle.employeeIds.includes(id))
+      if (toAdd.length === 0) return s
+      const updatedCycle: ReviewCycle = {
+        ...cycle,
+        employeeIds: [...cycle.employeeIds, ...toAdd],
+      }
+      const reviews =
+        updatedCycle.status === 'active'
+          ? reviewsForCycleLaunch(
+              updatedCycle,
+              s.reviews,
+              s.people,
+              updatedCycle.reviewerAssignments,
+            )
+          : s.reviews
+      return {
+        ...s,
+        cycles: s.cycles.map((c) => (c.id === cycleId ? updatedCycle : c)),
+        reviews,
+      }
+    })
+  }, [])
+
   const launchCycle = useCallback(
     (
       cycleInput: Omit<ReviewCycle, 'id' | 'status'>,
@@ -485,6 +570,65 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
             : cycle,
         ),
       }))
+    },
+    [],
+  )
+
+  const setCycleFinalApprover = useCallback(
+    (cycleId: string, finalApproverId: string | undefined) => {
+      setState((s) => ({
+        ...s,
+        cycles: s.cycles.map((cycle) => {
+          if (cycle.id !== cycleId) return cycle
+          const nextApprover = finalApproverId || undefined
+          const approverChanged = cycle.finalApproverId !== nextApprover
+          return {
+            ...cycle,
+            finalApproverId: nextApprover,
+            finalApprovalCompletedAt:
+              approverChanged && cycle.status !== 'completed'
+                ? undefined
+                : cycle.finalApprovalCompletedAt,
+          }
+        }),
+      }))
+    },
+    [],
+  )
+
+  const closeReviewCycle = useCallback(
+    (cycleId: string, attestation: ReviewCycleCompletionAttestation): boolean => {
+      const signature = attestation.signature.trim()
+      const signedDate = attestation.signedDate.trim()
+      if (!signature || !signedDate) return false
+
+      let closed = false
+      setState((s) => {
+        const cycle = s.cycles.find((c) => c.id === cycleId)
+        if (!cycle || cycle.status !== 'active') return s
+        if (!cycle.finalApproverId) return s
+        const cycleReviews = s.reviews.filter((r) => r.cycleId === cycleId)
+        if (cycleReviews.length === 0 || !cycleReviews.every((r) => r.status === 'completed')) {
+          return s
+        }
+        closed = true
+        const completedAt = `${signedDate}T12:00:00.000Z`
+        return {
+          ...s,
+          cycles: s.cycles.map((c) =>
+            c.id === cycleId
+              ? {
+                  ...c,
+                  status: 'completed',
+                  finalApprovalCompletedAt: completedAt,
+                  finalApprovalSignature: signature,
+                  finalApprovalSignedDate: signedDate,
+                }
+              : c,
+          ),
+        }
+      })
+      return closed
     },
     [],
   )
@@ -620,9 +764,13 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       deleteTemplate,
       saveReviewGroup,
       deleteReviewGroup,
+      addEmployeesToReviewGroup,
+      addEmployeesToCycle,
       launchCycle,
       saveCycleDraft,
       updateCycle,
+      setCycleFinalApprover,
+      closeReviewCycle,
       saveSelfEval,
       saveManagerReview,
       saveManagerReviewDraft,
@@ -652,9 +800,13 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       deleteTemplate,
       saveReviewGroup,
       deleteReviewGroup,
+      addEmployeesToReviewGroup,
+      addEmployeesToCycle,
       launchCycle,
       saveCycleDraft,
       updateCycle,
+      setCycleFinalApprover,
+      closeReviewCycle,
       saveSelfEval,
       saveManagerReview,
       saveManagerReviewDraft,

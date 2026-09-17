@@ -1,15 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  ModusWcAlert,
   ModusWcButton,
   ModusWcCard,
   ModusWcDate,
+  ModusWcDivider,
   ModusWcIcon,
   ModusWcModal,
   ModusWcProgress,
+  ModusWcSelect,
   ModusWcTextInput,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
+import type { ISelectOption } from '@trimble-oss/moduswebcomponents'
 import { usePerformance } from '../context/PerformanceContext'
+import {
+  canCompleteReviewCycle,
+  cycleParticipantReviewsComplete,
+  finalApproverCandidatePeople,
+} from '../utils/cycleFinalApproval'
 import { computeCycleStats } from '../utils/cycleStats'
 import { readInputString } from '../utils/modusFormEvents'
 import { formatDate, isReviewDateRangeValid } from '../utils/status'
@@ -37,9 +46,11 @@ import {
 import { getReviewWorkflowStage, type WorkflowReviewStage } from '../utils/workflow'
 import { CycleWorkflowStageCards } from './CycleWorkflowStageCards'
 import { PerformanceDashboardFilterBar } from './PerformanceDashboardFilterBar'
+import { ReviewCycleCompleteModal } from './ReviewCycleCompleteModal'
 import type { Person } from '../types'
 
 const CYCLE_EDIT_MODAL_ID = 'cycle-edit-modal'
+const FINAL_APPROVER_UNASSIGNED = ''
 
 export function CycleDetailView() {
   const {
@@ -53,15 +64,20 @@ export function CycleDetailView() {
     selectCycle,
     updateReviewManager,
     updateCycle,
+    setCycleFinalApprover,
   } = usePerformance()
 
   const [editModalOpen, setEditModalOpen] = useState(false)
+  const [closeModalOpen, setCloseModalOpen] = useState(false)
   const [draftName, setDraftName] = useState('')
   const [draftDueDate, setDraftDueDate] = useState('')
+  const [draftFinalApproverId, setDraftFinalApproverId] = useState(FINAL_APPROVER_UNASSIGNED)
   const [filters, setFilters] = useState<DashboardFilters>(() => createDefaultDashboardFilters())
   const [filterFieldsKey, setFilterFieldsKey] = useState(0)
 
   const cycle = state.selectedCycleId ? getCycle(state.selectedCycleId) : undefined
+  /** Cycle details is the HR cycle administration surface in this prototype. */
+  const canManageCycleAdmin = Boolean(cycle)
 
   useEffect(() => {
     setFilters(createDefaultDashboardFilters())
@@ -143,6 +159,7 @@ export function CycleDetailView() {
     if (!cycle) return
     setDraftName(cycle.name)
     setDraftDueDate(cycle.dueDate)
+    setDraftFinalApproverId(cycle.finalApproverId ?? FINAL_APPROVER_UNASSIGNED)
     setEditModalOpen(true)
   }
 
@@ -159,7 +176,13 @@ export function CycleDetailView() {
 
   const handleSaveCycleEdit = () => {
     if (!cycle || !canSaveCycleEdit) return
-    updateCycle(cycle.id, { name: draftName.trim(), dueDate: draftDueDate })
+    if (cycle.status === 'active' || cycle.status === 'draft') {
+      updateCycle(cycle.id, { name: draftName.trim(), dueDate: draftDueDate })
+    }
+    setCycleFinalApprover(
+      cycle.id,
+      draftFinalApproverId === FINAL_APPROVER_UNASSIGNED ? undefined : draftFinalApproverId,
+    )
     closeEditModal()
   }
 
@@ -167,6 +190,29 @@ export function CycleDetailView() {
     () => (cycle ? computeCycleStats(cycle, state.reviews) : null),
     [cycle, state.reviews],
   )
+
+  const finalApproverOptions: ISelectOption[] = useMemo(() => {
+    const candidates = finalApproverCandidatePeople(state.people)
+    return [
+      { label: 'Not assigned', value: FINAL_APPROVER_UNASSIGNED },
+      ...candidates.map((person) => ({ label: `${person.name} (${person.title})`, value: person.id })),
+    ]
+  }, [state.people])
+
+  const finalApproverPerson = cycle?.finalApproverId
+    ? getPerson(cycle.finalApproverId)
+    : undefined
+
+  const reviewsReadyToClose = cycle
+    ? cycleParticipantReviewsComplete(cycle, state.reviews)
+    : false
+
+  const canCompleteCycle =
+    Boolean(cycle) && canCompleteReviewCycle(cycle!, state.reviews)
+
+  const openCompleteCycleModal = () => {
+    setCloseModalOpen(true)
+  }
 
   const tableData = useMemo(() => {
     if (!cycle) return []
@@ -305,6 +351,20 @@ export function CycleDetailView() {
           subtitle={description}
           onBack={handleBackToCycles}
           backAriaLabel="Back to review cycles"
+          actions={
+            canManageCycleAdmin && cycle.status === 'active' ? (
+              <ModusWcButton
+                variant="filled"
+                color="primary"
+                size="sm"
+                disabled={!canCompleteCycle}
+                onButtonClick={openCompleteCycleModal}
+              >
+                <ModusWcIcon name="check_circle" size="xs" decorative />
+                Complete cycle
+              </ModusWcButton>
+            ) : undefined
+          }
         />
 
         <ModusWcModal
@@ -316,28 +376,48 @@ export function CycleDetailView() {
         >
           <span slot="header">Edit review cycle</span>
           <div slot="content" className="flex flex-col gap-3">
-            <ModusWcTextInput
-              label="Review cycle name"
-              size="sm"
-              required
-              value={draftName}
-              onInputChange={(e) => setDraftName(readInputString(e as CustomEvent))}
-            />
-            <ModusWcDate
-              label="End date"
-              size="sm"
-              required
-              value={draftDueDate}
-              onInputChange={(e) => setDraftDueDate(readInputString(e as CustomEvent))}
-            />
-            {!isReviewDateRangeValid(cycle.startDate, draftDueDate) && draftDueDate && (
+            {cycle.status === 'active' || cycle.status === 'draft' ? (
+              <>
+                <ModusWcTextInput
+                  label="Review cycle name"
+                  size="sm"
+                  required
+                  value={draftName}
+                  onInputChange={(e) => setDraftName(readInputString(e as CustomEvent))}
+                />
+                <ModusWcDate
+                  label="End date"
+                  size="sm"
+                  required
+                  value={draftDueDate}
+                  onInputChange={(e) => setDraftDueDate(readInputString(e as CustomEvent))}
+                />
+                {!isReviewDateRangeValid(cycle.startDate, draftDueDate) && draftDueDate && (
+                  <ModusWcTypography
+                    hierarchy="p"
+                    size="sm"
+                    customClass="text-[var(--modus-wc-color-danger)]"
+                    label="End date must be on or after the start date."
+                  />
+                )}
+              </>
+            ) : (
               <ModusWcTypography
                 hierarchy="p"
                 size="sm"
-                customClass="text-[var(--modus-wc-color-danger)]"
-                label="End date must be on or after the start date."
+                customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                label="This cycle is closed. You can update the final approver assignment below."
               />
             )}
+            <ModusWcSelect
+              label="Final approver"
+              size="sm"
+              value={draftFinalApproverId}
+              options={finalApproverOptions}
+              onInputChange={(e) =>
+                setDraftFinalApproverId(readInputString(e as CustomEvent))
+              }
+            />
           </div>
           <div slot="footer" className="flex w-full justify-end gap-2">
             <ModusWcButton variant="outlined" color="tertiary" size="sm" onButtonClick={closeEditModal}>
@@ -367,7 +447,7 @@ export function CycleDetailView() {
             />
             <div className="flex shrink-0 items-center gap-2">
               <CycleStatusBadge status={cycle.status} />
-              {cycle.status === 'active' && (
+              {canManageCycleAdmin && (
                 <ModusWcButton
                   variant="borderless"
                   color="tertiary"
@@ -423,7 +503,77 @@ export function CycleDetailView() {
               />
             </div>
           )}
+
+          <ModusWcDivider customClass="my-4" />
+
+          <div className="flex flex-col gap-3">
+            <ModusWcTypography
+              hierarchy="p"
+              size="sm"
+              weight="semibold"
+              customClass="!m-0"
+              label="Final approval"
+            />
+
+            {cycle.status === 'completed' && (
+              <ModusWcTypography
+                hierarchy="p"
+                size="sm"
+                customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                label={
+                  cycle.finalApprovalSignature && cycle.finalApprovalSignedDate
+                    ? `Signed by ${cycle.finalApprovalSignature} on ${formatDate(cycle.finalApprovalSignedDate)}.`
+                    : finalApproverPerson && cycle.finalApprovalCompletedAt
+                      ? `Closed by ${finalApproverPerson.name} on ${formatDate(cycle.finalApprovalCompletedAt.slice(0, 10))}.`
+                      : 'This cycle is closed.'
+                }
+              />
+            )}
+
+            <ModusWcTypography
+              hierarchy="p"
+              size="sm"
+              customClass={
+                !finalApproverPerson
+                  ? 'text-[var(--modus-wc-color-base-content-low-contrast)]'
+                  : undefined
+              }
+              label={
+                finalApproverPerson
+                  ? `Final approver: ${finalApproverPerson.name}`
+                  : 'Final approver not assigned yet.'
+              }
+            />
+
+            {cycle.status === 'active' && !finalApproverPerson && (
+              <ModusWcAlert
+                variant="warning"
+                alertTitle="Final approver required"
+                alertDescription="Assign a final approver before you can complete this cycle."
+              />
+            )}
+            {cycle.status === 'active' && finalApproverPerson && !reviewsReadyToClose && (
+              <ModusWcAlert
+                variant="warning"
+                alertTitle="Reviews still in progress"
+                alertDescription="All employee reviews must be completed before you can complete this cycle."
+              />
+            )}
+            {cycle.status === 'active' && canCompleteCycle && finalApproverPerson && (
+              <ModusWcAlert
+                variant="info"
+                alertTitle="Ready for final approval"
+                alertDescription={`All reviews are complete. ${finalApproverPerson.name} is the final approver — use Complete cycle above, sign as ${finalApproverPerson.name}, and confirm the date to close this cycle.`}
+              />
+            )}
+          </div>
         </ModusWcCard>
+
+        <ReviewCycleCompleteModal
+          cycle={cycle}
+          isOpen={closeModalOpen}
+          onClose={() => setCloseModalOpen(false)}
+        />
 
         <CycleWorkflowStageCards cycle={cycle} reviews={state.reviews} />
 

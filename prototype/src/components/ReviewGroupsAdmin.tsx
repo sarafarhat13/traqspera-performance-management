@@ -24,10 +24,13 @@ import {
   type ReviewGroupFormValues,
 } from './ReviewGroupFormModal'
 import { ReviewGroupMembersModal } from './ReviewGroupMembersModal'
+import { UnassignedEmployeesModal } from './UnassignedEmployeesModal'
+import { UnassignedEmployeesPanel } from './UnassignedEmployeesPanel'
 
 const GROUP_FORM_MODAL_ID = 'review-group-form-modal'
 const DELETE_GROUP_MODAL_ID = 'review-group-delete-modal'
 const MEMBERS_MODAL_ID = 'review-group-members-modal'
+const UNASSIGNED_MODAL_ID = 'review-group-unassigned-modal'
 
 function createEmptyGroup(): ReviewEmployeeGroup {
   return {
@@ -40,12 +43,21 @@ function createEmptyGroup(): ReviewEmployeeGroup {
 }
 
 export function ReviewGroupsAdmin() {
-  const { state, setView, saveReviewGroup, deleteReviewGroup, getPerson } = usePerformance()
+  const {
+    state,
+    setView,
+    saveReviewGroup,
+    deleteReviewGroup,
+    addEmployeesToReviewGroup,
+    addEmployeesToCycle,
+    getPerson,
+  } = usePerformance()
   const [search, setSearch] = useState('')
   const [formOpen, setFormOpen] = useState(false)
   const [editingGroup, setEditingGroup] = useState<ReviewEmployeeGroup | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ReviewEmployeeGroup | null>(null)
   const [membersGroup, setMembersGroup] = useState<ReviewEmployeeGroup | null>(null)
+  const [unassignedOpen, setUnassignedOpen] = useState(false)
 
   const filteredGroups = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -141,6 +153,7 @@ export function ReviewGroupsAdmin() {
 
   return (
     <TraqsperaPageBody>
+      <div className="flex flex-col gap-3">
       <TraqsperaPageHeader
         title="Review groups"
         subtitle="Create and maintain employee groups with a default reviewer for performance cycles."
@@ -152,6 +165,13 @@ export function ReviewGroupsAdmin() {
             Create group
           </ModusWcButton>
         }
+      />
+
+      <UnassignedEmployeesPanel
+        people={state.people}
+        reviewGroups={state.reviewGroups}
+        cycles={state.cycles}
+        onOpen={() => setUnassignedOpen(true)}
       />
 
       <ModusWcCard bordered padding="compact" customClass={`${TRAQ_CARD_CLASS} tq-table-card`}>
@@ -226,6 +246,17 @@ export function ReviewGroupsAdmin() {
         </div>
       </ModusWcCard>
 
+      <UnassignedEmployeesModal
+        modalId={UNASSIGNED_MODAL_ID}
+        open={unassignedOpen}
+        people={state.people}
+        reviewGroups={state.reviewGroups}
+        cycles={state.cycles}
+        onClose={() => setUnassignedOpen(false)}
+        onAssignToGroup={addEmployeesToReviewGroup}
+        onAssignToCycle={addEmployeesToCycle}
+      />
+
       <ReviewGroupMembersModal
         modalId={MEMBERS_MODAL_ID}
         group={membersGroup}
@@ -277,6 +308,7 @@ export function ReviewGroupsAdmin() {
           </ModusWcButton>
         </div>
       </ModusWcModal>
+      </div>
     </TraqsperaPageBody>
   )
 }

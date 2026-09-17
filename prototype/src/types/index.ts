@@ -91,6 +91,19 @@ export interface ReviewCycle {
   attachedGroupIds?: string[]
   /** Saved reviewer picks when cycle is still a draft */
   reviewerAssignments?: Record<string, EmployeeReviewerAssignment>
+  /** Person who performs final approval and closes the cycle */
+  finalApproverId?: string
+  /** When the final approver closed the cycle (ISO timestamp) */
+  finalApprovalCompletedAt?: string
+  /** Typed signature captured at cycle completion */
+  finalApprovalSignature?: string
+  /** Date of final approval signature (YYYY-MM-DD) */
+  finalApprovalSignedDate?: string
+}
+
+export interface ReviewCycleCompletionAttestation {
+  signature: string
+  signedDate: string
 }
 
 export interface ReviewEmployeeGroup {

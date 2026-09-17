@@ -198,20 +198,84 @@ const BULK_LAST_NAMES = [
   'Walker', 'Young', 'Zimmerman', 'Bennett', 'Cooper', 'Dixon', 'Evans', 'Foster', 'Gray', 'Hughes',
 ]
 
+/** Not in any review group or active/draft cycle — powers the Review Groups unassigned panel. */
+export const UNASSIGNED_DEMO_EMPLOYEE_IDS = [
+  'emp-51',
+  'emp-52',
+  'emp-53',
+  'emp-54',
+  'emp-55',
+] as const
+
+const UNASSIGNED_DEMO_EMPLOYEES: Omit<Person, 'union'>[] = [
+  {
+    id: 'emp-51',
+    name: 'Priya Sharma',
+    role: 'employee',
+    department: 'Operations',
+    costCenter: 'CC-100',
+    title: 'Quality Inspector',
+    managerId: 'mgr-1',
+  },
+  {
+    id: 'emp-52',
+    name: 'Marcus Bell',
+    role: 'employee',
+    department: 'Finance',
+    costCenter: 'CC-200',
+    title: 'Payroll Analyst',
+    managerId: 'mgr-2',
+  },
+  {
+    id: 'emp-53',
+    name: 'Elena Vasquez',
+    role: 'employee',
+    department: 'Information Technology',
+    costCenter: 'CC-400',
+    title: 'Data Analyst',
+    managerId: 'mgr-3',
+  },
+  {
+    id: 'emp-54',
+    name: "Tyler O'Neill",
+    role: 'employee',
+    department: 'Sales',
+    costCenter: 'CC-500',
+    title: 'Inside Sales Representative',
+    managerId: 'mgr-1',
+  },
+  {
+    id: 'emp-55',
+    name: 'Hannah Kim',
+    role: 'employee',
+    department: 'Human Resources',
+    costCenter: 'CC-300',
+    title: 'HR Coordinator',
+    managerId: 'mgr-2',
+  },
+]
+
 function generateAdditionalEmployees(): Omit<Person, 'union'>[] {
-  return Array.from({ length: 30 }, (_, index) => {
+  return Array.from({ length: 35 }, (_, index) => {
     const id = index + 21
     const profile = BULK_EMPLOYEE_PROFILES[index % BULK_EMPLOYEE_PROFILES.length]
+    const first = BULK_FIRST_NAMES[index % BULK_FIRST_NAMES.length]
+    const last = BULK_LAST_NAMES[index % BULK_LAST_NAMES.length]
     return {
       id: `emp-${id}`,
-      name: `${BULK_FIRST_NAMES[index]} ${BULK_LAST_NAMES[index]}`,
+      name: `${first} ${last}`,
       role: 'employee',
       ...profile,
     }
   })
 }
 
+const UNASSIGNED_DEMO_BY_ID = new Map(UNASSIGNED_DEMO_EMPLOYEES.map((person) => [person.id, person]))
+
 const ADDITIONAL_EMPLOYEES = generateAdditionalEmployees().map((person) => {
+  const unassignedDemo = UNASSIGNED_DEMO_BY_ID.get(person.id)
+  if (unassignedDemo) return unassignedDemo
+
   // Demo: keep each manager dashboard (Team Reviews) at 15+ direct-report reviews.
   if (person.id === 'emp-21' || person.id === 'emp-22' || person.id === 'emp-23') {
     return {
@@ -606,6 +670,53 @@ export const seedReviewGroups: ReviewEmployeeGroup[] = [
 
 const cycle2025Reviews = create2025AnnualReviews(seedPeople)
 
+/** Lisa Wong final-approval demo — reset from seed on each load so the walkthrough stays available. */
+export const DEMO_LISA_FINAL_APPROVAL_CYCLE_ID = 'cycle-final-pending'
+
+/** Small roster for “ready for final approval” demo (Lisa Wong closes via signature). */
+const FINAL_APPROVAL_PENDING_EMPLOYEE_IDS = ['emp-8', 'emp-9', 'emp-10', 'emp-11'] as const
+
+function createFinalApprovalPendingReviews(people: Person[]): PerformanceReview[] {
+  const selfEval = {
+    answers: {
+      q1: 'Met quarterly close and reporting deadlines.',
+      q2: 'One automation backlog item carried to next quarter.',
+      q3: 'Partnered with operations and HR on budget planning.',
+      q4: 'Pursuing advanced Excel and FP&A coursework.',
+    },
+    completedAt: '2025-02-14T10:00:00Z',
+  }
+  const managerReview = {
+    answers: {
+      q1: 'Reliable contributor with strong attention to detail.',
+      q2: 'Backlog item is tracked with a clear owner.',
+      q3: 'Effective cross-functional communication.',
+      q4: 'Support continued professional development.',
+    },
+    completedAt: '2025-02-28T14:00:00Z',
+  }
+  const acknowledgement = {
+    acknowledged: true,
+    completedAt: '2025-03-10T09:00:00Z',
+  }
+
+  return FINAL_APPROVAL_PENDING_EMPLOYEE_IDS.map((employeeId, index) => {
+    const person = people.find((entry) => entry.id === employeeId)
+    return {
+      id: `rev-final-pending-${index + 1}`,
+      cycleId: 'cycle-final-pending',
+      employeeId,
+      managerId: person?.managerId ?? 'mgr-2',
+      status: 'completed' as const,
+      selfEval,
+      managerReview,
+      acknowledgement,
+    }
+  })
+}
+
+const finalApprovalPendingReviews = createFinalApprovalPendingReviews(seedPeople)
+
 export const seedCycles: ReviewCycle[] = [
   {
     id: 'cycle-2024',
@@ -624,6 +735,26 @@ export const seedCycles: ReviewCycle[] = [
     ratingScale: defaultRatingScale,
     status: 'active',
     employeeIds: [...MGR1_CORE_TEAM_EMPLOYEE_IDS, 'mgr-1'],
+  },
+  {
+    id: 'cycle-final-pending',
+    name: '2025 Finance Annual Review',
+    description:
+      'Finance team annual reviews — all participant work is complete; awaiting final approval to close.',
+    createdBy: 'Hannah Reed',
+    templateId: 'tpl-annual',
+    startDate: '2025-01-15',
+    dueDate: '2025-03-30',
+    includesSelfEvaluation: true,
+    workflow: workflowWithDeadlines(createDefaultWorkflowSteps(), {
+      employee: '2025-02-15',
+      manager: '2025-03-01',
+      acknowledgement: '2025-03-15',
+    }),
+    ratingScale: defaultRatingScale,
+    status: 'active',
+    employeeIds: [...FINAL_APPROVAL_PENDING_EMPLOYEE_IDS],
+    finalApproverId: 'mgr-2',
   },
   {
     id: 'cycle-2025',
@@ -924,6 +1055,7 @@ export const seedReviews: PerformanceReview[] = [
       completedAt: '2024-03-03T15:00:00Z',
     },
   },
+  ...finalApprovalPendingReviews,
   ...cycle2025Reviews,
   {
     id: 'rev-4',

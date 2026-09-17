@@ -377,6 +377,25 @@ modus-wc-card [slot='title'] {
   color: var(--modus-wc-color-base-content-low-contrast, #6a6976);
 }
 
+.tq-dashboard-kpi-card--interactive {
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.tq-dashboard-kpi-card--interactive:hover {
+  border-color: var(--modus-wc-color-primary, #0063a3);
+  box-shadow: var(--app-elevation-md, 0 4px 6px rgb(0 0 0 / 0.1));
+}
+
+.tq-dashboard-kpi-card--interactive:focus-visible {
+  outline: 2px solid var(--modus-wc-color-primary, #0063a3);
+  outline-offset: 2px;
+}
+
 .tq-manager-review-row {
   display: flex;
   flex-wrap: wrap;

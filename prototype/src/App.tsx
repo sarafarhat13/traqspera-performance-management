@@ -17,9 +17,25 @@ import { PerformanceReviewDetails } from './components/PerformanceReviewDetails'
 import { navPageFromView, navTargetFromNavPage } from './navigation'
 import type { TraqsperaNavPage } from './layouts/traqsperaShellConstants'
 
+/** Demo persona for Performance admin surfaces (templates, cycles, review groups). */
+const HR_ADMIN_DEMO_PERSON_ID = 'hr-1'
+
+const HR_ADMIN_NAV_PAGES: ReadonlySet<TraqsperaNavPage> = new Set([
+  'p_perf_dashboard',
+  'p_perf_templates',
+  'p_perf_review_groups',
+])
+
 function PerformanceApp() {
-  const { state, setView, setEmployeeDetailsTab, selectPerson, openMyPerformance, openManagerTeamReviews } =
-    usePerformance()
+  const {
+    state,
+    setView,
+    setEmployeeDetailsTab,
+    selectPerson,
+    openMyPerformance,
+    openManagerTeamReviews,
+    setActivePersonId,
+  } = usePerformance()
   const [myPerformanceVisit, setMyPerformanceVisit] = useState(0)
 
   const activeNavPage = navPageFromView(state.view, {
@@ -39,6 +55,10 @@ function PerformanceApp() {
     if (page === 'p_perf_team') {
       openManagerTeamReviews()
       return
+    }
+
+    if (HR_ADMIN_NAV_PAGES.has(page)) {
+      setActivePersonId(HR_ADMIN_DEMO_PERSON_ID)
     }
 
     const target = navTargetFromNavPage(page, state.activePersonId)

@@ -29,6 +29,7 @@ import {
   createTableActionButton,
 } from '../utils/modusTableCells'
 import type { CycleStatus } from '../types'
+import { DEMO_LISA_FINAL_APPROVAL_CYCLE_ID } from '../data/seed'
 
 type DashboardViewMode = 'card' | 'table'
 
@@ -86,10 +87,12 @@ export function HRAdminDashboard() {
     ],
   )
 
-  const filteredCycles = useMemo(
-    () => filterDashboardCycles(state.cycles, state.reviews, state.people, filters),
-    [state.cycles, state.reviews, state.people, filters],
-  )
+  const filteredCycles = useMemo(() => {
+    const list = filterDashboardCycles(state.cycles, state.reviews, state.people, filters)
+    const demo = list.find((cycle) => cycle.id === DEMO_LISA_FINAL_APPROVAL_CYCLE_ID)
+    if (!demo) return list
+    return [demo, ...list.filter((cycle) => cycle.id !== DEMO_LISA_FINAL_APPROVAL_CYCLE_ID)]
+  }, [state.cycles, state.reviews, state.people, filters])
 
   const activeFilterCount = useMemo(() => countActiveDashboardFilters(filters), [filters])
 

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   ModusWcButton,
   ModusWcCard,
@@ -6,9 +7,11 @@ import {
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
 import type { ReviewCycle } from '../types'
+import { canCompleteReviewCycle } from '../utils/cycleFinalApproval'
 import { computeCycleStats } from '../utils/cycleStats'
 import { formatReviewPeriod } from '../utils/status'
 import { CycleStatusBadge } from './CycleStatusBadge'
+import { ReviewCycleCompleteModal } from './ReviewCycleCompleteModal'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import type { PerformanceReview } from '../types'
 
@@ -42,7 +45,10 @@ export function ReviewCycleCard({
   templateDescription,
   onViewDetails,
 }: ReviewCycleCardProps) {
+  const [completeModalOpen, setCompleteModalOpen] = useState(false)
   const stats = computeCycleStats(cycle, reviews)
+  const canCompleteCycle =
+    cycle.status === 'active' && canCompleteReviewCycle(cycle, reviews)
   const description =
     cycle.description?.trim() ||
     templateDescription?.trim() ||
@@ -72,7 +78,7 @@ export function ReviewCycleCard({
               label={description}
             />
           </div>
-          <div className="shrink-0">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
             <ModusWcButton
               variant="borderless"
               color="tertiary"
@@ -82,6 +88,17 @@ export function ReviewCycleCard({
               <ModusWcIcon name="visibility" size="xs" decorative />
               View details
             </ModusWcButton>
+            {canCompleteCycle ? (
+              <ModusWcButton
+                variant="filled"
+                color="primary"
+                size="sm"
+                onButtonClick={() => setCompleteModalOpen(true)}
+              >
+                <ModusWcIcon name="check_circle" size="xs" decorative />
+                Complete cycle
+              </ModusWcButton>
+            ) : null}
           </div>
         </div>
 
@@ -125,6 +142,13 @@ export function ReviewCycleCard({
           />
         </div>
       </div>
+      {canCompleteCycle ? (
+        <ReviewCycleCompleteModal
+          cycle={cycle}
+          isOpen={completeModalOpen}
+          onClose={() => setCompleteModalOpen(false)}
+        />
+      ) : null}
     </ModusWcCard>
   )
 }

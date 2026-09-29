@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useModusDialog } from '../utils/useModusDialog'
 import {
   ModusWcButton,
   ModusWcCard,
@@ -43,20 +44,7 @@ export function UnassignedEmployeesModal({
   const [groupId, setGroupId] = useState(NONE)
   const [cycleId, setCycleId] = useState(NONE)
   const [assignError, setAssignError] = useState('')
-
-  useEffect(() => {
-    const dialog = document.getElementById(modalId) as HTMLDialogElement | null
-    if (!dialog) return
-    const handleClose = () => onClose()
-    dialog.addEventListener('close', handleClose)
-    return () => dialog.removeEventListener('close', handleClose)
-  }, [modalId, onClose])
-
-  useEffect(() => {
-    const dialog = document.getElementById(modalId) as HTMLDialogElement | null
-    if (open) dialog?.showModal()
-    else dialog?.close()
-  }, [open, modalId])
+  const { requestClose } = useModusDialog(modalId, open, onClose)
 
   useEffect(() => {
     if (open) {
@@ -147,7 +135,7 @@ export function UnassignedEmployeesModal({
             <TraqsperaPageHeader
               title="Unassigned employees"
               subtitle="These employees are not in a review group and are not on an active or draft review cycle. Select people below and assign them to a group and/or cycle."
-              onBack={onClose}
+              onBack={requestClose}
               backAriaLabel="Back to review groups"
             />
 

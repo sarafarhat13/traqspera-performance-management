@@ -396,6 +396,24 @@ modus-wc-card [slot='title'] {
   outline-offset: 2px;
 }
 
+/* Unassigned employees — full-width KPI trigger (ModusWcButton host) */
+modus-wc-button.tq-unassigned-kpi-trigger {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: auto;
+}
+
+modus-wc-button.tq-unassigned-kpi-trigger button {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  padding: 0;
+  text-align: left;
+  white-space: normal;
+}
+
 .tq-manager-review-row {
   display: flex;
   flex-wrap: wrap;

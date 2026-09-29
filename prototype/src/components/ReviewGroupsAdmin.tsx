@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { closeModusDialog, getModusDialog } from '../utils/useModusDialog'
 import {
   ModusWcButton,
   ModusWcCard,
@@ -32,6 +33,20 @@ const DELETE_GROUP_MODAL_ID = 'review-group-delete-modal'
 const MEMBERS_MODAL_ID = 'review-group-members-modal'
 const UNASSIGNED_MODAL_ID = 'review-group-unassigned-modal'
 
+const REVIEW_GROUPS_DIALOG_IDS = [
+  UNASSIGNED_MODAL_ID,
+  MEMBERS_MODAL_ID,
+  GROUP_FORM_MODAL_ID,
+  DELETE_GROUP_MODAL_ID,
+] as const
+
+function closeReviewGroupDialogsExcept(modalId?: string) {
+  for (const id of REVIEW_GROUPS_DIALOG_IDS) {
+    if (id === modalId) continue
+    closeModusDialog(id)
+  }
+}
+
 function createEmptyGroup(): ReviewEmployeeGroup {
   return {
     id: `rgrp-${crypto.randomUUID().slice(0, 8)}`,
@@ -58,6 +73,44 @@ export function ReviewGroupsAdmin() {
   const [deleteTarget, setDeleteTarget] = useState<ReviewEmployeeGroup | null>(null)
   const [membersGroup, setMembersGroup] = useState<ReviewEmployeeGroup | null>(null)
   const [unassignedOpen, setUnassignedOpen] = useState(false)
+
+  const closeUnassigned = useCallback(() => setUnassignedOpen(false), [])
+
+  useLayoutEffect(() => {
+    for (const id of REVIEW_GROUPS_DIALOG_IDS) {
+      closeModusDialog(id)
+    }
+    setUnassignedOpen(false)
+    setFormOpen(false)
+    setMembersGroup(null)
+    setDeleteTarget(null)
+  }, [])
+
+  const openUnassigned = useCallback(() => {
+    closeReviewGroupDialogsExcept(UNASSIGNED_MODAL_ID)
+    setFormOpen(false)
+    setMembersGroup(null)
+    setDeleteTarget(null)
+
+    const dialog = getModusDialog(UNASSIGNED_MODAL_ID)
+    if (unassignedOpen && dialog && !dialog.open) {
+      setUnassignedOpen(false)
+      requestAnimationFrame(() => setUnassignedOpen(true))
+      return
+    }
+
+    setUnassignedOpen(true)
+    requestAnimationFrame(() => {
+      const d = getModusDialog(UNASSIGNED_MODAL_ID)
+      if (d && !d.open) {
+        try {
+          d.showModal()
+        } catch {
+          /* useModusDialog layout effect will retry */
+        }
+      }
+    })
+  }, [unassignedOpen])
 
   const filteredGroups = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -99,6 +152,8 @@ export function ReviewGroupsAdmin() {
     editingGroup !== null && state.reviewGroups.some((g) => g.id === editingGroup.id)
 
   const openCreate = () => {
+    closeReviewGroupDialogsExcept(GROUP_FORM_MODAL_ID)
+    setUnassignedOpen(false)
     setEditingGroup(createEmptyGroup())
     setFormOpen(true)
   }
@@ -171,7 +226,7 @@ export function ReviewGroupsAdmin() {
         people={state.people}
         reviewGroups={state.reviewGroups}
         cycles={state.cycles}
-        onOpen={() => setUnassignedOpen(true)}
+        onOpen={openUnassigned}
       />
 
       <ModusWcCard bordered padding="compact" customClass={`${TRAQ_CARD_CLASS} tq-table-card`}>
@@ -252,7 +307,7 @@ export function ReviewGroupsAdmin() {
         people={state.people}
         reviewGroups={state.reviewGroups}
         cycles={state.cycles}
-        onClose={() => setUnassignedOpen(false)}
+        onClose={closeUnassigned}
         onAssignToGroup={addEmployeesToReviewGroup}
         onAssignToCycle={addEmployeesToCycle}
       />

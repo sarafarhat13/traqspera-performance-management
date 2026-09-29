@@ -11,6 +11,7 @@ import {
 } from '@trimble-oss/moduswebcomponents-react'
 import type { EmployeeReviewerAssignment, Person, ReviewEmployeeGroup, ReviewerRoleType } from '../types'
 import { readInputString } from '../utils/modusFormEvents'
+import { useModusDialog } from '../utils/useModusDialog'
 import {
   REVIEWER_TYPE_OPTIONS,
   buildManagerOptions,
@@ -90,19 +91,7 @@ export function ReviewGroupFormModal({
     }
   }, [open, initial])
 
-  useEffect(() => {
-    const dialog = document.getElementById(modalId) as HTMLDialogElement | null
-    if (!dialog) return
-    const handleClose = () => onClose()
-    dialog.addEventListener('close', handleClose)
-    return () => dialog.removeEventListener('close', handleClose)
-  }, [modalId, onClose])
-
-  useEffect(() => {
-    const dialog = document.getElementById(modalId) as HTMLDialogElement | null
-    if (open) dialog?.showModal()
-    else dialog?.close()
-  }, [open, modalId])
+  const { requestClose } = useModusDialog(modalId, open, onClose)
 
   const departmentOptions = useMemo(() => {
     const values = [...new Set(employeePool.map((p) => p.department))].sort()
@@ -317,7 +306,7 @@ export function ReviewGroupFormModal({
         />
       </div>
       <div slot="footer" className="flex justify-end gap-2">
-        <ModusWcButton variant="outlined" color="tertiary" size="sm" onButtonClick={onClose}>
+        <ModusWcButton variant="outlined" color="tertiary" size="sm" onButtonClick={requestClose}>
           Cancel
         </ModusWcButton>
         <ModusWcButton variant="filled" color="primary" size="sm" onButtonClick={handleSave}>

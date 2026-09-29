@@ -1,4 +1,5 @@
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
+import { useModusDialog } from '../utils/useModusDialog'
 import {
   ModusWcCard,
   ModusWcIcon,
@@ -28,20 +29,7 @@ export function ReviewGroupMembersModal({
   onClose,
 }: ReviewGroupMembersModalProps) {
   const open = group !== null
-
-  useEffect(() => {
-    const dialog = document.getElementById(modalId) as HTMLDialogElement | null
-    if (!dialog) return
-    const handleClose = () => onClose()
-    dialog.addEventListener('close', handleClose)
-    return () => dialog.removeEventListener('close', handleClose)
-  }, [modalId, onClose])
-
-  useEffect(() => {
-    const dialog = document.getElementById(modalId) as HTMLDialogElement | null
-    if (open) dialog?.showModal()
-    else dialog?.close()
-  }, [open, modalId])
+  const { requestClose } = useModusDialog(modalId, open, onClose)
 
   const tableData = useMemo(() => {
     if (!group) return []
@@ -82,7 +70,7 @@ export function ReviewGroupMembersModal({
             <TraqsperaPageHeader
               title={group?.name ?? 'Group members'}
               subtitle={subtitle}
-              onBack={onClose}
+              onBack={requestClose}
               backAriaLabel="Back to review groups"
             />
 

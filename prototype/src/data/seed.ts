@@ -205,6 +205,14 @@ export const UNASSIGNED_DEMO_EMPLOYEE_IDS = [
   'emp-53',
   'emp-54',
   'emp-55',
+  'emp-56',
+  'emp-57',
+  'emp-58',
+  'emp-59',
+  'emp-60',
+  'emp-61',
+  'emp-62',
+  'emp-63',
 ] as const
 
 const UNASSIGNED_DEMO_EMPLOYEES: Omit<Person, 'union'>[] = [
@@ -252,6 +260,82 @@ const UNASSIGNED_DEMO_EMPLOYEES: Omit<Person, 'union'>[] = [
     costCenter: 'CC-300',
     title: 'HR Coordinator',
     managerId: 'mgr-2',
+  },
+]
+
+/** Beyond bulk-generated roster (emp-21–55); not on active/draft cycles or review groups. */
+const EXTRA_UNASSIGNED_DEMO_EMPLOYEES: Omit<Person, 'union'>[] = [
+  {
+    id: 'emp-56',
+    name: 'Noah Patterson',
+    role: 'employee',
+    department: 'Operations',
+    costCenter: 'CC-150',
+    title: 'Warehouse Associate',
+    managerId: 'mgr-1',
+  },
+  {
+    id: 'emp-57',
+    name: 'Sofia Delgado',
+    role: 'employee',
+    department: 'Finance',
+    costCenter: 'CC-250',
+    title: 'Staff Accountant',
+    managerId: 'mgr-2',
+  },
+  {
+    id: 'emp-58',
+    name: 'Liam Okonkwo',
+    role: 'employee',
+    department: 'Information Technology',
+    costCenter: 'CC-450',
+    title: 'Network Technician',
+    managerId: 'mgr-3',
+  },
+  {
+    id: 'emp-59',
+    name: 'Chloe Nguyen',
+    role: 'employee',
+    department: 'Sales',
+    costCenter: 'CC-550',
+    title: 'Business Development Rep',
+    managerId: 'mgr-1',
+  },
+  {
+    id: 'emp-60',
+    name: 'Omar Haddad',
+    role: 'employee',
+    department: 'Human Resources',
+    costCenter: 'CC-300',
+    title: 'HR Generalist',
+    managerId: 'mgr-2',
+  },
+  {
+    id: 'emp-61',
+    name: 'Isabella Rossi',
+    role: 'employee',
+    department: 'Operations',
+    costCenter: 'CC-100',
+    title: 'Dispatcher',
+    managerId: 'mgr-1',
+  },
+  {
+    id: 'emp-62',
+    name: 'Devon Clarke',
+    role: 'employee',
+    department: 'Finance',
+    costCenter: 'CC-200',
+    title: 'Accounts Receivable Clerk',
+    managerId: 'mgr-2',
+  },
+  {
+    id: 'emp-63',
+    name: 'Yuki Tanaka',
+    role: 'employee',
+    department: 'Information Technology',
+    costCenter: 'CC-400',
+    title: 'QA Analyst',
+    managerId: 'mgr-3',
   },
 ]
 
@@ -622,6 +706,7 @@ const SEED_PEOPLE_BASE: Omit<Person, 'union'>[] = [
     managerId: 'mgr-2',
   },
   ...ADDITIONAL_EMPLOYEES,
+  ...EXTRA_UNASSIGNED_DEMO_EMPLOYEES,
 ]
 
 function defaultSupervisorId(person: Omit<Person, 'union'>): string | undefined {

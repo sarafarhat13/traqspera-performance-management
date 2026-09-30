@@ -10,6 +10,7 @@ import { ReviewScheduleLines } from './ReviewScheduleLines'
 import { StatusBadge } from './StatusBadge'
 import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
+import { needsEmployeeSelfEval } from '../utils/workflow'
 
 export function EmployeeDashboard() {
   const { state, setView, selectReview, getCycle, getTemplate, setLayoutMode } = usePerformance()
@@ -20,7 +21,10 @@ export function EmployeeDashboard() {
     [state.reviews, employeeId],
   )
 
-  const primaryAction = myReviews.find((r) => r.status === 'self_eval_pending')
+  const primaryAction = myReviews.find((r) => {
+    const cycle = getCycle(r.cycleId)
+    return cycle ? needsEmployeeSelfEval(cycle, r) : r.status === 'self_eval_pending'
+  })
   const ackAction = myReviews.find((r) => r.status === 'acknowledgement_pending')
 
   return (
@@ -126,7 +130,8 @@ export function EmployeeDashboard() {
                   size="sm"
                   onButtonClick={() => {
                     selectReview(review.id)
-                    if (review.status === 'self_eval_pending') setView('self_eval')
+                    if (cycle ? needsEmployeeSelfEval(cycle, review) : review.status === 'self_eval_pending')
+                      setView('self_eval')
                     else if (review.status === 'acknowledgement_pending') setView('acknowledgement')
                     else setView('review_details')
                   }}

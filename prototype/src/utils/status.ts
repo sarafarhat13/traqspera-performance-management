@@ -25,6 +25,7 @@ export const STATUS_LABELS: Record<ReviewStatus, string> = {
   not_started: 'Not started',
   self_eval_pending: 'Self-evaluation pending',
   manager_pending: 'Manager review pending',
+  parallel_review_pending: 'Self and manager review in progress',
   acknowledgement_pending: 'Acknowledgement pending',
   completed: 'Completed',
 }
@@ -33,6 +34,7 @@ export const MANAGER_DASHBOARD_STATUS_LABELS: Record<ReviewStatus, string> = {
   not_started: 'Not started',
   self_eval_pending: 'Self-evaluation pending',
   manager_pending: 'Manager Review',
+  parallel_review_pending: 'Self and manager review',
   acknowledgement_pending: 'Awaiting Acknowledgement',
   completed: 'Completed',
 }
@@ -44,6 +46,7 @@ export function managerDashboardStatusBadgeColor(
     case 'completed':
       return 'success'
     case 'manager_pending':
+    case 'parallel_review_pending':
       return 'danger'
     case 'acknowledgement_pending':
     case 'self_eval_pending':
@@ -63,6 +66,7 @@ export function statusBadgeColor(status: ReviewStatus): 'primary' | 'warning' | 
       return 'danger'
     case 'self_eval_pending':
     case 'acknowledgement_pending':
+    case 'parallel_review_pending':
       return 'warning'
     case 'manager_pending':
       return 'primary'

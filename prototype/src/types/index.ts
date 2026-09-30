@@ -4,8 +4,12 @@ export type ReviewStatus =
   | 'not_started'
   | 'self_eval_pending'
   | 'manager_pending'
+  | 'parallel_review_pending'
   | 'acknowledgement_pending'
   | 'completed'
+
+/** Whether self-evaluation and manager evaluation run in sequence or may start together. */
+export type WorkflowKickoffMode = 'sequential' | 'parallel'
 
 export type CycleStatus = 'draft' | 'active' | 'completed'
 
@@ -84,6 +88,8 @@ export interface ReviewCycle {
   dueDate: string
   includesSelfEvaluation: boolean
   workflow?: WorkflowStep[]
+  /** When both self-evaluation and manager evaluation are enabled, controls simultaneous vs ordered kickoff. */
+  workflowKickoffMode?: WorkflowKickoffMode
   ratingScale?: RatingScaleConfig
   status: CycleStatus
   employeeIds: string[]

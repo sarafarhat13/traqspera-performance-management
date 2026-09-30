@@ -29,7 +29,11 @@ import {
   unionOptionsFromPeople,
   type DashboardFilters,
 } from '../utils/dashboardFilters'
-import { getCurrentStageDeadline, hasManagerReviewDraft } from '../utils/workflow'
+import {
+  getCurrentStageDeadline,
+  hasManagerReviewDraft,
+  needsManagerReview,
+} from '../utils/workflow'
 import type { PerformanceReview, Person, ReviewCycle, ReviewStatus, ReviewTemplate } from '../types'
 import { resolveManagerDashboardPersonId } from '../utils/managerDashboardContext'
 
@@ -38,6 +42,7 @@ type ManagerDashboardViewMode = 'card' | 'table'
 function reviewStatusPriority(status: ReviewStatus): number {
   switch (status) {
     case 'manager_pending':
+    case 'parallel_review_pending':
       return 0
     case 'acknowledgement_pending':
       return 1
@@ -90,6 +95,7 @@ function buildReviewTableRows(
         ? formatDate(review.selfEval.completedAt)
         : '—',
       managerReviewDraft: hasManagerReviewDraft(review),
+      managerActionRequired: cycle ? needsManagerReview(cycle, review) : review.status === 'manager_pending',
     }
   })
 }
@@ -222,8 +228,12 @@ export function ManagerDashboard() {
   )
 
   const reviewsDueCount = useMemo(
-    () => teamReviews.filter((review) => review.status === 'manager_pending').length,
-    [teamReviews],
+    () =>
+      teamReviews.filter((review) => {
+        const cycle = getCycle(review.cycleId)
+        return cycle ? needsManagerReview(cycle, review) : review.status === 'manager_pending'
+      }).length,
+    [teamReviews, getCycle],
   )
 
   const pendingAcknowledgementCount = useMemo(
@@ -289,12 +299,15 @@ export function ManagerDashboard() {
         sortable: false,
         cellRenderer: (value: unknown, row: unknown) => {
           const reviewId = String(value)
-          const rowData = row as { status: ReviewStatus; managerReviewDraft: boolean }
+          const rowData = row as {
+            managerReviewDraft: boolean
+            managerActionRequired: boolean
+          }
           const actions = [
             createTableActionButton('Details', () => openEmployeeReview(reviewId), 'tertiary'),
           ]
 
-          if (rowData.status === 'manager_pending') {
+          if (rowData.managerActionRequired) {
             actions.unshift(
               createTableActionButton(
                 rowData.managerReviewDraft ? 'Continue review' : 'Start Review',
@@ -340,7 +353,12 @@ export function ManagerDashboard() {
         cycle={cycle}
         templateName={template?.name ?? cycle?.name ?? 'Performance review'}
         onStartReview={
-          showPrimaryAction && review.status === 'manager_pending'
+          showPrimaryAction && (() => {
+            const cycle = getCycle(review.cycleId)
+            return cycle
+              ? needsManagerReview(cycle, review)
+              : review.status === 'manager_pending' || review.status === 'parallel_review_pending'
+          })()
             ? () => openManagerReview(review.id)
             : undefined
         }

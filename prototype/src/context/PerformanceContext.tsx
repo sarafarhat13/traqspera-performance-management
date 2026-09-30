@@ -34,6 +34,8 @@ import {
   cycleIncludesAcknowledgement,
   initialStatusFromWorkflow,
   includesSelfEvaluationFromWorkflow,
+  statusAfterEmployeePhaseComplete,
+  statusAfterManagerPhaseComplete,
   workflowFromLegacy,
 } from '../utils/workflow'
 import { resolveManagerDashboardPersonId } from '../utils/managerDashboardContext'
@@ -174,7 +176,9 @@ function loadPersisted(): Partial<PersistedState> {
 }
 
 function initialStatusForCycle(cycle: ReviewCycle): ReviewStatus {
-  if (cycle.workflow) return initialStatusFromWorkflow(cycle.workflow)
+  if (cycle.workflow) {
+    return initialStatusFromWorkflow(cycle.workflow, cycle.workflowKickoffMode ?? 'sequential')
+  }
   return cycle.includesSelfEvaluation ? 'self_eval_pending' : 'manager_pending'
 }
 
@@ -636,15 +640,18 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
   const saveSelfEval = useCallback((reviewId: string, answers: Record<string, string>) => {
     setState((s) => ({
       ...s,
-      reviews: s.reviews.map((r) =>
-        r.id === reviewId
-          ? {
-              ...r,
-              selfEval: { answers, completedAt: new Date().toISOString() },
-              status: 'manager_pending',
-            }
-          : r,
-      ),
+      reviews: s.reviews.map((r) => {
+        if (r.id !== reviewId) return r
+        const cycle = s.cycles.find((c) => c.id === r.cycleId)
+        const nextReview: PerformanceReview = {
+          ...r,
+          selfEval: { answers, completedAt: new Date().toISOString() },
+        }
+        const nextStatus: ReviewStatus = cycle
+          ? statusAfterEmployeePhaseComplete(cycle, nextReview)
+          : 'manager_pending'
+        return { ...nextReview, status: nextStatus }
+      }),
       view: 'employee_details',
       selectedPersonId: s.activePersonId,
       employeeDetailsTab: 'performance',
@@ -676,18 +683,20 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       reviews: s.reviews.map((r) => {
         if (r.id !== reviewId) return r
         const cycle = s.cycles.find((c) => c.id === r.cycleId)
-        const nextStatus: ReviewStatus =
-          cycle && cycleIncludesAcknowledgement(cycle)
-            ? 'acknowledgement_pending'
-            : 'completed'
-        return {
+        const nextReview: PerformanceReview = {
           ...r,
           managerReview: { answers, completedAt, savedAt: completedAt },
+        }
+        const nextStatus: ReviewStatus = cycle
+          ? statusAfterManagerPhaseComplete(cycle, nextReview)
+          : 'completed'
+        const autoAcknowledge = nextStatus === 'completed'
+        return {
+          ...nextReview,
           status: nextStatus,
-          acknowledgement:
-            nextStatus === 'completed'
-              ? { acknowledged: true, completedAt: new Date().toISOString() }
-              : r.acknowledgement,
+          acknowledgement: autoAcknowledge
+            ? { acknowledged: true, completedAt: new Date().toISOString() }
+            : r.acknowledgement,
         }
       }),
       view: 'manager_dashboard',

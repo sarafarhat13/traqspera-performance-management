@@ -11,6 +11,7 @@ import type { PerformanceReview, ReviewCycle, ReviewTemplate } from '../types'
 import { ReviewScheduleLines } from './ReviewScheduleLines'
 import { StatusBadge } from './StatusBadge'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
+import { needsEmployeeSelfEval } from '../utils/workflow'
 
 const REVIEW_LIST_TABS: ITab[] = [{ label: 'To Complete' }, { label: 'Completed' }]
 
@@ -39,7 +40,7 @@ function ReviewCard({
   onViewDetails: (reviewId: string) => void
 }) {
   const { review, cycle, template } = row
-  const needsSelfEval = review.status === 'self_eval_pending'
+  const needsSelfEval = cycle ? needsEmployeeSelfEval(cycle, review) : review.status === 'self_eval_pending'
   const needsAcknowledgement = review.status === 'acknowledgement_pending'
 
   return (

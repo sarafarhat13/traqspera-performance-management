@@ -123,7 +123,6 @@ export function ManagerReviewForm() {
     )
   }
 
-  const canSubmit = !includesRatingScale || overallRating > 0
   const lastSavedAt = review.managerReview?.savedAt
 
   const markDirty = () => {
@@ -261,7 +260,6 @@ export function ManagerReviewForm() {
                 variant="filled"
                 color="primary"
                 size="sm"
-                disabled={!canSubmit}
                 onButtonClick={handleSubmit}
               >
                 <ModusWcIcon name="send" size="xs" decorative />

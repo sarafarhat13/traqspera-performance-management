@@ -10,7 +10,8 @@ import { formatDate } from '../utils/status'
 import {
   getWorkflowStepCardStatusLabel,
   getWorkflowStepStates,
-  workflowStepDisplayLabel,
+  workflowFlowStepLabel,
+  workflowFromLegacy,
   workflowStepIcon,
   type WorkflowStepState,
 } from '../utils/workflow'
@@ -54,6 +55,7 @@ export function ReviewWorkflowStepCards({
   stacked = false,
 }: ReviewWorkflowStepCardsProps) {
   const ratingScaleMax = cycle.ratingScale?.max ?? 5
+  const workflow = cycle.workflow ?? workflowFromLegacy(cycle.includesSelfEvaluation)
   const steps = getWorkflowStepStates(cycle, review)
 
   if (steps.length === 0) {
@@ -72,7 +74,7 @@ export function ReviewWorkflowStepCards({
       <div className={cardsClassName}>
         {steps.map(({ step, state }, index) => {
           const deadline = step.deadline?.trim() || cycle.dueDate
-          const label = workflowStepDisplayLabel(step.type, ratingScaleMax)
+          const label = workflowFlowStepLabel(workflow, step, ratingScaleMax)
 
           return (
             <div key={step.id} className="tq-review-step-cards__item">

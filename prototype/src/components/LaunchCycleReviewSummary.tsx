@@ -10,6 +10,7 @@ import type {
   RatingScaleConfig,
   ReviewEmployeeGroup,
   ReviewTemplate,
+  WorkflowKickoffMode,
   WorkflowStep,
   WorkflowStepType,
 } from '../types'
@@ -18,8 +19,11 @@ import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { formatLongDate } from '../utils/status'
 import { TagBadge } from './TagBadge'
 import {
+  canUseParallelKickoff,
   getEnabledWorkflowSteps,
   RATING_SCALE_STEP_META,
+  workflowFlowStepLabel,
+  workflowIncludesManagerRatingScale,
   WORKFLOW_STEP_META,
   type CoreWorkflowStepType,
 } from '../utils/workflow'
@@ -28,6 +32,7 @@ type LaunchCycleReviewSummaryProps = {
   cycleName: string
   template?: ReviewTemplate
   workflow: WorkflowStep[]
+  workflowKickoffMode: WorkflowKickoffMode
   ratingScale: RatingScaleConfig
   selectedEmployees: Person[]
   attachedGroups?: ReviewEmployeeGroup[]
@@ -80,18 +85,80 @@ function SummaryCardHeader({ icon, title }: { icon: string; title: string }) {
   )
 }
 
+type TimelineRow = {
+  key: string
+  label: string
+  icon: string
+  bulletClass: string
+  deadline?: string
+}
+
+function buildTimelineRows(
+  workflow: WorkflowStep[],
+  kickoffMode: WorkflowKickoffMode,
+  ratingScaleMax: number,
+): TimelineRow[] {
+  const enabled = getEnabledWorkflowSteps(workflow)
+  const employee = enabled.find((step) => step.type === 'employee')
+  const manager = enabled.find((step) => step.type === 'manager')
+  const tail = enabled.filter((step) => step.type !== 'employee' && step.type !== 'manager')
+  const useParallel =
+    kickoffMode === 'parallel' && canUseParallelKickoff(workflow) && employee && manager
+
+  if (useParallel) {
+    const kickoffDeadlines = [employee.deadline, manager.deadline]
+      .map((d) => d?.trim())
+      .filter((d): d is string => Boolean(d))
+      .sort()
+    const managerTimelineLabel = workflowIncludesManagerRatingScale(workflow)
+      ? `${timelineStepLabel('manager', ratingScaleMax)} (optional rating)`
+      : timelineStepLabel('manager', ratingScaleMax)
+    const rows: TimelineRow[] = [
+      {
+        key: 'parallel-kickoff',
+        label: `${timelineStepLabel('employee', ratingScaleMax)} + ${managerTimelineLabel} (at the same time)`,
+        icon: 'people_group',
+        bulletClass: TIMELINE_BULLET_CLASS.employee,
+        deadline: kickoffDeadlines.at(-1),
+      },
+    ]
+    for (const step of tail) {
+      if (step.type === 'rating_scale') continue
+      rows.push({
+        key: step.id,
+        label: workflowFlowStepLabel(workflow, step, ratingScaleMax),
+        icon: timelineStepIcon(step.type),
+        bulletClass: TIMELINE_BULLET_CLASS[step.type],
+        deadline: step.deadline?.trim() || undefined,
+      })
+    }
+    return rows
+  }
+
+  return enabled
+    .filter((step) => step.type !== 'rating_scale')
+    .map((step) => ({
+      key: step.id,
+      label: workflowFlowStepLabel(workflow, step, ratingScaleMax),
+      icon: timelineStepIcon(step.type),
+      bulletClass: TIMELINE_BULLET_CLASS[step.type],
+      deadline: step.deadline?.trim() || undefined,
+    }))
+}
+
 export function LaunchCycleReviewSummary({
   cycleName,
   template,
   workflow,
+  workflowKickoffMode,
   ratingScale,
   selectedEmployees,
   attachedGroups = [],
   conflictsWereResolved = false,
   getPerson,
 }: LaunchCycleReviewSummaryProps) {
-  const timelineSteps = getEnabledWorkflowSteps(workflow)
-  const ratingEnabled = workflow.some((step) => step.enabled && step.type === 'rating_scale')
+  const timelineRows = buildTimelineRows(workflow, workflowKickoffMode, ratingScale.max)
+  const ratingEnabled = workflowIncludesManagerRatingScale(workflow)
   const employeeCount = selectedEmployees.length
   const employeeCountLabel =
     employeeCount === 1 ? '1 employee' : `${employeeCount} employees`
@@ -101,15 +168,17 @@ export function LaunchCycleReviewSummary({
     configurationItems.push({ icon: WORKFLOW_STEP_META.employee.icon, label: 'Self Evaluation' })
   }
   if (workflow.some((step) => step.enabled && step.type === 'manager')) {
-    configurationItems.push({ icon: WORKFLOW_STEP_META.manager.icon, label: 'Manager Evaluation' })
+    const managerLabel = ratingEnabled
+      ? `Manager Evaluation (optional ${ratingScale.max}-point rating)`
+      : 'Manager Evaluation'
+    configurationItems.push({ icon: WORKFLOW_STEP_META.manager.icon, label: managerLabel })
   }
-  if (ratingEnabled) {
+  if (workflowKickoffMode === 'parallel' && canUseParallelKickoff(workflow)) {
     configurationItems.push({
-      icon: RATING_SCALE_STEP_META.icon,
-      label: `${ratingScale.max}-Point Scale Rating`,
+      icon: 'refresh',
+      label: 'Parallel kickoff (self-evaluation and manager review together)',
     })
   }
-
   return (
     <div className="tq-launch-review flex flex-col gap-3">
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -169,42 +238,62 @@ export function LaunchCycleReviewSummary({
               </li>
             ))}
           </ul>
+          {ratingEnabled ? (
+            <div className="tq-launch-review__rating-scale-summary">
+              <ModusWcTypography
+                hierarchy="p"
+                size="xs"
+                weight="semibold"
+                customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
+                label="Rating labels"
+              />
+              <ul className="tq-launch-review__rating-scale-list">
+                {ratingScale.labels.map((label, index) => (
+                  <li key={`${index}-${label}`}>
+                    <ModusWcTypography
+                      hierarchy="p"
+                      size="sm"
+                      customClass="!m-0"
+                      label={`${ratingScale.min + index} star: ${label}`}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </ModusWcCard>
       </div>
 
       <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
         <SummaryCardHeader icon="calendar" title="Review Process Timeline" />
         <ol className="tq-launch-review__timeline">
-          {timelineSteps.map((step, index) => {
-            const bulletClass = TIMELINE_BULLET_CLASS[step.type]
-            return (
-              <li key={step.id} className="tq-launch-review__timeline-row">
-                <span className={`tq-launch-review__step-index ${bulletClass}`}>{index + 1}</span>
-                <div className="tq-launch-review__timeline-main min-w-0 flex-1">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <ModusWcIcon name={timelineStepIcon(step.type)} size="sm" decorative />
-                    <ModusWcTypography
-                      hierarchy="p"
-                      size="sm"
-                      weight="semibold"
-                      label={timelineStepLabel(step.type, ratingScale.max)}
-                    />
-                  </div>
+          {timelineRows.map((row, index) => (
+            <li key={row.key} className="tq-launch-review__timeline-row">
+              <span className={`tq-launch-review__step-index ${row.bulletClass}`}>{index + 1}</span>
+              <div className="tq-launch-review__timeline-main min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-2">
+                  <ModusWcIcon name={row.icon} size="sm" decorative />
+                  <ModusWcTypography
+                    hierarchy="p"
+                    size="sm"
+                    weight="semibold"
+                    label={row.label}
+                  />
                 </div>
-                {step.deadline && (
-                  <div className="tq-launch-review__timeline-due shrink-0">
-                    <ModusWcIcon name="calendar" size="xs" decorative />
-                    <ModusWcTypography
-                      hierarchy="p"
-                      size="sm"
-                      customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                      label={`Due: ${formatLongDate(step.deadline)}`}
-                    />
-                  </div>
-                )}
-              </li>
-            )
-          })}
+              </div>
+              {row.deadline && (
+                <div className="tq-launch-review__timeline-due shrink-0">
+                  <ModusWcIcon name="calendar" size="xs" decorative />
+                  <ModusWcTypography
+                    hierarchy="p"
+                    size="sm"
+                    customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                    label={`Due: ${formatLongDate(row.deadline)}`}
+                  />
+                </div>
+              )}
+            </li>
+          ))}
         </ol>
       </ModusWcCard>
 

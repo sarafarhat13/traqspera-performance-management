@@ -21,7 +21,7 @@ export function CurrentStageDueLine({
   const stageDue = formatCurrentStageDue(cycle, review)
   if (!stageDue) return null
 
-  const actionRequired = isReviewActionRequired(review, { personId: activePersonId })
+  const actionRequired = isReviewActionRequired(review, { personId: activePersonId, cycle })
   const toneClass = actionRequired
     ? 'text-[var(--modus-wc-color-warning)]'
     : 'text-[var(--modus-wc-color-base-content-low-contrast)]'

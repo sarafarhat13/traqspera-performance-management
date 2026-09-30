@@ -66,6 +66,7 @@ function isCyclePastDue(cycle: ReviewCycle, now: Date): boolean {
 export function isManagerTeamInProgressReview(review: PerformanceReview): boolean {
   return (
     review.status === 'manager_pending' ||
+    review.status === 'parallel_review_pending' ||
     review.status === 'self_eval_pending' ||
     review.status === 'acknowledgement_pending' ||
     review.status === 'not_started'

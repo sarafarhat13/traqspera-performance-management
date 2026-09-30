@@ -12,7 +12,7 @@ import {
   ModusWcTextInput,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
-import { createEmptyTemplate } from '../data/seed'
+import { createEmptyTemplate, DEFAULT_RATING_SCALE } from '../data/seed'
 import { usePerformance } from '../context/PerformanceContext'
 import type {
   EmployeeReviewerAssignment,
@@ -20,6 +20,7 @@ import type {
   ReviewerRoleType,
   ReviewTemplate,
   ReviewCycle,
+  WorkflowKickoffMode,
   WorkflowStep,
 } from '../types'
 import { readInputString } from '../utils/modusFormEvents'
@@ -29,9 +30,11 @@ import {
 } from '../utils/tableRowSelection'
 import { questionScoringMetaLabel } from '../utils/questionReview'
 import { CYCLE_STATUS_LABELS, isReviewDateRangeValid } from '../utils/status'
+import { isRatingScaleConfigValid, normalizeRatingScale } from '../utils/ratingScale'
 import {
   createDefaultWorkflowSteps,
   getEnabledWorkflowSteps,
+  workflowIncludesManagerRatingScale,
 } from '../utils/workflow'
 import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
@@ -86,12 +89,6 @@ const LAUNCH_GROUP_FORM_MODAL_ID = 'launch-wizard-review-group-form'
 
 const LAUNCH_WIZARD_CARD = `${TRAQ_CARD_CLASS} tq-launch-wizard__card`
 
-const DEFAULT_RATING_SCALE: RatingScaleConfig = {
-  min: 1,
-  max: 5,
-  labels: ['Unsatisfactory', 'Needs improvement', 'Meets expectations', 'Exceeds', 'Outstanding'],
-}
-
 function defaultStartDate(): string {
   return new Date().toISOString().slice(0, 10)
 }
@@ -123,7 +120,10 @@ export function LaunchCycleWizard() {
   )
   const [draftTemplate, setDraftTemplate] = useState<ReviewTemplate>(() => createEmptyTemplate())
   const [workflow, setWorkflow] = useState<WorkflowStep[]>(() => createDefaultWorkflowSteps())
-  const [ratingScale, setRatingScale] = useState<RatingScaleConfig>(DEFAULT_RATING_SCALE)
+  const [workflowKickoffMode, setWorkflowKickoffMode] = useState<WorkflowKickoffMode>('sequential')
+  const [ratingScale, setRatingScale] = useState<RatingScaleConfig>(() =>
+    normalizeRatingScale(DEFAULT_RATING_SCALE),
+  )
   const [individualEmployeeIds, setIndividualEmployeeIds] = useState<string[]>([])
   const [attachedGroupIds, setAttachedGroupIds] = useState<string[]>([])
   const [participantsTabIndex, setParticipantsTabIndex] = useState(0)
@@ -274,7 +274,8 @@ export function LaunchCycleWizard() {
       dueDate: cycleDue,
       includesSelfEvaluation: workflow.some((s) => s.enabled && s.type === 'employee'),
       workflow,
-      ratingScale,
+      workflowKickoffMode,
+      ratingScale: normalizeRatingScale(ratingScale),
       employeeIds: derivedParticipantIds,
       attachedGroupIds: attachedGroupIds.length > 0 ? attachedGroupIds : undefined,
     }
@@ -669,8 +670,13 @@ export function LaunchCycleWizard() {
         )
       case 1:
         return isTemplateValid()
-      case 2:
-        return getEnabledWorkflowSteps(workflow).length > 0
+      case 2: {
+        if (getEnabledWorkflowSteps(workflow).length === 0) return false
+        if (workflowIncludesManagerRatingScale(workflow)) {
+          return isRatingScaleConfigValid(ratingScale)
+        }
+        return true
+      }
       case 3:
         return (
           derivedParticipantIds.length > 0 &&
@@ -1001,7 +1007,21 @@ export function LaunchCycleWizard() {
 
         {stepIndex === 2 && (
           <ModusWcCard bordered padding="compact" customClass={LAUNCH_WIZARD_CARD}>
-            <WorkflowStepConfig workflow={workflow} onWorkflowChange={setWorkflow} />
+            <ModusWcTypography
+              slot="title"
+              hierarchy="h4"
+              size="md"
+              weight="semibold"
+              label="Step 3 — Workflow"
+            />
+            <WorkflowStepConfig
+              workflow={workflow}
+              onWorkflowChange={setWorkflow}
+              workflowKickoffMode={workflowKickoffMode}
+              onWorkflowKickoffModeChange={setWorkflowKickoffMode}
+              ratingScale={ratingScale}
+              onRatingScaleChange={setRatingScale}
+            />
           </ModusWcCard>
         )}
 
@@ -1198,6 +1218,7 @@ export function LaunchCycleWizard() {
             cycleName={cycleName.trim() || '—'}
             template={resolvedTemplate}
             workflow={workflow}
+            workflowKickoffMode={workflowKickoffMode}
             ratingScale={ratingScale}
             selectedEmployees={selectedEmployees}
             attachedGroups={attachedGroups}

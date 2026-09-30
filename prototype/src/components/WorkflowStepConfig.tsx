@@ -1,12 +1,15 @@
-import { useState, type DragEvent } from 'react'
+import { useEffect, useState, type DragEvent } from 'react'
 import {
   ModusWcButton,
   ModusWcCheckbox,
   ModusWcDate,
   ModusWcIcon,
+  ModusWcRadio,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
-import type { WorkflowStep, WorkflowStepType } from '../types'
+import type { RatingScaleConfig, WorkflowKickoffMode, WorkflowStep, WorkflowStepType } from '../types'
+import { RatingScaleConfigModal } from './RatingScaleConfigModal'
+import { formatRatingScaleSummary } from '../utils/ratingScale'
 import { readInputChecked, readInputString } from '../utils/modusFormEvents'
 import {
   type CoreWorkflowStepType,
@@ -15,6 +18,8 @@ import {
   getEnabledWorkflowSteps,
   getRatingScaleWorkflowStep,
   getReorderableWorkflowSteps,
+  getWorkflowFlowSummaryItems,
+  canUseParallelKickoff,
   moveCoreWorkflowStepToIndex,
   RATING_SCALE_STEP_META,
   resetCoreWorkflowOrder,
@@ -25,6 +30,10 @@ import {
 type WorkflowStepConfigProps = {
   workflow: WorkflowStep[]
   onWorkflowChange: (steps: WorkflowStep[]) => void
+  workflowKickoffMode: WorkflowKickoffMode
+  onWorkflowKickoffModeChange: (mode: WorkflowKickoffMode) => void
+  ratingScale: RatingScaleConfig
+  onRatingScaleChange: (scale: RatingScaleConfig) => void
 }
 
 function flowBulletClass(type: WorkflowStepType): string {
@@ -32,19 +41,64 @@ function flowBulletClass(type: WorkflowStepType): string {
   return WORKFLOW_STEP_META[type as CoreWorkflowStepType].flowBulletClass
 }
 
-export function WorkflowStepConfig({ workflow, onWorkflowChange }: WorkflowStepConfigProps) {
+export function WorkflowStepConfig({
+  workflow,
+  onWorkflowChange,
+  workflowKickoffMode,
+  onWorkflowKickoffModeChange,
+  ratingScale,
+  onRatingScaleChange,
+}: WorkflowStepConfigProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
+  const [ratingModalOpen, setRatingModalOpen] = useState(false)
+
+  const parallelKickoffAvailable = canUseParallelKickoff(workflow)
+  const sequentialKickoff = workflowKickoffMode === 'sequential' || !parallelKickoffAvailable
+  const flowSummaryItems = getWorkflowFlowSummaryItems(
+    workflow,
+    sequentialKickoff ? 'sequential' : 'parallel',
+  )
+
+  useEffect(() => {
+    if (!parallelKickoffAvailable && workflowKickoffMode === 'parallel') {
+      onWorkflowKickoffModeChange('sequential')
+    }
+  }, [parallelKickoffAvailable, workflowKickoffMode, onWorkflowKickoffModeChange])
 
   const reorderableSteps = getReorderableWorkflowSteps(workflow)
   const ratingStep = getRatingScaleWorkflowStep(workflow)
   const acknowledgementStep = getAcknowledgementWorkflowStep(workflow)
   const enabledFlowSteps = getEnabledWorkflowSteps(workflow)
-  const ratingStepNumber = reorderableSteps.length + 1
-  const acknowledgementStepNumber = reorderableSteps.length + 2
+  const acknowledgementStepNumber = reorderableSteps.length + 1
 
   const updateStep = (id: string, patch: Partial<WorkflowStep>) => {
     onWorkflowChange(workflow.map((step) => (step.id === id ? { ...step, ...patch } : step)))
+  }
+
+  const updateManagerStep = (id: string, patch: Partial<WorkflowStep>) => {
+    const managerStep = workflow.find((step) => step.type === 'manager')
+    if (
+      patch.enabled === false &&
+      ratingStep &&
+      managerStep &&
+      id === managerStep.id
+    ) {
+      onWorkflowChange(
+        workflow.map((step) => {
+          if (step.id === id) return { ...step, ...patch }
+          if (step.type === 'rating_scale') return { ...step, enabled: false }
+          return step
+        }),
+      )
+      return
+    }
+    updateStep(id, patch)
+  }
+
+  const updateManagerRatingIncluded = (included: boolean) => {
+    if (!ratingStep) return
+    updateStep(ratingStep.id, { enabled: included })
   }
 
   const handleDragStart = (event: DragEvent<HTMLButtonElement>, id: string) => {
@@ -104,21 +158,72 @@ export function WorkflowStepConfig({ workflow, onWorkflowChange }: WorkflowStepC
         </ModusWcButton>
       </div>
 
-      <div className="tq-workflow-config__hint" role="note">
-        <ModusWcIcon name="drag_indicator" size="sm" decorative />
+      <fieldset className="tq-workflow-config__kickoff flex flex-col gap-2 border-0 p-0 m-0">
         <ModusWcTypography
           hierarchy="p"
           size="sm"
-          customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
-          label="Drag Self Evaluation and Manager Evaluation to reorder them. Scale Rating and Employee Acknowledgment stay fixed at the end."
+          weight="semibold"
+          customClass="!m-0"
+          label="Employee and manager kickoff"
         />
-      </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-4">
+          <ModusWcRadio
+            name="workflow-kickoff-mode"
+            size="sm"
+            label="Sequential — one phase starts after the other"
+            value={sequentialKickoff}
+            onInputChange={() => onWorkflowKickoffModeChange('sequential')}
+          />
+          <ModusWcRadio
+            name="workflow-kickoff-mode"
+            size="sm"
+            label="Parallel — self-evaluation and manager review start together"
+            value={!sequentialKickoff}
+            disabled={!parallelKickoffAvailable}
+            onInputChange={() => onWorkflowKickoffModeChange('parallel')}
+          />
+        </div>
+        {!parallelKickoffAvailable && (
+          <ModusWcTypography
+            hierarchy="p"
+            size="xs"
+            customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
+            label="Enable both Self Evaluation and Manager Evaluation to use parallel kickoff."
+          />
+        )}
+      </fieldset>
+
+      {sequentialKickoff ? (
+        <div className="tq-workflow-config__hint" role="note">
+          <ModusWcIcon name="drag_indicator" size="sm" decorative />
+          <ModusWcTypography
+            hierarchy="p"
+            size="sm"
+            customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
+            label="Drag Self Evaluation and Manager Evaluation to reorder them. Employee Acknowledgment stays fixed at the end. Optional manager rating is configured under Manager Evaluation."
+          />
+        </div>
+      ) : (
+        <div className="tq-workflow-config__hint" role="note">
+          <ModusWcIcon name="people_group" size="sm" decorative />
+          <ModusWcTypography
+            hierarchy="p"
+            size="sm"
+            customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
+            label="Both evaluations are open at once until each is submitted. Later steps still run in order after both are complete."
+          />
+        </div>
+      )}
 
       <div className="flex flex-col gap-3">
         {reorderableSteps.map((step, index) => {
           const stepType = step.type as ReorderableWorkflowStepType
           const meta = WORKFLOW_STEP_META[stepType]
-          const isDraggable = step.enabled
+          const isDraggable = step.enabled && sequentialKickoff
+          const onToggleStep =
+            stepType === 'manager'
+              ? (enabled: boolean) => updateManagerStep(step.id, { enabled })
+              : (enabled: boolean) => updateStep(step.id, { enabled })
 
           return (
             <div
@@ -143,7 +248,7 @@ export function WorkflowStepConfig({ workflow, onWorkflowChange }: WorkflowStepC
                   value={step.enabled}
                   aria-label={`Include ${meta.title}`}
                   onInputChange={(e) =>
-                    updateStep(step.id, { enabled: readInputChecked(e as CustomEvent) })
+                    onToggleStep(readInputChecked(e as CustomEvent))
                   }
                 />
 
@@ -198,51 +303,59 @@ export function WorkflowStepConfig({ workflow, onWorkflowChange }: WorkflowStepC
                   }
                 />
               </div>
+
+              {stepType === 'manager' && ratingStep ? (
+                <div className="tq-workflow-step__nested-block">
+                  <div className="tq-workflow-step__nested-option">
+                    <ModusWcCheckbox
+                      size="sm"
+                      value={ratingStep.enabled && step.enabled}
+                      disabled={!step.enabled}
+                      aria-label={`Include ${RATING_SCALE_STEP_META.title} under manager evaluation`}
+                      onInputChange={(e) =>
+                        updateManagerRatingIncluded(readInputChecked(e as CustomEvent))
+                      }
+                    />
+                    <div className="tq-workflow-step__nested-copy min-w-0 flex-1">
+                      <ModusWcTypography
+                        hierarchy="p"
+                        size="sm"
+                        weight="semibold"
+                        customClass="!m-0"
+                        label={RATING_SCALE_STEP_META.title}
+                      />
+                      <ModusWcTypography
+                        hierarchy="p"
+                        size="xs"
+                        customClass="!m-0 mt-1 text-[var(--modus-wc-color-base-content-low-contrast)]"
+                        label={RATING_SCALE_STEP_META.description}
+                      />
+                    </div>
+                  </div>
+                  {step.enabled && ratingStep.enabled ? (
+                    <div className="tq-workflow-step__nested-summary">
+                      <ModusWcTypography
+                        hierarchy="p"
+                        size="sm"
+                        customClass="!m-0 min-w-0 flex-1 text-[var(--modus-wc-color-base-content-low-contrast)]"
+                        label={formatRatingScaleSummary(ratingScale)}
+                      />
+                      <ModusWcButton
+                        variant="outlined"
+                        color="tertiary"
+                        size="sm"
+                        onButtonClick={() => setRatingModalOpen(true)}
+                      >
+                        <ModusWcIcon name="edit" size="xs" decorative />
+                        Edit rating scale
+                      </ModusWcButton>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           )
         })}
-
-        {ratingStep && (
-          <div className="tq-workflow-step tq-workflow-step--rating tq-workflow-step--no-handle">
-            <div className="tq-workflow-step__top">
-              <ModusWcCheckbox
-                size="sm"
-                value={ratingStep.enabled}
-                aria-label={`Include ${RATING_SCALE_STEP_META.title}`}
-                onInputChange={(e) =>
-                  updateStep(ratingStep.id, { enabled: readInputChecked(e as CustomEvent) })
-                }
-              />
-
-              <span className="tq-workflow-step__icon tq-workflow-step__icon--rating_scale">
-                <ModusWcIcon name={RATING_SCALE_STEP_META.icon} size="sm" decorative />
-              </span>
-
-              <div className="tq-workflow-step__copy min-w-0 flex-1">
-                <ModusWcTypography
-                  hierarchy="p"
-                  size="md"
-                  weight="semibold"
-                  customClass="!m-0"
-                  label={RATING_SCALE_STEP_META.title}
-                />
-                <ModusWcTypography
-                  hierarchy="p"
-                  size="sm"
-                  customClass="!m-0 mt-1 text-[var(--modus-wc-color-base-content-low-contrast)]"
-                  label={RATING_SCALE_STEP_META.description}
-                />
-              </div>
-
-              <ModusWcTypography
-                hierarchy="p"
-                size="sm"
-                customClass="!m-0 shrink-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
-                label={`Step ${ratingStepNumber}`}
-              />
-            </div>
-          </div>
-        )}
 
         {acknowledgementStep && (
           <div className="tq-workflow-step tq-workflow-step--acknowledgement tq-workflow-step--no-handle">
@@ -297,6 +410,15 @@ export function WorkflowStepConfig({ workflow, onWorkflowChange }: WorkflowStepC
         )}
       </div>
 
+      {ratingStep ? (
+        <RatingScaleConfigModal
+          open={ratingModalOpen}
+          ratingScale={ratingScale}
+          onClose={() => setRatingModalOpen(false)}
+          onSave={onRatingScaleChange}
+        />
+      ) : null}
+
       <div className="tq-workflow-flow" aria-label="Review process flow summary">
         <div className="tq-workflow-flow__header">
           <ModusWcIcon name="settings" size="sm" decorative />
@@ -309,17 +431,25 @@ export function WorkflowStepConfig({ workflow, onWorkflowChange }: WorkflowStepC
           />
         </div>
         <ol className="tq-workflow-flow__list">
-          {enabledFlowSteps.map((step, index) => (
-            <li key={step.id} className="tq-workflow-flow__item">
-              <span className={`tq-workflow-flow__bullet ${flowBulletClass(step.type)}`} aria-hidden="true" />
-              <ModusWcTypography
-                hierarchy="p"
-                size="sm"
-                customClass="!m-0"
-                label={`${index + 1}. ${WORKFLOW_STEP_LABELS[step.type]}`}
-              />
-            </li>
-          ))}
+          {flowSummaryItems.map((item, index) => {
+            const bulletClass =
+              item.key === 'parallel-kickoff'
+                ? 'tq-workflow-flow__bullet--primary'
+                : flowBulletClass(
+                    enabledFlowSteps.find((s) => s.id === item.key)?.type ?? 'acknowledgement',
+                  )
+            return (
+              <li key={item.key} className="tq-workflow-flow__item">
+                <span className={`tq-workflow-flow__bullet ${bulletClass}`} aria-hidden="true" />
+                <ModusWcTypography
+                  hierarchy="p"
+                  size="sm"
+                  customClass="!m-0"
+                  label={`${index + 1}. ${item.label}`}
+                />
+              </li>
+            )
+          })}
         </ol>
       </div>
     </div>

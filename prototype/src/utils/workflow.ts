@@ -1,4 +1,11 @@
-import type { PerformanceReview, ReviewCycle, ReviewStatus, WorkflowStep, WorkflowStepType } from '../types'
+import type {
+  PerformanceReview,
+  ReviewCycle,
+  ReviewStatus,
+  WorkflowKickoffMode,
+  WorkflowStep,
+  WorkflowStepType,
+} from '../types'
 import { formatDate } from './status'
 
 export const WORKFLOW_STEP_LABELS: Record<WorkflowStepType, string> = {
@@ -55,8 +62,9 @@ export const WORKFLOW_STEP_META: Record<
 }
 
 export const RATING_SCALE_STEP_META = {
-  title: 'Scale Rating',
-  description: 'Include 5-point performance rating scale (1-Unsatisfactory to 5-Outstanding)',
+  title: 'Performance rating scale',
+  description:
+    'Managers may assign an overall rating during evaluation. Ratings are optional even when enabled.',
   icon: 'bar_graph',
   flowBulletClass: 'tq-workflow-flow__bullet--primary',
 }
@@ -83,11 +91,167 @@ export function getEnabledWorkflowSteps(workflow: WorkflowStep[]): WorkflowStep[
   return [...workflow].filter((s) => s.enabled).sort((a, b) => a.order - b.order)
 }
 
+export type WorkflowFlowSummaryItem = {
+  key: string
+  label: string
+}
+
+/** Ordered labels for the wizard flow summary (collapses parallel kickoff into one row). */
+export function getWorkflowFlowSummaryItems(
+  workflow: WorkflowStep[],
+  kickoffMode: WorkflowKickoffMode = 'sequential',
+): WorkflowFlowSummaryItem[] {
+  const enabled = getEnabledWorkflowSteps(workflow)
+  const employee = enabled.some((s) => s.type === 'employee')
+  const manager = enabled.some((s) => s.type === 'manager')
+  const tail = enabled.filter((s) => s.type !== 'employee' && s.type !== 'manager')
+
+  if (kickoffMode === 'parallel' && employee && manager) {
+    const managerPart = workflowIncludesManagerRatingScale(workflow)
+      ? `${WORKFLOW_STEP_LABELS.manager} with optional rating`
+      : WORKFLOW_STEP_LABELS.manager
+    const items: WorkflowFlowSummaryItem[] = [
+      {
+        key: 'parallel-kickoff',
+        label: `${WORKFLOW_STEP_LABELS.employee} + ${managerPart} (at the same time)`,
+      },
+    ]
+    for (const step of tail) {
+      if (step.type === 'rating_scale') continue
+      items.push({
+        key: step.id,
+        label: workflowFlowStepLabel(workflow, step),
+      })
+    }
+    return items
+  }
+
+  return enabled
+    .filter((step) => step.type !== 'rating_scale')
+    .map((step) => ({
+      key: step.id,
+      label: workflowFlowStepLabel(workflow, step),
+    }))
+}
+
+export function workflowIncludesManagerRatingScale(workflow: WorkflowStep[]): boolean {
+  const managerOn = workflow.some((s) => s.enabled && s.type === 'manager')
+  if (!managerOn) return false
+  return workflow.some((s) => s.enabled && s.type === 'rating_scale')
+}
+
+/** Flow summary / timeline label for a step (folds optional rating into manager). */
+export function workflowFlowStepLabel(
+  workflow: WorkflowStep[],
+  step: WorkflowStep,
+  ratingScaleMax = 5,
+): string {
+  if (step.type === 'manager' && workflowIncludesManagerRatingScale(workflow)) {
+    return `${WORKFLOW_STEP_LABELS.manager} (optional ${ratingScaleMax}-point rating)`
+  }
+  return WORKFLOW_STEP_LABELS[step.type]
+}
+
+/** Enabled steps shown as separate progress cards (rating is part of manager review). */
+export function getWorkflowStepsForProgressDisplay(workflow: WorkflowStep[]): WorkflowStep[] {
+  return getEnabledWorkflowSteps(workflow).filter((step) => step.type !== 'rating_scale')
+}
+
+export function canUseParallelKickoff(workflow: WorkflowStep[]): boolean {
+  const employee = workflow.some((s) => s.enabled && s.type === 'employee')
+  const manager = workflow.some((s) => s.enabled && s.type === 'manager')
+  return employee && manager
+}
+
 export function includesSelfEvaluationFromWorkflow(workflow: WorkflowStep[]): boolean {
   return workflow.some((s) => s.enabled && s.type === 'employee')
 }
 
-export function initialStatusFromWorkflow(workflow: WorkflowStep[]): ReviewStatus {
+export function cycleHasEmployeeAndManagerSteps(cycle: ReviewCycle): boolean {
+  const workflow = cycle.workflow ?? workflowFromLegacy(cycle.includesSelfEvaluation)
+  const employee = workflow.some((s) => s.enabled && s.type === 'employee')
+  const manager = workflow.some((s) => s.enabled && s.type === 'manager')
+  return employee && manager
+}
+
+export function cycleUsesParallelKickoff(cycle: ReviewCycle): boolean {
+  return cycle.workflowKickoffMode === 'parallel' && cycleHasEmployeeAndManagerSteps(cycle)
+}
+
+export function statusAfterCoreReviewPhases(cycle: ReviewCycle): ReviewStatus {
+  if (cycleIncludesAcknowledgement(cycle)) return 'acknowledgement_pending'
+  return 'completed'
+}
+
+export function areCoreReviewPhasesComplete(cycle: ReviewCycle, review: PerformanceReview): boolean {
+  const workflow = cycle.workflow ?? workflowFromLegacy(cycle.includesSelfEvaluation)
+  for (const step of getEnabledWorkflowSteps(workflow)) {
+    if (step.type === 'employee' || step.type === 'manager') {
+      if (!isWorkflowStepComplete(step, review)) return false
+    }
+  }
+  return true
+}
+
+export function statusAfterEmployeePhaseComplete(
+  cycle: ReviewCycle,
+  review: PerformanceReview,
+): ReviewStatus {
+  if (cycleUsesParallelKickoff(cycle)) {
+    return areCoreReviewPhasesComplete(cycle, review)
+      ? statusAfterCoreReviewPhases(cycle)
+      : 'parallel_review_pending'
+  }
+  const workflow = cycle.workflow ?? workflowFromLegacy(cycle.includesSelfEvaluation)
+  const managerEnabled = workflow.some((s) => s.enabled && s.type === 'manager')
+  if (managerEnabled) return 'manager_pending'
+  return statusAfterCoreReviewPhases(cycle)
+}
+
+export function statusAfterManagerPhaseComplete(
+  cycle: ReviewCycle,
+  review: PerformanceReview,
+): ReviewStatus {
+  if (cycleUsesParallelKickoff(cycle)) {
+    return areCoreReviewPhasesComplete(cycle, review)
+      ? statusAfterCoreReviewPhases(cycle)
+      : 'parallel_review_pending'
+  }
+  return statusAfterCoreReviewPhases(cycle)
+}
+
+export function needsEmployeeSelfEval(cycle: ReviewCycle, review: PerformanceReview): boolean {
+  if (review.selfEval?.completedAt) return false
+  if (!cycleIncludesSelfEvaluation(cycle)) return false
+  if (review.status === 'acknowledgement_pending' || review.status === 'completed') return false
+  if (cycleUsesParallelKickoff(cycle)) {
+    return review.status === 'parallel_review_pending'
+  }
+  return review.status === 'self_eval_pending'
+}
+
+export function needsManagerReview(cycle: ReviewCycle, review: PerformanceReview): boolean {
+  if (review.managerReview?.completedAt) return false
+  const workflow = cycle.workflow ?? workflowFromLegacy(cycle.includesSelfEvaluation)
+  const managerEnabled = workflow.some((s) => s.enabled && s.type === 'manager')
+  if (!managerEnabled) return false
+  if (review.status === 'acknowledgement_pending' || review.status === 'completed') return false
+  if (cycleUsesParallelKickoff(cycle)) {
+    return review.status === 'parallel_review_pending'
+  }
+  return review.status === 'manager_pending'
+}
+
+export function initialStatusFromWorkflow(
+  workflow: WorkflowStep[],
+  kickoffMode: WorkflowKickoffMode = 'sequential',
+): ReviewStatus {
+  const employee = workflow.some((s) => s.enabled && s.type === 'employee')
+  const manager = workflow.some((s) => s.enabled && s.type === 'manager')
+  if (kickoffMode === 'parallel' && employee && manager) {
+    return 'parallel_review_pending'
+  }
+
   const first = getEnabledWorkflowSteps(workflow)[0]
   if (!first) return 'not_started'
   switch (first.type) {
@@ -276,6 +440,12 @@ export function getReviewWorkflowStage(
       return 'not_started'
     case 'self_eval_pending':
       return 'employee_review'
+    case 'parallel_review_pending': {
+      if (!review.selfEval?.completedAt && cycleIncludesSelfEvaluation(cycle)) {
+        return 'employee_review'
+      }
+      return 'manager_review'
+    }
     case 'manager_pending':
       return 'manager_review'
     case 'acknowledgement_pending':
@@ -382,12 +552,20 @@ export function getWorkflowStepStates(
   review: PerformanceReview,
 ): { step: WorkflowStep; state: WorkflowStepState }[] {
   const workflow = cycle.workflow ?? workflowFromLegacy(cycle.includesSelfEvaluation)
-  const enabled = getEnabledWorkflowSteps(workflow)
+  const enabled = getWorkflowStepsForProgressDisplay(workflow)
   const current = getCurrentWorkflowStep(cycle, review)
+  const parallelKickoff = cycleUsesParallelKickoff(cycle)
 
   return enabled.map((step) => {
     if (review.status === 'completed' || isWorkflowStepComplete(step, review)) {
       return { step, state: 'complete' as const }
+    }
+    if (
+      parallelKickoff &&
+      review.status === 'parallel_review_pending' &&
+      (step.type === 'employee' || step.type === 'manager')
+    ) {
+      return { step, state: 'current' as const }
     }
     if (current?.id === step.id) {
       return { step, state: 'current' as const }
@@ -435,19 +613,23 @@ export function formatCurrentStageDue(cycle: ReviewCycle, review: PerformanceRev
 /** Whether the current viewer should take action on this review's open stage. */
 export function isReviewActionRequired(
   review: PerformanceReview,
-  context?: { personId?: string },
+  context?: { personId?: string; cycle?: ReviewCycle },
 ): boolean {
   if (review.status === 'completed') return false
 
   const { personId } = context ?? {}
   if (!personId) return false
 
+  const cycle = context?.cycle
   if (personId === review.employeeId) {
-    return review.status === 'self_eval_pending' || review.status === 'acknowledgement_pending'
+    if (review.status === 'acknowledgement_pending') return true
+    if (cycle) return needsEmployeeSelfEval(cycle, review)
+    return review.status === 'self_eval_pending' || review.status === 'parallel_review_pending'
   }
 
   if (personId === review.managerId) {
-    return review.status === 'manager_pending'
+    if (cycle) return needsManagerReview(cycle, review)
+    return review.status === 'manager_pending' || review.status === 'parallel_review_pending'
   }
 
   return false

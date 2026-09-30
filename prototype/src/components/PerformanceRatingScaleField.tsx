@@ -26,13 +26,13 @@ export function PerformanceRatingScaleField({
           size="sm"
           weight="semibold"
           customClass="!m-0"
-          label="Overall performance rating *"
+          label="Overall performance rating (optional)"
         />
         <ModusWcTypography
           hierarchy="p"
           size="xs"
           customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
-          label={`Select a rating from ${ratingScale.min} (${ratingScale.labels[0]}) to ${ratingScale.max} (${ratingScale.labels[ratingScale.labels.length - 1]}).`}
+          label={`Optional — select a rating from ${ratingScale.min} (${ratingScale.labels[0]}) to ${ratingScale.max} (${ratingScale.labels[ratingScale.labels.length - 1]}), or leave unset.`}
         />
       </div>
 

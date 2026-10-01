@@ -43,7 +43,7 @@ export function HRAdminDashboard() {
     getTemplate,
     getPerson,
   } = usePerformance()
-  const [viewMode, setViewMode] = useState<DashboardViewMode>('card')
+  const [viewMode, setViewMode] = useState<DashboardViewMode>('table')
   const [filters, setFilters] = useState<DashboardFilters>(() => createDefaultDashboardFilters())
   const [filterFieldsKey, setFilterFieldsKey] = useState(0)
 

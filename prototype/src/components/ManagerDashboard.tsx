@@ -126,7 +126,7 @@ export function ManagerDashboard() {
       setActivePersonId(managerId)
     }
   }, [managerId, state.activePersonId, setActivePersonId])
-  const [viewMode, setViewMode] = useState<ManagerDashboardViewMode>('card')
+  const [viewMode, setViewMode] = useState<ManagerDashboardViewMode>('table')
   const [filters, setFilters] = useState<DashboardFilters>(() => createDefaultDashboardFilters())
   const [filterFieldsKey, setFilterFieldsKey] = useState(0)
 

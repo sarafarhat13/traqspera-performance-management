@@ -18,6 +18,7 @@ import {
   seedReviewGroups,
   seedReviews,
   seedTemplates,
+  UNASSIGNED_DEMO_EMPLOYEE_IDS,
 } from '../data/seed'
 import type {
   AppState,
@@ -46,7 +47,9 @@ import { resolveManagerDashboardPersonId } from '../utils/managerDashboardContex
 
 const STORAGE_KEY = 'traqspera-performance-management-v3'
 /** Bump when bundled seed cycles/reviews change so stale localStorage is refreshed. */
-const SEED_VERSION = 20
+const SEED_VERSION = 21
+
+const UNASSIGNED_DEMO_ID_SET = new Set<string>(UNASSIGNED_DEMO_EMPLOYEE_IDS)
 
 /** Traqspera “My Info → My Performance” always opens Hannah Reed’s walkthrough reviews. */
 const TRAQSPERA_MY_PERFORMANCE_PERSON_ID = 'hr-1'
@@ -102,14 +105,35 @@ function resolveTemplates(persisted?: ReviewTemplate[]): ReviewTemplate[] {
   return [...seedTemplates, ...custom].map(normalizeTemplate)
 }
 
+/** Keeps the Review Groups unassigned panel populated for the demo roster. */
+function pinUnassignedDemoReviewGroups(groups: ReviewEmployeeGroup[]): ReviewEmployeeGroup[] {
+  return groups.map((group) => ({
+    ...group,
+    memberIds: group.memberIds.filter((id) => !UNASSIGNED_DEMO_ID_SET.has(id)),
+  }))
+}
+
+function pinUnassignedDemoCycles(cycles: ReviewCycle[]): ReviewCycle[] {
+  return cycles.map((cycle) => {
+    if (cycle.status !== 'active' && cycle.status !== 'draft') return cycle
+    return {
+      ...cycle,
+      employeeIds: cycle.employeeIds.filter((id) => !UNASSIGNED_DEMO_ID_SET.has(id)),
+    }
+  })
+}
+
 function resolveReviewGroups(persisted: Partial<PersistedState>): ReviewEmployeeGroup[] {
   const seedIds = new Set(seedReviewGroups.map((g) => g.id))
+  let groups: ReviewEmployeeGroup[]
   if (shouldRefreshSeedData(persisted)) {
     const custom = (persisted.reviewGroups ?? []).filter((g) => !seedIds.has(g.id))
-    return [...seedReviewGroups, ...custom]
+    groups = [...seedReviewGroups, ...custom]
+  } else {
+    const stored = persisted.reviewGroups ?? []
+    groups = stored.length > 0 ? stored : seedReviewGroups
   }
-  const stored = persisted.reviewGroups ?? []
-  return stored.length > 0 ? stored : seedReviewGroups
+  return pinUnassignedDemoReviewGroups(groups)
 }
 
 function shouldRefreshSeedData(persisted: Partial<PersistedState>): boolean {
@@ -134,13 +158,18 @@ function pinLisaFinalApprovalDemoCycle(stored: ReviewCycle[]): ReviewCycle[] {
 }
 
 function resolveCycles(persisted: Partial<PersistedState>): ReviewCycle[] {
+  let cycles: ReviewCycle[]
   if (shouldRefreshSeedData(persisted)) {
     const customCycles = (persisted.cycles ?? []).filter((cycle) => !SEED_CYCLE_IDS.has(cycle.id))
-    return pinLisaFinalApprovalDemoCycle([...seedCycles, ...customCycles]).map(normalizeCycle)
+    cycles = pinLisaFinalApprovalDemoCycle([...seedCycles, ...customCycles]).map(normalizeCycle)
+  } else {
+    const stored = persisted.cycles ?? []
+    cycles =
+      stored.length === 0
+        ? seedCycles.map(normalizeCycle)
+        : pinLisaFinalApprovalDemoCycle(mergeMissingSeedCycles(stored)).map(normalizeCycle)
   }
-  const stored = persisted.cycles ?? []
-  if (stored.length === 0) return seedCycles.map(normalizeCycle)
-  return pinLisaFinalApprovalDemoCycle(mergeMissingSeedCycles(stored)).map(normalizeCycle)
+  return pinUnassignedDemoCycles(cycles)
 }
 
 function mergeMissingSeedReviews(stored: PerformanceReview[]): PerformanceReview[] {
@@ -324,7 +353,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       seedVersion: SEED_VERSION,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-  }, [state.activePersonId, state.templates, state.cycles, state.reviews])
+  }, [state.activePersonId, state.templates, state.reviewGroups, state.cycles, state.reviews])
 
   const setView = useCallback((view: ViewId) => {
     setState((s) => ({ ...s, view }))

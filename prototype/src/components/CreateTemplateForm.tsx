@@ -184,7 +184,7 @@ export function CreateTemplateForm({
               hierarchy="p"
               size="sm"
               customClass="!m-0 mt-1 text-[var(--modus-wc-color-base-content-low-contrast)]"
-              label="Add up to 10 questions with optional weights and rating scales"
+              label="Add up to 10 questions for this review template"
             />
           </div>
           <TagBadge label={`${questionCount}/10 questions`} color="warning" />
@@ -241,24 +241,6 @@ export function CreateTemplateForm({
                     value={q.required}
                     onInputChange={(e) =>
                       updateQuestion(q.id, { required: readInputChecked(e as CustomEvent) })
-                    }
-                  />
-                  <ModusWcCheckbox
-                    label="Default weight % (reviewers can adjust during the review)"
-                    size="sm"
-                    value={Boolean(q.enableWeight)}
-                    onInputChange={(e) =>
-                      updateQuestion(q.id, { enableWeight: readInputChecked(e as CustomEvent) })
-                    }
-                  />
-                  <ModusWcCheckbox
-                    label="Highlight per-question rating in template (reviewers always set a rating)"
-                    size="sm"
-                    value={Boolean(q.enableRatingScale)}
-                    onInputChange={(e) =>
-                      updateQuestion(q.id, {
-                        enableRatingScale: readInputChecked(e as CustomEvent),
-                      })
                     }
                   />
                 </div>

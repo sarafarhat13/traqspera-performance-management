@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Paperclip, Trash2 } from 'lucide-react'
 import {
+  ModusWcBadge,
   ModusWcButton,
   ModusWcCheckbox,
   ModusWcIcon,
@@ -19,6 +19,7 @@ import { EmployeeSelfEvalPanel } from './EmployeeSelfEvalPanel'
 import { EmployeeAcknowledgementPanel } from './EmployeeAcknowledgementPanel'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { PageBackButton } from './PageBackButton'
+import { PrototypeReviewDownloadButton } from './PrototypeReviewDownloadButton'
 import { EmployeeMobileHub } from './EmployeeMobileHub'
 import { EmployeeMobileShell } from './EmployeeMobileShell'
 import {
@@ -107,24 +108,33 @@ function EmployeeReviewDetailPanel({
         {showBackButton && (
           <PageBackButton onBack={onBack} ariaLabel="Back to performance reviews" />
         )}
-        <div className="mb-1 flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2">
-          <div className="min-w-0">
-            <h2 className="text-[16px] font-bold text-[#252a2e]">{cycle?.name ?? 'Review cycle'}</h2>
-            {cycle && (
-              <div>
-                <p className="text-[13px] text-[#6a6e79]">
-                  {formatReviewPeriod(cycle.startDate, cycle.dueDate)}
-                </p>
-                <CurrentStageDueLine
-                  cycle={cycle}
-                  review={review}
-                  activePersonId={activePersonId}
-                  size="sm"
-                />
+        <div className="mb-1 min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+              <h2 className="text-[16px] font-bold text-[#252a2e]">{cycle?.name ?? 'Review cycle'}</h2>
+              <span className="shrink-0">
+                <StatusBadge status={review.status} cycle={cycle} review={review} />
+              </span>
+            </div>
+            {review.status === 'completed' && (
+              <div className="shrink-0">
+                <PrototypeReviewDownloadButton />
               </div>
             )}
           </div>
-          <StatusBadge status={review.status} cycle={cycle} review={review} />
+          {cycle && (
+            <div className="mt-1">
+              <p className="text-[13px] text-[#6a6e79]">
+                {formatReviewPeriod(cycle.startDate, cycle.dueDate)}
+              </p>
+              <CurrentStageDueLine
+                cycle={cycle}
+                review={review}
+                activePersonId={activePersonId}
+                size="sm"
+              />
+            </div>
+          )}
         </div>
       </div>
       <PerformanceReviewDetailContent reviewId={detailReviewId} />
@@ -558,7 +568,7 @@ export function EmployeeDetails({ myPerformanceVisit = 0 }: { myPerformanceVisit
 
   return (
     <div className="tq-performance-surface tq-employee-view min-h-full bg-[#f1f1f6]">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e0e1e9] bg-[#f1f1f6] px-6 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e0e1e9] bg-[#f1f1f6] px-6 py-4">
         <div className="flex min-w-0 items-center gap-3">
           <PageBackButton onBack={handleBack} ariaLabel="Back" />
           <h1 className="text-[18px] font-bold leading-[28px] text-[#252a2e]">Employee Details</h1>
@@ -566,26 +576,28 @@ export function EmployeeDetails({ myPerformanceVisit = 0 }: { myPerformanceVisit
         {isOwnEmployeeView ? (
           layoutModeToggle
         ) : (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <button
-              type="button"
+          <div className="tq-employee-details-header__actions flex shrink-0 flex-wrap items-center gap-3">
+            <ModusWcButton
+              variant="outlined"
+              color="primary"
+              size="sm"
               disabled
-              className="inline-flex h-8 items-center gap-1.5 rounded-[4px] border border-[#e0e1e9] bg-white px-3 text-[12px] font-semibold text-[#6a6e79]"
+              aria-label="Delete employee (not available in prototype)"
             >
-              <Trash2 size={14} aria-hidden />
+              <ModusWcIcon name="delete" size="xs" decorative />
               Delete Employee
-            </button>
-            <button
-              type="button"
+            </ModusWcButton>
+            <ModusWcButton
+              variant="outlined"
+              color="primary"
+              size="sm"
               disabled
-              className="relative inline-flex h-8 items-center gap-1.5 rounded-[4px] bg-[#0063a3] px-3 text-[12px] font-semibold text-white"
+              aria-label="Attachments (not available in prototype)"
             >
-              <Paperclip size={14} aria-hidden />
+              <ModusWcIcon name="documents" size="xs" decorative />
               Attachments
-              <span className="ml-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold text-[#0063a3]">
-                1
-              </span>
-            </button>
+              <ModusWcBadge variant="filled" color="primary" size="sm">1</ModusWcBadge>
+            </ModusWcButton>
           </div>
         )}
       </div>

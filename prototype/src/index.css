@@ -203,6 +203,15 @@ modus-wc-card [slot='title'] {
   text-align: left;
 }
 
+.tq-employee-details-header__actions modus-wc-button {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.tq-employee-details-header__actions modus-wc-button + modus-wc-button {
+  margin-inline-start: 0;
+}
+
 /* Employee detail page — vertical section nav (Traqspera screenshot pattern) */
 .employee-detail-sidenav {
   --employee-nav-active-bg: #e8f2fc;

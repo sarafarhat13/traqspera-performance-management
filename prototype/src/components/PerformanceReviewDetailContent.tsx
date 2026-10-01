@@ -19,7 +19,6 @@ export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string 
   const cycle = review ? getCycle(review.cycleId) : undefined
   const template = cycle ? getTemplate(cycle.templateId) : undefined
   const manager = review ? getPerson(review.managerId) : undefined
-
   const canViewManager = review
     ? employeeCanViewManagerReviewContent(review, state.activePersonId)
     : true
@@ -256,6 +255,7 @@ export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string 
           </div>
         </>
       )}
+
     </div>
   )
 }

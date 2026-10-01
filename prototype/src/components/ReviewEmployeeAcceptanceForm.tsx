@@ -85,10 +85,6 @@ export function ReviewEmployeeAcceptanceForm({
     })
   }
 
-  const handlePrintDownload = () => {
-    window.print()
-  }
-
   const primarySize = compactActions ? 'sm' : 'md'
   const iconSize = compactActions ? 'xs' : 'sm'
 
@@ -179,7 +175,8 @@ export function ReviewEmployeeAcceptanceForm({
               size="sm"
               fullWidth={fullWidthButtons}
               customClass="tq-review-acceptance-footer__btn"
-              onButtonClick={handlePrintDownload}
+              disabled
+              aria-label="Download PDF (not available in prototype)"
             >
               <ModusWcIcon name="download" size="xs" decorative />
               Download PDF

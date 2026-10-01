@@ -217,7 +217,7 @@ export function EmployeeMyReviewsPanel({
         <ModusWcAlert
           variant="info"
           alertTitle="Review acceptance"
-          alertDescription="These reviews are ready for your acceptance. Read the summary, choose agree or disagree, sign, and optionally download a PDF."
+          alertDescription="These reviews are ready for your acceptance. Read the summary, choose agree or disagree, and sign."
         />
       )}
 

@@ -10,7 +10,6 @@ import { isReviewEmployee } from '../utils/viewerContext'
 import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { seedQuestionAnswerKeys } from '../utils/questionReview'
-import { ReviewQuestionMeta, ReviewQuestionScoringInputs } from './ReviewQuestionScoring'
 import { SelfEvaluationFooter } from './SelfEvaluationFooter'
 
 function returnToEmployeePerformance(
@@ -73,20 +72,11 @@ export function SelfEvaluationForm() {
             <div className="flex flex-col gap-4">
               {template.questions.map((q, index) => (
                 <div key={q.id} className="flex flex-col gap-2">
-                  <div className="flex flex-col gap-1">
-                    <ModusWcTypography
-                      hierarchy="p"
-                      size="sm"
-                      weight="semibold"
-                      label={`${index + 1}. ${q.label}${q.required ? ' *' : ''}`}
-                    />
-                    <ReviewQuestionMeta question={q} answers={answers} />
-                  </div>
-                  <ReviewQuestionScoringInputs
-                    question={q}
-                    ratingScale={cycle?.ratingScale}
-                    answers={answers}
-                    onAnswersChange={setAnswers}
+                  <ModusWcTypography
+                    hierarchy="p"
+                    size="sm"
+                    weight="semibold"
+                    label={`${index + 1}. ${q.label}${q.required ? ' *' : ''}`}
                   />
                   <ModusWcTextarea
                     rows={isMobile ? 4 : 3}

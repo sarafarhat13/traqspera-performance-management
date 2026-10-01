@@ -3,8 +3,6 @@ import type { PerformanceReview, ReviewCycle, ReviewTemplate } from '../types'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { formatDate } from '../utils/status'
 import { MANAGER_OVERALL_RATING_KEY } from '../utils/workflow'
-import { ReviewQuestionScoringSummary } from './ReviewQuestionScoring'
-
 type ReviewAcceptanceSummaryProps = {
   review: PerformanceReview
   cycle: ReviewCycle
@@ -60,11 +58,6 @@ export function ReviewAcceptanceSummary({
               {template.questions.map((q) => (
                 <div key={q.id} className="flex flex-col gap-1">
                   <ModusWcTypography hierarchy="p" size="sm" weight="semibold" label={q.label} />
-                  <ReviewQuestionScoringSummary
-                    question={q}
-                    answers={review.selfEval?.answers}
-                    ratingScale={cycle.ratingScale}
-                  />
                   <ModusWcTypography
                     hierarchy="p"
                     size="sm"
@@ -113,11 +106,6 @@ export function ReviewAcceptanceSummary({
             {template.questions.map((q) => (
               <div key={q.id} className="flex flex-col gap-1">
                 <ModusWcTypography hierarchy="p" size="sm" weight="semibold" label={q.label} />
-                <ReviewQuestionScoringSummary
-                  question={q}
-                  answers={review.managerReview?.answers}
-                  ratingScale={cycle.ratingScale}
-                />
                 <ModusWcTypography
                   hierarchy="p"
                   size="sm"

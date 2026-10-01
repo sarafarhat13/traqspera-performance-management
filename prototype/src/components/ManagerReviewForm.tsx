@@ -17,12 +17,6 @@ import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { seedQuestionAnswerKeys } from '../utils/questionReview'
 import { PerformanceRatingScaleField } from './PerformanceRatingScaleField'
-import {
-  ReviewQuestionMeta,
-  ReviewQuestionScoringInputs,
-  ReviewQuestionScoringSummary,
-} from './ReviewQuestionScoring'
-
 const AUTO_SAVE_MS = 800
 
 function readStoredRating(answers?: Record<string, string>): number {
@@ -190,11 +184,6 @@ export function ManagerReviewForm() {
                 <div className="flex flex-col gap-2 rounded-lg bg-[var(--modus-wc-color-base-100)] p-3">
                   <ModusWcTypography hierarchy="p" size="xs" weight="semibold" label="Employee response" />
                   <ModusWcTypography hierarchy="p" size="sm" weight="semibold" label={q.label} />
-                  <ReviewQuestionScoringSummary
-                    question={q}
-                    answers={review.selfEval?.answers}
-                    ratingScale={ratingScale}
-                  />
                   <ModusWcTypography
                     hierarchy="p"
                     size="sm"
@@ -207,17 +196,6 @@ export function ManagerReviewForm() {
                     size="sm"
                     weight="semibold"
                     label={`${index + 1}. Manager feedback${q.required ? ' *' : ''}`}
-                  />
-                  <ReviewQuestionMeta question={q} answers={answers} />
-                  <ReviewQuestionScoringInputs
-                    question={q}
-                    ratingScale={ratingScale}
-                    answers={answers}
-                    fieldLabelPrefix="Manager"
-                    onAnswersChange={(next) => {
-                      markDirty()
-                      setAnswers(next)
-                    }}
                   />
                   <ModusWcTextarea
                     rows={3}

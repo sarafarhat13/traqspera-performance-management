@@ -28,7 +28,6 @@ import {
   readTableSelectedRowIds,
   rowIdSetEqual,
 } from '../utils/tableRowSelection'
-import { questionScoringMetaLabel } from '../utils/questionReview'
 import { CYCLE_STATUS_LABELS, isReviewDateRangeValid } from '../utils/status'
 import { isRatingScaleConfigValid, normalizeRatingScale } from '../utils/ratingScale'
 import {
@@ -975,14 +974,7 @@ export function LaunchCycleWizard() {
                               hierarchy="p"
                               size="xs"
                               customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
-                              label={
-                                [
-                                  questionScoringMetaLabel(q) ?? (q.weight > 0 ? `Weight ${q.weight}%` : undefined),
-                                  q.required ? 'Required' : undefined,
-                                ]
-                                  .filter(Boolean)
-                                  .join(' · ') || '—'
-                              }
+                              label={q.required ? 'Required' : 'Optional'}
                             />
                           </li>
                         ))}

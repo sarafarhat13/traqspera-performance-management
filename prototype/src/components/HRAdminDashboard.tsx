@@ -14,6 +14,8 @@ import {
   departmentOptionsFromPeople,
   filterDashboardCycles,
   computeDashboardPackageCounts,
+  cycleReviewersSummary,
+  reviewerOptionsFromReviews,
   titleOptionsFromPeople,
   unionOptionsFromPeople,
   type DashboardFilters,
@@ -39,6 +41,7 @@ export function HRAdminDashboard() {
     setView,
     selectCycle,
     getTemplate,
+    getPerson,
   } = usePerformance()
   const [viewMode, setViewMode] = useState<DashboardViewMode>('card')
   const [filters, setFilters] = useState<DashboardFilters>(() => createDefaultDashboardFilters())
@@ -66,25 +69,33 @@ export function HRAdminDashboard() {
 
   const unionOptions = useMemo(() => unionOptionsFromPeople(state.people), [state.people])
 
-  const packageCounts = useMemo(
-    () =>
-      computeDashboardPackageCounts(state.cycles, state.reviews, state.people, {
-        search: filters.search,
-        department: filters.department,
-        costCenter: filters.costCenter,
-        title: filters.title,
-        union: filters.union,
-      }),
+  const reviewerOptions = useMemo(
+    () => reviewerOptionsFromReviews(state.reviews, getPerson),
+    [state.reviews, getPerson],
+  )
+
+  const listFilters = useMemo(
+    () => ({
+      search: filters.search,
+      department: filters.department,
+      costCenter: filters.costCenter,
+      title: filters.title,
+      union: filters.union,
+      reviewerId: filters.reviewerId,
+    }),
     [
-      state.cycles,
-      state.reviews,
-      state.people,
       filters.search,
       filters.department,
       filters.costCenter,
       filters.title,
       filters.union,
+      filters.reviewerId,
     ],
+  )
+
+  const packageCounts = useMemo(
+    () => computeDashboardPackageCounts(state.cycles, state.reviews, state.people, listFilters),
+    [state.cycles, state.reviews, state.people, listFilters],
   )
 
   const filteredCycles = useMemo(() => {
@@ -108,10 +119,11 @@ export function HRAdminDashboard() {
           startDate: formatDate(cycle.startDate),
           dueDate: formatDate(cycle.dueDate),
           employees: String(stats.totalEmployees),
+          reviewers: cycleReviewersSummary(cycle.id, state.reviews, getPerson),
           progress: `${stats.percentComplete}%`,
         }
       }),
-    [filteredCycles, state.reviews],
+    [filteredCycles, state.reviews, getPerson],
   )
 
   const tableColumns = useMemo(
@@ -128,6 +140,7 @@ export function HRAdminDashboard() {
       { id: 'start', header: 'Start', accessor: 'startDate', sortable: true },
       { id: 'due', header: 'End', accessor: 'dueDate', sortable: true },
       { id: 'employees', header: 'Employees', accessor: 'employees', sortable: true },
+      { id: 'reviewers', header: 'Reviewers', accessor: 'reviewers', sortable: true },
       { id: 'progress', header: 'Progress', accessor: 'progress', sortable: true },
       {
         id: 'actions',
@@ -202,6 +215,7 @@ export function HRAdminDashboard() {
             costCenterOptions={costCenterOptions}
             titleOptions={titleOptions}
             unionOptions={unionOptions}
+            reviewerOptions={reviewerOptions}
             activeFilterCount={activeFilterCount}
             filterFieldsKey={filterFieldsKey}
             viewMode={viewMode}

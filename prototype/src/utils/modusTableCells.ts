@@ -1,5 +1,14 @@
 import type { CycleStatus, PerformanceReview, ReviewCycle, ReviewStatus } from '../types'
-import { CYCLE_STATUS_LABELS, cycleStatusBadgeColor, MANAGER_DASHBOARD_STATUS_LABELS, managerDashboardStatusBadgeColor, STATUS_LABELS, statusBadgeColor, statusBadgeCustomClass, type StatusBadgeSemanticColor } from './status'
+import { reviewRequiresHrEscalation } from './acknowledgement'
+import {
+  CYCLE_STATUS_LABELS,
+  cycleStatusBadgeColor,
+  REVIEW_DISPLAY_STATUS_LABELS,
+  reviewDisplayStatusBadgeColor,
+  statusBadgeCustomClass,
+  type ReviewDisplayStatus,
+  type StatusBadgeSemanticColor,
+} from './status'
 import {
   formatCurrentStageDue,
   isReviewActionRequired,
@@ -73,20 +82,32 @@ export function createCycleStatusBadge(status: CycleStatus) {
   return badge
 }
 
-export function createReviewStatusBadge(status: ReviewStatus) {
-  const badge = document.createElement('modus-wc-badge')
-  applyStatusBadgeStyle(badge, statusBadgeColor(status), STATUS_LABELS[status])
-  return badge
-}
-
-export function createManagerReviewStatusBadge(status: ReviewStatus) {
+export function createReviewDisplayStatusBadge(displayStatus: ReviewDisplayStatus) {
   const badge = document.createElement('modus-wc-badge')
   applyStatusBadgeStyle(
     badge,
-    managerDashboardStatusBadgeColor(status),
-    MANAGER_DASHBOARD_STATUS_LABELS[status],
+    reviewDisplayStatusBadgeColor(displayStatus),
+    REVIEW_DISPLAY_STATUS_LABELS[displayStatus],
   )
   return badge
+}
+
+/** @deprecated Use `createReviewDisplayStatusBadge` with `getReviewDisplayStatus`. */
+export function createReviewStatusBadge(status: ReviewStatus) {
+  return createReviewDisplayStatusBadge(
+    status === 'completed'
+      ? 'complete'
+      : status === 'not_started'
+        ? 'not_started'
+        : status === 'acknowledgement_pending'
+          ? 'employee_acknowledgement'
+          : 'pending',
+  )
+}
+
+/** @deprecated Use `createReviewDisplayStatusBadge` with `getReviewDisplayStatus`. */
+export function createManagerReviewStatusBadge(status: ReviewStatus) {
+  return createReviewStatusBadge(status)
 }
 
 export function createWorkflowReviewStageBadge(stage: WorkflowReviewStage | 'complete') {
@@ -255,4 +276,17 @@ export function createStageDueCell(
   row.appendChild(text)
 
   return row
+}
+
+export function createHrEscalationCell(review: PerformanceReview) {
+  const wrap = document.createElement('div')
+  wrap.className = 'flex min-w-0 items-center'
+  if (!reviewRequiresHrEscalation(review)) {
+    wrap.textContent = '—'
+    return wrap
+  }
+  const badge = document.createElement('modus-wc-badge')
+  applyStatusBadgeStyle(badge, 'danger', 'HR escalation')
+  wrap.appendChild(badge)
+  return wrap
 }

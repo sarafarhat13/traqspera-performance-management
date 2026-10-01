@@ -1,4 +1,5 @@
 import type { PerformanceReview, ReviewCycle } from '../types'
+import { getReviewDisplayStatus } from './workflow'
 
 export interface CycleStats {
   totalEmployees: number
@@ -7,13 +8,6 @@ export interface CycleStats {
   notStarted: number
   overdue: number
   percentComplete: number
-}
-
-function isOverdueReview(review: PerformanceReview, dueDate: string, now: Date): boolean {
-  if (review.status === 'completed') return false
-  const due = new Date(dueDate)
-  due.setHours(23, 59, 59, 999)
-  return due < now
 }
 
 export function getCycleReviews(
@@ -36,17 +30,17 @@ export function computeCycleStats(
   let overdue = 0
 
   for (const review of cycleReviews) {
-    if (review.status === 'completed') {
+    const display = getReviewDisplayStatus(cycle, review, now)
+    if (display === 'complete') {
       completed += 1
       continue
     }
-    if (review.status === 'not_started') {
+    if (display === 'not_started') {
       notStarted += 1
-      if (isOverdueReview(review, cycle.dueDate, now)) overdue += 1
-      continue
+    } else {
+      pending += 1
     }
-    pending += 1
-    if (isOverdueReview(review, cycle.dueDate, now)) overdue += 1
+    if (display === 'overdue') overdue += 1
   }
 
   const tracked = cycleReviews.length

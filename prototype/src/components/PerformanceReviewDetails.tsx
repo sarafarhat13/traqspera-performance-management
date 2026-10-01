@@ -47,7 +47,7 @@ export function PerformanceReviewDetails() {
         <ModusWcAvatar initials={employee?.name?.slice(0, 2) ?? 'EE'} size="lg" />
         <div className="min-w-0 flex-1">
           <TraqsperaPageHeader title={employee?.name ?? 'Employee'} subtitle={cycle?.name ?? ''} />
-          <StatusBadge status={review.status} />
+          <StatusBadge status={review.status} cycle={cycle} review={review} />
         </div>
       </div>
 

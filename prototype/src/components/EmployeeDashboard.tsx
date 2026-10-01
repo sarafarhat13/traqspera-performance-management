@@ -77,7 +77,7 @@ export function EmployeeDashboard() {
           )}
           {ackAction && (
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mt-3">
-              <ModusWcTypography hierarchy="p" size="sm" label="Acknowledge your completed review." />
+              <ModusWcTypography hierarchy="p" size="sm" label="Accept your completed review." />
               <ModusWcButton
                 variant="filled"
                 color="primary"
@@ -88,7 +88,7 @@ export function EmployeeDashboard() {
                 }}
               >
                 <ModusWcIcon name="check_circle" size="xs" decorative />
-                Acknowledge
+                Accept review
               </ModusWcButton>
             </div>
           )}
@@ -113,7 +113,7 @@ export function EmployeeDashboard() {
                   label={cycle?.name ?? 'Review'}
                 />
                 <span className="shrink-0">
-                  <StatusBadge status={review.status} />
+                  <StatusBadge status={review.status} cycle={cycle} review={review} />
                 </span>
               </div>
               <div className="flex flex-col gap-2">

@@ -400,7 +400,7 @@ const MGR1_2025_DASHBOARD_STATUS: Partial<Record<string, PerformanceReview['stat
   'emp-5': 'manager_pending',
   'emp-6': 'not_started',
   'emp-7': 'manager_pending',
-  'emp-3': 'not_started',
+  'emp-3': 'acknowledgement_pending',
   'emp-16': 'completed',
   'emp-17': 'acknowledgement_pending',
   'emp-18': 'acknowledgement_pending',
@@ -753,7 +753,177 @@ export const seedReviewGroups: ReviewEmployeeGroup[] = [
   },
 ]
 
-const cycle2025Reviews = create2025AnnualReviews(seedPeople)
+const cycle2025Reviews = create2025AnnualReviews(seedPeople).map((review) => {
+  if (review.employeeId !== 'emp-3' || review.cycleId !== 'cycle-2025') return review
+  return {
+    ...review,
+    status: 'acknowledgement_pending' as const,
+    selfEval: {
+      answers: {
+        q1: 'Closed monthly close on time each quarter and improved variance reporting for operations.',
+        q2: 'One reconciliation backlog item carried over; recovery plan shared with manager.',
+        q3: 'Partnered with operations and HR on cost-center reporting.',
+        q4: 'Pursuing CPA study hours and advanced Excel coursework.',
+      },
+      completedAt: '2025-10-18T10:00:00Z',
+    },
+    managerReview: {
+      answers: {
+        q1: 'Reliable accounting support with strong attention to detail on close activities.',
+        q2: 'Backlog item is tracked; expect clearance early next quarter.',
+        q3: 'Effective cross-functional communication with operations.',
+        q4: 'Encourage continued CPA progress and training goals.',
+      },
+      completedAt: '2025-11-08T14:30:00Z',
+    },
+  }
+})
+
+/** My Performance walkthrough — completed, awaiting acceptance, and not started (pinned on load). */
+export const MY_PERFORMANCE_WALKTHROUGH_EMPLOYEE_IDS = ['emp-3', 'hr-1'] as const
+
+const MY_PERFORMANCE_WALKTHROUGH_EMPLOYEE_ID_SET = new Set<string>(MY_PERFORMANCE_WALKTHROUGH_EMPLOYEE_IDS)
+
+export function isMyPerformanceWalkthroughEmployee(employeeId: string): boolean {
+  return MY_PERFORMANCE_WALKTHROUGH_EMPLOYEE_ID_SET.has(employeeId)
+}
+
+export function isMyPerformanceWalkthroughReview(reviewId: string): boolean {
+  return reviewId.startsWith('rev-walk-')
+}
+
+type WalkthroughCopy = {
+  employeeId: string
+  managerId: string
+  signatureName: string
+  completedSelf: Record<string, string>
+  completedManager: Record<string, string>
+  pendingSelf: Record<string, string>
+  pendingManager: Record<string, string>
+  acceptanceComment: string
+}
+
+function createMyPerformanceWalkthroughReviews(copy: WalkthroughCopy): PerformanceReview[] {
+  const token = copy.employeeId.replace(/-/g, '')
+  return [
+    {
+      id: `rev-walk-${token}-2024`,
+      cycleId: 'cycle-2024',
+      employeeId: copy.employeeId,
+      managerId: copy.managerId,
+      status: 'completed',
+      selfEval: {
+        answers: copy.completedSelf,
+        completedAt: '2024-02-11T10:00:00Z',
+      },
+      managerReview: {
+        answers: copy.completedManager,
+        completedAt: '2024-02-26T14:00:00Z',
+      },
+      acknowledgement: {
+        acknowledged: true,
+        completedAt: '2024-03-02T09:00:00Z',
+        decision: 'agree',
+        comment: copy.acceptanceComment,
+        signature: copy.signatureName,
+        signedDate: '2024-03-02',
+      },
+    },
+    {
+      id: `rev-walk-${token}-2025`,
+      cycleId: 'cycle-2025',
+      employeeId: copy.employeeId,
+      managerId: copy.managerId,
+      status: 'acknowledgement_pending',
+      selfEval: {
+        answers: copy.pendingSelf,
+        completedAt: '2025-10-18T10:00:00Z',
+      },
+      managerReview: {
+        answers: copy.pendingManager,
+        completedAt: '2025-11-08T14:30:00Z',
+      },
+    },
+    {
+      id: `rev-walk-${token}-90day`,
+      cycleId: 'cycle-90-days',
+      employeeId: copy.employeeId,
+      managerId: copy.managerId,
+      status: 'not_started',
+    },
+  ]
+}
+
+export const myPerformanceWalkthroughReviews: PerformanceReview[] = [
+  ...createMyPerformanceWalkthroughReviews({
+    employeeId: 'emp-3',
+    managerId: 'mgr-1',
+    signatureName: 'Sarah Miller',
+    completedSelf: {
+      q1: 'Closed monthly close on time each quarter.',
+      q2: 'One reconciliation backlog item carried over.',
+      q3: 'Partnered with operations on cost reporting.',
+      q4: 'Pursuing CPA study hours.',
+    },
+    completedManager: {
+      q1: 'Reliable accounting support for the operations team.',
+      q2: 'Backlog item tracked with clear owners.',
+      q3: 'Strong cross-functional communication.',
+      q4: 'Encourage CPA progress.',
+    },
+    pendingSelf: {
+      q1: 'Closed monthly close on time each quarter and improved variance reporting for operations.',
+      q2: 'One reconciliation backlog item carried over; recovery plan shared with manager.',
+      q3: 'Partnered with operations and HR on cost-center reporting.',
+      q4: 'Pursuing CPA study hours and advanced Excel coursework.',
+    },
+    pendingManager: {
+      q1: 'Reliable accounting support with strong attention to detail on close activities.',
+      q2: 'Backlog item is tracked; expect clearance early next quarter.',
+      q3: 'Effective cross-functional communication with operations.',
+      q4: 'Encourage continued CPA progress and training goals.',
+    },
+    acceptanceComment: 'Discussed ratings and development goals with Mike; aligned on CPA study plan.',
+  }),
+  ...createMyPerformanceWalkthroughReviews({
+    employeeId: 'hr-1',
+    managerId: 'mgr-2',
+    signatureName: 'Hannah Reed',
+    completedSelf: {
+      q1: 'Supported three annual review cycles and policy updates on schedule.',
+      q2: 'One compliance training rollout slipped one week due to scheduling.',
+      q3: 'Partnered with finance and operations on performance program communications.',
+      q4: 'Building expertise in HR analytics and employee experience tools.',
+    },
+    completedManager: {
+      q1: 'Strong HR program delivery with reliable follow-through.',
+      q2: 'Training delay was communicated early with a clear recovery plan.',
+      q3: 'Effective cross-functional partner on performance initiatives.',
+      q4: 'Support continued development in analytics and change management.',
+    },
+    pendingSelf: {
+      q1: 'Coordinated launch communications for the 2025 performance cycle across all divisions.',
+      q2: 'Employee acknowledgment reporting needed one extra dashboard iteration.',
+      q3: 'Worked with HRIS on acceptance workflow requirements and training.',
+      q4: 'Focused on manager enablement materials for disagree / escalation paths.',
+    },
+    pendingManager: {
+      q1: 'Excellent ownership of the performance program rollout.',
+      q2: 'Dashboard iteration is on track for the next sprint.',
+      q3: 'Clear partner to finance leadership on cycle status.',
+      q4: 'Continue building manager toolkit for acceptance conversations.',
+    },
+    acceptanceComment:
+      'Reviewed 2024 goals with Lisa; aligned on analytics training and Q1 compliance priorities.',
+  }),
+]
+
+/** @deprecated use isMyPerformanceWalkthroughReview */
+export const DEMO_SARAH_MY_PERFORMANCE_EMPLOYEE_ID = 'emp-3'
+
+export function isSarahMyPerformanceDemoReview(reviewId: string): boolean {
+  return isMyPerformanceWalkthroughReview(reviewId)
+}
 
 /** Lisa Wong final-approval demo — reset from seed on each load so the walkthrough stays available. */
 export const DEMO_LISA_FINAL_APPROVAL_CYCLE_ID = 'cycle-final-pending'
@@ -819,7 +989,7 @@ export const seedCycles: ReviewCycle[] = [
     }),
     ratingScale: defaultRatingScale,
     status: 'active',
-    employeeIds: [...MGR1_CORE_TEAM_EMPLOYEE_IDS, 'mgr-1'],
+    employeeIds: [...MGR1_CORE_TEAM_EMPLOYEE_IDS, 'mgr-1', 'hr-1'],
   },
   {
     id: 'cycle-final-pending',
@@ -857,7 +1027,7 @@ export const seedCycles: ReviewCycle[] = [
     }),
     ratingScale: defaultRatingScale,
     status: 'active',
-    employeeIds: [...CYCLE_2025_EMPLOYEE_IDS, 'mgr-1'],
+    employeeIds: [...CYCLE_2025_EMPLOYEE_IDS, 'mgr-1', 'hr-1'],
   },
   {
     id: 'cycle-90-days',
@@ -874,7 +1044,7 @@ export const seedCycles: ReviewCycle[] = [
     }),
     ratingScale: defaultRatingScale,
     status: 'active',
-    employeeIds: ['emp-1', 'emp-2'],
+    employeeIds: ['emp-1', 'emp-2', 'emp-3'],
   },
   {
     id: 'cycle-2023',
@@ -924,6 +1094,12 @@ export const seedReviews: PerformanceReview[] = [
     acknowledgement: {
       acknowledged: true,
       completedAt: '2024-03-05T09:00:00Z',
+      decision: 'disagree',
+      comment:
+        'I disagree with the certification feedback; my manager and I documented a revised completion plan in our meeting.',
+      signature: 'Jane Alvarez',
+      signedDate: '2024-03-05',
+      hrEscalationRequired: true,
     },
   },
   {
@@ -969,6 +1145,10 @@ export const seedReviews: PerformanceReview[] = [
     acknowledgement: {
       acknowledged: true,
       completedAt: '2024-03-02T09:00:00Z',
+      decision: 'agree',
+      comment: 'Discussed ratings and development goals with Mike; aligned on CPA study plan.',
+      signature: 'Sarah Miller',
+      signedDate: '2024-03-02',
     },
   },
   {
@@ -1142,6 +1322,7 @@ export const seedReviews: PerformanceReview[] = [
   },
   ...finalApprovalPendingReviews,
   ...cycle2025Reviews,
+  ...myPerformanceWalkthroughReviews,
   {
     id: 'rev-4',
     cycleId: 'cycle-90-days',

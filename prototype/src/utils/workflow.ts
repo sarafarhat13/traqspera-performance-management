@@ -6,7 +6,8 @@ import type {
   WorkflowStep,
   WorkflowStepType,
 } from '../types'
-import { formatDate } from './status'
+import { formatDate, type ReviewDisplayStatus } from './status'
+import { isReviewAcknowledgementComplete } from './acknowledgement'
 
 export const WORKFLOW_STEP_LABELS: Record<WorkflowStepType, string> = {
   employee: 'Self Evaluation',
@@ -383,6 +384,91 @@ export function reorderWorkflowStep(steps: WorkflowStep[], id: string, direction
 
 export type WorkflowStepState = 'complete' | 'current' | 'pending'
 
+export type ReviewParticipantProgress = 'not_started' | 'draft' | 'submitted' | 'overdue' | 'skipped'
+
+function isDeadlinePast(deadlineIso: string, now: Date): boolean {
+  const due = new Date(deadlineIso)
+  if (Number.isNaN(due.getTime())) return false
+  due.setHours(23, 59, 59, 999)
+  return due < now
+}
+
+function stepDeadlineOrCycleEnd(cycle: ReviewCycle, step?: WorkflowStep): string {
+  const fromStep = step?.deadline?.trim()
+  return fromStep || cycle.dueDate
+}
+
+function getEnabledStepOfType(
+  cycle: ReviewCycle,
+  type: WorkflowStepType,
+): WorkflowStep | undefined {
+  const workflow = cycle.workflow ?? workflowFromLegacy(cycle.includesSelfEvaluation)
+  return getEnabledWorkflowSteps(workflow).find((s) => s.type === type)
+}
+
+function cycleIncludesManagerEvaluation(cycle: ReviewCycle): boolean {
+  const workflow = cycle.workflow ?? workflowFromLegacy(cycle.includesSelfEvaluation)
+  return workflow.some((s) => s.enabled && (s.type === 'manager' || s.type === 'rating_scale'))
+}
+
+export function getEmployeeReviewParticipantProgress(
+  cycle: ReviewCycle,
+  review: PerformanceReview,
+  now = new Date(),
+): ReviewParticipantProgress {
+  if (!cycleIncludesSelfEvaluation(cycle)) return 'skipped'
+  if (review.selfEval?.completedAt) return 'submitted'
+  const step = getEnabledStepOfType(cycle, 'employee')
+  const deadline = stepDeadlineOrCycleEnd(cycle, step)
+  if (isDeadlinePast(deadline, now)) return 'overdue'
+  if (review.selfEval?.savedAt) return 'draft'
+  return 'not_started'
+}
+
+export function getManagerReviewParticipantProgress(
+  cycle: ReviewCycle,
+  review: PerformanceReview,
+  now = new Date(),
+): ReviewParticipantProgress {
+  if (!cycleIncludesManagerEvaluation(cycle)) return 'skipped'
+  if (review.managerReview?.completedAt) return 'submitted'
+  const step = getEnabledStepOfType(cycle, 'manager') ?? getEnabledStepOfType(cycle, 'rating_scale')
+  const deadline = stepDeadlineOrCycleEnd(cycle, step)
+  if (isDeadlinePast(deadline, now)) return 'overdue'
+  if (review.managerReview?.savedAt) return 'draft'
+  return 'not_started'
+}
+
+/**
+ * Display status for review lists (employee/manager dashboards, cycle tables).
+ * Consolidates in-progress employee/manager phases into Pending; surfaces step overdue.
+ */
+export function getReviewDisplayStatus(
+  cycle: ReviewCycle,
+  review: PerformanceReview,
+  now = new Date(),
+): ReviewDisplayStatus {
+  if (review.status === 'completed') return 'complete'
+  if (review.status === 'acknowledgement_pending') return 'employee_acknowledgement'
+
+  const employee = getEmployeeReviewParticipantProgress(cycle, review, now)
+  const manager = getManagerReviewParticipantProgress(cycle, review, now)
+
+  if (employee === 'overdue' || manager === 'overdue') return 'overdue'
+
+  const employeeIdle = employee === 'not_started' || employee === 'skipped'
+  const managerIdle = manager === 'not_started' || manager === 'skipped'
+
+  if (employeeIdle && managerIdle && review.status === 'not_started') {
+    return 'not_started'
+  }
+  if (employee === 'not_started' && manager === 'not_started') {
+    return 'not_started'
+  }
+
+  return 'pending'
+}
+
 export type WorkflowReviewStage =
   | 'not_started'
   | 'employee_review'
@@ -539,7 +625,7 @@ export function isWorkflowStepComplete(step: WorkflowStep, review: PerformanceRe
     case 'manager':
       return Boolean(review.managerReview?.completedAt)
     case 'acknowledgement':
-      return Boolean(review.acknowledgement?.acknowledged)
+      return isReviewAcknowledgementComplete(review.acknowledgement)
     case 'rating_scale':
       return Boolean(review.managerReview?.completedAt)
     default:

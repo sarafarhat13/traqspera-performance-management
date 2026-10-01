@@ -58,6 +58,7 @@ type PerformanceDashboardFilterBarProps = {
   costCenterOptions: { label: string; value: string }[]
   titleOptions: { label: string; value: string }[]
   unionOptions: { label: string; value: string }[]
+  reviewerOptions?: { label: string; value: string }[]
   activeFilterCount: number
   filterFieldsKey: number
   viewMode?: DashboardViewMode
@@ -78,6 +79,7 @@ export function PerformanceDashboardFilterBar({
   costCenterOptions,
   titleOptions,
   unionOptions,
+  reviewerOptions,
   activeFilterCount,
   filterFieldsKey,
   viewMode = 'table',
@@ -219,6 +221,17 @@ export function PerformanceDashboardFilterBar({
               options={unionOptions}
               onInputChange={(e) => onFiltersChange({ union: readInputString(e as CustomEvent) })}
             />
+            {reviewerOptions && reviewerOptions.length > 1 ? (
+              <ModusWcSelect
+                size="sm"
+                label="Reviewer"
+                value={filters.reviewerId}
+                options={reviewerOptions}
+                onInputChange={(e) =>
+                  onFiltersChange({ reviewerId: readInputString(e as CustomEvent) })
+                }
+              />
+            ) : null}
           </div>
           <div className="tq-dashboard-filter-panel__actions">
             <ModusWcButton

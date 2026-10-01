@@ -1,5 +1,52 @@
 import type { CycleStatus, ReviewStatus } from '../types'
 
+/** Unified review status shown on employee/manager dashboards and review lists. */
+export type ReviewDisplayStatus =
+  | 'not_started'
+  | 'pending'
+  | 'overdue'
+  | 'employee_acknowledgement'
+  | 'complete'
+
+export const REVIEW_DISPLAY_STATUS_LABELS: Record<ReviewDisplayStatus, string> = {
+  not_started: 'Not started',
+  pending: 'Pending',
+  overdue: 'Overdue',
+  employee_acknowledgement: 'Employee Acknowledgement',
+  complete: 'Complete',
+}
+
+/** Fallback when cycle context is unavailable (overdue cannot be detected). */
+export function reviewDisplayStatusFromReviewStatus(status: ReviewStatus): ReviewDisplayStatus {
+  switch (status) {
+    case 'not_started':
+      return 'not_started'
+    case 'completed':
+      return 'complete'
+    case 'acknowledgement_pending':
+      return 'employee_acknowledgement'
+    default:
+      return 'pending'
+  }
+}
+
+export function reviewDisplayStatusBadgeColor(
+  status: ReviewDisplayStatus,
+): 'primary' | 'warning' | 'success' | 'danger' | 'secondary' {
+  switch (status) {
+    case 'complete':
+      return 'success'
+    case 'not_started':
+    case 'overdue':
+      return 'danger'
+    case 'pending':
+    case 'employee_acknowledgement':
+      return 'warning'
+    default:
+      return 'secondary'
+  }
+}
+
 export const CYCLE_STATUS_LABELS: Record<CycleStatus, string> = {
   draft: 'Draft',
   active: 'Active',
@@ -21,58 +68,27 @@ export function cycleStatusBadgeColor(
   }
 }
 
+/** @deprecated Prefer `REVIEW_DISPLAY_STATUS_LABELS` via `getReviewDisplayStatus`. */
 export const STATUS_LABELS: Record<ReviewStatus, string> = {
-  not_started: 'Not started',
-  self_eval_pending: 'Self-evaluation pending',
-  manager_pending: 'Manager review pending',
-  parallel_review_pending: 'Self and manager review in progress',
-  acknowledgement_pending: 'Acknowledgement pending',
-  completed: 'Completed',
+  not_started: REVIEW_DISPLAY_STATUS_LABELS.not_started,
+  self_eval_pending: REVIEW_DISPLAY_STATUS_LABELS.pending,
+  manager_pending: REVIEW_DISPLAY_STATUS_LABELS.pending,
+  parallel_review_pending: REVIEW_DISPLAY_STATUS_LABELS.pending,
+  acknowledgement_pending: REVIEW_DISPLAY_STATUS_LABELS.employee_acknowledgement,
+  completed: REVIEW_DISPLAY_STATUS_LABELS.complete,
 }
 
-export const MANAGER_DASHBOARD_STATUS_LABELS: Record<ReviewStatus, string> = {
-  not_started: 'Not started',
-  self_eval_pending: 'Self-evaluation pending',
-  manager_pending: 'Manager Review',
-  parallel_review_pending: 'Self and manager review',
-  acknowledgement_pending: 'Awaiting Acknowledgement',
-  completed: 'Completed',
-}
+/** @deprecated Prefer `REVIEW_DISPLAY_STATUS_LABELS` via `getReviewDisplayStatus`. */
+export const MANAGER_DASHBOARD_STATUS_LABELS: Record<ReviewStatus, string> = STATUS_LABELS
 
 export function managerDashboardStatusBadgeColor(
   status: ReviewStatus,
 ): 'primary' | 'warning' | 'success' | 'danger' | 'secondary' {
-  switch (status) {
-    case 'completed':
-      return 'success'
-    case 'manager_pending':
-    case 'parallel_review_pending':
-      return 'danger'
-    case 'acknowledgement_pending':
-    case 'self_eval_pending':
-      return 'warning'
-    case 'not_started':
-      return 'secondary'
-    default:
-      return 'secondary'
-  }
+  return reviewDisplayStatusBadgeColor(reviewDisplayStatusFromReviewStatus(status))
 }
 
 export function statusBadgeColor(status: ReviewStatus): 'primary' | 'warning' | 'success' | 'danger' | 'secondary' {
-  switch (status) {
-    case 'completed':
-      return 'success'
-    case 'not_started':
-      return 'danger'
-    case 'self_eval_pending':
-    case 'acknowledgement_pending':
-    case 'parallel_review_pending':
-      return 'warning'
-    case 'manager_pending':
-      return 'primary'
-    default:
-      return 'secondary'
-  }
+  return reviewDisplayStatusBadgeColor(reviewDisplayStatusFromReviewStatus(status))
 }
 
 export type StatusBadgeSemanticColor =

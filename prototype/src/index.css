@@ -441,9 +441,176 @@ modus-wc-button.tq-unassigned-kpi-trigger button {
   align-items: center;
   flex-wrap: wrap;
   gap: var(--modus-wc-spacing-sm, 0.75rem);
+  width: 100%;
+  box-sizing: border-box;
   margin-top: var(--modus-wc-spacing-md, 1rem);
   padding: var(--modus-wc-spacing-md, 1rem);
   border-top: 1px solid var(--modus-wc-color-base-200, #e0e1e9);
+}
+
+.tq-performance-surface modus-wc-card [slot='footer'].tq-card-footer-actions.tq-review-acceptance-footer {
+  display: block;
+  padding: 0;
+  gap: 0;
+}
+
+modus-wc-card [slot='footer'].tq-review-acceptance-footer {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: var(--modus-wc-spacing-md, 1rem);
+  padding: 0;
+  border-top: 1px solid var(--modus-wc-color-base-200, #e0e1e9);
+}
+
+.tq-review-acceptance-footer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--modus-wc-spacing-sm, 0.75rem);
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--modus-wc-spacing-md, 1rem);
+}
+
+.tq-employee-view modus-wc-card [slot='footer'].tq-review-acceptance-footer .tq-review-acceptance-footer__actions,
+.tq-employee-mobile-phone modus-wc-card [slot='footer'].tq-review-acceptance-footer .tq-review-acceptance-footer__actions {
+  padding: var(--modus-wc-spacing-md, 1rem);
+}
+
+/* Review acceptance — stack on narrow viewports and Traqspera mobile phone frame (viewport may stay desktop-wide). */
+.tq-review-acceptance-footer__commit-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--modus-wc-spacing-sm, 0.75rem);
+  width: 100%;
+  min-width: 0;
+}
+
+.tq-review-acceptance-footer--stack .tq-review-acceptance-footer__actions,
+.review-acceptance-screen--stack-footer .tq-review-acceptance-footer__actions,
+.tq-employee-mobile-phone .tq-review-acceptance-footer__actions {
+  flex-direction: column;
+  align-items: stretch;
+  flex-wrap: nowrap;
+}
+
+.tq-review-acceptance-footer--stack .tq-review-acceptance-footer__commit-row,
+.review-acceptance-screen--stack-footer .tq-review-acceptance-footer__commit-row,
+.tq-employee-mobile-phone .tq-review-acceptance-footer__commit-row {
+  flex-direction: column;
+  width: 100%;
+}
+
+.tq-review-acceptance-footer--stack .tq-review-acceptance-footer__actions > modus-wc-button,
+.review-acceptance-screen--stack-footer .tq-review-acceptance-footer__actions > modus-wc-button,
+.tq-employee-mobile-phone .tq-review-acceptance-footer__actions > modus-wc-button,
+.tq-review-acceptance-footer--stack .tq-review-acceptance-footer__commit-row > modus-wc-button,
+.review-acceptance-screen--stack-footer .tq-review-acceptance-footer__commit-row > modus-wc-button,
+.tq-employee-mobile-phone .tq-review-acceptance-footer__commit-row > modus-wc-button {
+  align-self: stretch;
+  box-sizing: border-box;
+}
+
+.tq-review-acceptance-footer--stack modus-wc-button.tq-review-acceptance-footer__btn,
+.review-acceptance-screen--stack-footer modus-wc-button.tq-review-acceptance-footer__btn,
+.tq-employee-mobile-phone modus-wc-button.tq-review-acceptance-footer__btn {
+  width: 100%;
+  max-width: 100%;
+}
+
+.tq-review-acceptance-footer--stack modus-wc-button.tq-review-acceptance-footer__btn button,
+.review-acceptance-screen--stack-footer modus-wc-button.tq-review-acceptance-footer__btn button,
+.tq-employee-mobile-phone modus-wc-button.tq-review-acceptance-footer__btn button {
+  width: 100%;
+  justify-content: center;
+}
+
+@media (max-width: 639px) {
+  .tq-performance-surface modus-wc-card [slot='footer'].tq-review-acceptance-footer .tq-review-acceptance-footer__actions {
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: nowrap;
+  }
+
+  .tq-review-acceptance-footer__commit-row {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .tq-performance-surface modus-wc-card [slot='footer'].tq-review-acceptance-footer modus-wc-button.tq-review-acceptance-footer__btn {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .tq-performance-surface
+    modus-wc-card
+    [slot='footer'].tq-review-acceptance-footer
+    modus-wc-button.tq-review-acceptance-footer__btn
+    button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (min-width: 640px) {
+  .review-acceptance-screen:not(.review-acceptance-screen--stack-footer)
+    .tq-review-acceptance-footer:not(.tq-review-acceptance-footer--stack)
+    .tq-review-acceptance-footer__actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+  }
+
+  .review-acceptance-screen:not(.review-acceptance-screen--stack-footer)
+    .tq-review-acceptance-footer__commit-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: auto;
+    justify-content: flex-end;
+  }
+
+  .review-acceptance-screen:not(.review-acceptance-screen--stack-footer)
+    modus-wc-button.tq-review-acceptance-footer__btn {
+    width: auto;
+    max-width: none;
+  }
+
+  .review-acceptance-screen:not(.review-acceptance-screen--stack-footer)
+    modus-wc-button.tq-review-acceptance-footer__btn
+    button {
+    width: auto;
+  }
+
+  /* Phone preview + mobile layout mode: keep stacked footer even when viewport is wide. */
+  .review-acceptance-screen--stack-footer .tq-review-acceptance-footer__actions,
+  .tq-employee-mobile-phone .tq-review-acceptance-footer__actions {
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
+
+  .review-acceptance-screen--stack-footer .tq-review-acceptance-footer__commit-row,
+  .tq-employee-mobile-phone .tq-review-acceptance-footer__commit-row {
+    flex-direction: column;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .review-acceptance-screen--stack-footer modus-wc-button.tq-review-acceptance-footer__btn,
+  .tq-employee-mobile-phone modus-wc-button.tq-review-acceptance-footer__btn {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .review-acceptance-screen--stack-footer modus-wc-button.tq-review-acceptance-footer__btn button,
+  .tq-employee-mobile-phone modus-wc-button.tq-review-acceptance-footer__btn button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .tq-manager-review-footer {
@@ -1973,5 +2140,30 @@ modus-wc-badge .modus-wc-badge.modus-wc-badge-outlined.tq-status-badge--tertiary
   .tq-cycle-stage-cards > * {
     flex: 0 0 8.5rem;
     scroll-snap-align: start;
+  }
+}
+
+.review-acceptance-print-target {
+  display: none;
+}
+
+@media print {
+  .app-shell modus-wc-navbar,
+  .app-shell modus-wc-side-navigation,
+  .app-shell .tq-page-header,
+  .review-acceptance-screen > *:not(.review-acceptance-print-target) {
+    display: none !important;
+  }
+
+  .app-shell main,
+  #main-content {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  .review-acceptance-print-target {
+    display: block !important;
+    padding: 1rem;
   }
 }

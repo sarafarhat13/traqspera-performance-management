@@ -12,9 +12,9 @@ import { PerformanceDashboardKpiCard } from './PerformanceDashboardKpiCard'
 import { PerformanceDashboardFilterBar } from './PerformanceDashboardFilterBar'
 import { ManagerTeamReviewRow } from './ManagerTeamReviewRow'
 import { PerformanceDataTable } from './PerformanceDataTable'
-import { formatDate, MANAGER_DASHBOARD_STATUS_LABELS } from '../utils/status'
+import { formatDate, REVIEW_DISPLAY_STATUS_LABELS } from '../utils/status'
 import {
-  createManagerReviewStatusBadge,
+  createReviewDisplayStatusBadge,
   createTableActionButton,
   createTableActionGroup,
 } from '../utils/modusTableCells'
@@ -32,6 +32,7 @@ import {
 import {
   getCurrentStageDeadline,
   hasManagerReviewDraft,
+  getReviewDisplayStatus,
   needsManagerReview,
 } from '../utils/workflow'
 import type { PerformanceReview, Person, ReviewCycle, ReviewStatus, ReviewTemplate } from '../types'
@@ -89,7 +90,10 @@ function buildReviewTableRows(
       title: employee?.title ?? '—',
       reviewName: template?.name ?? cycle?.name ?? 'Performance review',
       status: review.status,
-      statusLabel: MANAGER_DASHBOARD_STATUS_LABELS[review.status],
+      displayStatus: cycle ? getReviewDisplayStatus(cycle, review) : undefined,
+      statusLabel: cycle
+        ? REVIEW_DISPLAY_STATUS_LABELS[getReviewDisplayStatus(cycle, review)]
+        : review.status,
       dueDate: dueDate ? formatDate(dueDate) : '—',
       selfEvalCompleted: review.selfEval?.completedAt
         ? formatDate(review.selfEval.completedAt)
@@ -203,6 +207,7 @@ export function ManagerDashboard() {
           costCenter: filters.costCenter,
           title: filters.title,
           union: filters.union,
+          reviewerId: filters.reviewerId,
         },
         managerReviewFilterOptions,
       ),
@@ -282,8 +287,12 @@ export function ManagerDashboard() {
         header: 'Status',
         accessor: 'statusLabel',
         sortable: true,
-        cellRenderer: (_value: unknown, row: unknown) =>
-          createManagerReviewStatusBadge((row as { status: ReviewStatus }).status),
+        cellRenderer: (_value: unknown, row: unknown) => {
+          const displayStatus = (row as { displayStatus?: ReturnType<typeof getReviewDisplayStatus> })
+            .displayStatus
+          if (displayStatus) return createReviewDisplayStatusBadge(displayStatus)
+          return createReviewDisplayStatusBadge('pending')
+        },
       },
       { id: 'due', header: 'Due', accessor: 'dueDate', sortable: true },
       {
@@ -400,7 +409,7 @@ export function ManagerDashboard() {
                 : 'No reviews due'
             }
             status={reviewsDueCount > 0 ? 'badge' : 'complete'}
-            badgeLabel={MANAGER_DASHBOARD_STATUS_LABELS.manager_pending}
+            badgeLabel={REVIEW_DISPLAY_STATUS_LABELS.pending}
             footerIcon="calendar_clock"
           />
           <PerformanceDashboardKpiCard

@@ -11,6 +11,8 @@ import {
   createEmptyTemplate,
   DEMO_LISA_FINAL_APPROVAL_CYCLE_ID,
   DEPRECATED_TEMPLATE_IDS,
+  isMyPerformanceWalkthroughEmployee,
+  myPerformanceWalkthroughReviews,
   seedCycles,
   seedPeople,
   seedReviewGroups,
@@ -25,6 +27,7 @@ import type {
   Person,
   ReviewCycle,
   ReviewCycleCompletionAttestation,
+  ReviewAcceptanceSubmission,
   ReviewEmployeeGroup,
   ReviewTemplate,
   ReviewStatus,
@@ -38,11 +41,15 @@ import {
   statusAfterManagerPhaseComplete,
   workflowFromLegacy,
 } from '../utils/workflow'
+import { buildReviewAcknowledgement, legacyAutoAcknowledgement } from '../utils/acknowledgement'
 import { resolveManagerDashboardPersonId } from '../utils/managerDashboardContext'
 
 const STORAGE_KEY = 'traqspera-performance-management-v3'
 /** Bump when bundled seed cycles/reviews change so stale localStorage is refreshed. */
-const SEED_VERSION = 16
+const SEED_VERSION = 20
+
+/** Traqspera “My Info → My Performance” always opens Hannah Reed’s walkthrough reviews. */
+const TRAQSPERA_MY_PERFORMANCE_PERSON_ID = 'hr-1'
 
 const DEFAULT_ACTIVE_PERSON_ID = 'mgr-1'
 
@@ -142,6 +149,14 @@ function mergeMissingSeedReviews(stored: PerformanceReview[]): PerformanceReview
   return missing.length > 0 ? [...stored, ...missing] : stored
 }
 
+function pinMyPerformanceWalkthroughReviews(stored: PerformanceReview[]): PerformanceReview[] {
+  if (myPerformanceWalkthroughReviews.length === 0) return stored
+  const withoutWalkthroughEmployees = stored.filter(
+    (review) => !isMyPerformanceWalkthroughEmployee(review.employeeId),
+  )
+  return [...withoutWalkthroughEmployees, ...myPerformanceWalkthroughReviews]
+}
+
 function pinLisaFinalApprovalDemoReviews(stored: PerformanceReview[]): PerformanceReview[] {
   const demoReviews = seedReviews.filter(
     (review) => review.cycleId === DEMO_LISA_FINAL_APPROVAL_CYCLE_ID,
@@ -158,11 +173,15 @@ function resolveReviews(persisted: Partial<PersistedState>): PerformanceReview[]
     const customReviews = (persisted.reviews ?? []).filter(
       (review) => !SEED_CYCLE_IDS.has(review.cycleId),
     )
-    return pinLisaFinalApprovalDemoReviews([...seedReviews, ...customReviews])
+    return pinMyPerformanceWalkthroughReviews(
+      pinLisaFinalApprovalDemoReviews([...seedReviews, ...customReviews]),
+    )
   }
   const stored = persisted.reviews ?? seedReviews
-  if (stored.length === 0) return seedReviews
-  return pinLisaFinalApprovalDemoReviews(mergeMissingSeedReviews(stored))
+  if (stored.length === 0) {
+    return pinMyPerformanceWalkthroughReviews(pinLisaFinalApprovalDemoReviews(seedReviews))
+  }
+  return pinMyPerformanceWalkthroughReviews(pinLisaFinalApprovalDemoReviews(mergeMissingSeedReviews(stored)))
 }
 
 function loadPersisted(): Partial<PersistedState> {
@@ -262,7 +281,7 @@ interface PerformanceContextValue {
   saveSelfEval: (reviewId: string, answers: Record<string, string>) => void
   saveManagerReview: (reviewId: string, answers: Record<string, string>) => void
   saveManagerReviewDraft: (reviewId: string, answers: Record<string, string>) => void
-  acknowledgeReview: (reviewId: string) => void
+  submitReviewAcceptance: (reviewId: string, submission: ReviewAcceptanceSubmission) => void
   updateReviewManager: (reviewId: string, managerId: string) => void
   getPerson: (id: string) => AppState['people'][0] | undefined
   getTemplate: (id: string) => ReviewTemplate | undefined
@@ -352,8 +371,9 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
   const openMyPerformance = useCallback(() => {
     setState((s) => ({
       ...s,
+      activePersonId: TRAQSPERA_MY_PERFORMANCE_PERSON_ID,
       view: 'employee_details',
-      selectedPersonId: s.activePersonId,
+      selectedPersonId: TRAQSPERA_MY_PERFORMANCE_PERSON_ID,
       employeeDetailsTab: 'performance',
       selectedReviewId: null,
       selectedCycleId: null,
@@ -694,33 +714,38 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
         return {
           ...nextReview,
           status: nextStatus,
-          acknowledgement: autoAcknowledge
-            ? { acknowledged: true, completedAt: new Date().toISOString() }
-            : r.acknowledgement,
+          acknowledgement: autoAcknowledge ? legacyAutoAcknowledgement() : r.acknowledgement,
         }
       }),
       view: 'manager_dashboard',
     }))
   }, [])
 
-  const acknowledgeReview = useCallback((reviewId: string) => {
-    setState((s) => ({
-      ...s,
-      reviews: s.reviews.map((r) =>
-        r.id === reviewId
-          ? {
-              ...r,
-              status: 'completed',
-              acknowledgement: { acknowledged: true, completedAt: new Date().toISOString() },
-            }
-          : r,
-      ),
-      view: 'employee_details',
-      selectedPersonId: s.activePersonId,
-      employeeDetailsTab: 'performance',
-      selectedReviewId: null,
-    }))
-  }, [])
+  const submitReviewAcceptance = useCallback(
+    (reviewId: string, submission: ReviewAcceptanceSubmission) => {
+      const signature = submission.signature.trim()
+      const signedDate = submission.signedDate.trim()
+      if (!signature || !signedDate || !submission.decision) return
+
+      setState((s) => ({
+        ...s,
+        reviews: s.reviews.map((r) =>
+          r.id === reviewId
+            ? {
+                ...r,
+                status: 'completed',
+                acknowledgement: buildReviewAcknowledgement(submission),
+              }
+            : r,
+        ),
+        view: 'employee_details',
+        selectedPersonId: s.activePersonId,
+        employeeDetailsTab: 'performance',
+        selectedReviewId: null,
+      }))
+    },
+    [],
+  )
 
   const updateReviewManager = useCallback((reviewId: string, managerId: string) => {
     setState((s) => ({
@@ -783,7 +808,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       saveSelfEval,
       saveManagerReview,
       saveManagerReviewDraft,
-      acknowledgeReview,
+      submitReviewAcceptance,
       updateReviewManager,
       getPerson,
       getTemplate,
@@ -819,7 +844,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       saveSelfEval,
       saveManagerReview,
       saveManagerReviewDraft,
-      acknowledgeReview,
+      submitReviewAcceptance,
       updateReviewManager,
       getPerson,
       getTemplate,

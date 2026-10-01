@@ -57,7 +57,7 @@ export function ManagerTeamReviewRow({
               customClass="!m-0"
               label={employee?.name ?? 'Employee'}
             />
-            <ManagerReviewStatusBadge status={review.status} />
+            <ManagerReviewStatusBadge status={review.status} cycle={cycle} review={review} />
           </div>
           <ModusWcTypography
             hierarchy="p"

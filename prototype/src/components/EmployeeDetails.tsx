@@ -124,7 +124,7 @@ function EmployeeReviewDetailPanel({
               </div>
             )}
           </div>
-          <StatusBadge status={review.status} />
+          <StatusBadge status={review.status} cycle={cycle} review={review} />
         </div>
       </div>
       <PerformanceReviewDetailContent reviewId={detailReviewId} />
@@ -465,7 +465,7 @@ export function EmployeeDetails({ myPerformanceVisit = 0 }: { myPerformanceVisit
                   >
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                       <h3 className="text-[14px] font-bold text-[#252a2e]">{cycle?.name ?? 'Review cycle'}</h3>
-                      <StatusBadge status={review.status} />
+                      <StatusBadge status={review.status} cycle={cycle} review={review} />
                     </div>
                     <p className="text-[13px] text-[#252a2e]">{template?.name ?? '—'}</p>
                     {cycle && (

@@ -1,9 +1,23 @@
 import { ModusWcBadge } from '@trimble-oss/moduswebcomponents-react'
-import type { ReviewStatus } from '../types'
-import { STATUS_LABELS, statusBadgeColor, statusBadgeCustomClass } from '../utils/status'
+import type { PerformanceReview, ReviewCycle, ReviewStatus } from '../types'
+import {
+  REVIEW_DISPLAY_STATUS_LABELS,
+  reviewDisplayStatusBadgeColor,
+  reviewDisplayStatusFromReviewStatus,
+  statusBadgeCustomClass,
+} from '../utils/status'
+import { getReviewDisplayStatus } from '../utils/workflow'
 
-export function StatusBadge({ status }: { status: ReviewStatus }) {
-  const color = statusBadgeColor(status)
+type StatusBadgeProps = {
+  status: ReviewStatus
+  cycle?: ReviewCycle
+  review?: PerformanceReview
+}
+
+export function StatusBadge({ status, cycle, review }: StatusBadgeProps) {
+  const displayStatus =
+    cycle && review ? getReviewDisplayStatus(cycle, review) : reviewDisplayStatusFromReviewStatus(status)
+  const color = reviewDisplayStatusBadgeColor(displayStatus)
 
   return (
     <ModusWcBadge
@@ -12,7 +26,7 @@ export function StatusBadge({ status }: { status: ReviewStatus }) {
       size="sm"
       customClass={statusBadgeCustomClass(color)}
     >
-      {STATUS_LABELS[status]}
+      {REVIEW_DISPLAY_STATUS_LABELS[displayStatus]}
     </ModusWcBadge>
   )
 }

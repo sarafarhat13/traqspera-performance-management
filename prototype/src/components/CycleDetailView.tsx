@@ -30,7 +30,7 @@ import {
   createManagerSelectCell,
   createStageDueCell,
   createTableActionButton,
-  createWorkflowReviewStageBadge,
+  createReviewDisplayStatusBadge,
 } from '../utils/modusTableCells'
 import { reviewReviewerDisplayName, reviewerPreviewLabel } from '../utils/reviewer'
 import {
@@ -39,11 +39,13 @@ import {
   createDefaultDashboardFilters,
   departmentOptionsFromPeople,
   reviewMatchesDashboardFilters,
+  reviewerOptionsFromReviews,
   titleOptionsFromPeople,
   unionOptionsFromPeople,
   type DashboardFilters,
 } from '../utils/dashboardFilters'
-import { getReviewWorkflowStage, type WorkflowReviewStage } from '../utils/workflow'
+import { getReviewDisplayStatus } from '../utils/workflow'
+import type { ReviewDisplayStatus } from '../utils/status'
 import { CycleWorkflowStageCards } from './CycleWorkflowStageCards'
 import { PerformanceDashboardFilterBar } from './PerformanceDashboardFilterBar'
 import { ReviewCycleCompleteModal } from './ReviewCycleCompleteModal'
@@ -123,6 +125,16 @@ export function CycleDetailView() {
   const titleOptions = useMemo(() => titleOptionsFromPeople(cyclePeople), [cyclePeople])
 
   const unionOptions = useMemo(() => unionOptionsFromPeople(cyclePeople), [cyclePeople])
+
+  const cycleReviews = useMemo(
+    () => (cycle ? state.reviews.filter((review) => review.cycleId === cycle.id) : []),
+    [cycle, state.reviews],
+  )
+
+  const reviewerOptions = useMemo(
+    () => reviewerOptionsFromReviews(cycleReviews, getPerson),
+    [cycleReviews, getPerson],
+  )
 
   const activeFilterCount = useMemo(() => countActiveDashboardFilters(filters), [filters])
 
@@ -220,7 +232,9 @@ export function CycleDetailView() {
       .filter((review) => review.cycleId === cycle.id)
       .filter((review) => {
         const employee = getPerson(review.employeeId)
-        return reviewMatchesDashboardFilters(review, cycle, employee, filters)
+        return reviewMatchesDashboardFilters(review, cycle, employee, filters, undefined, {
+          getPerson,
+        })
       })
       .map((review) => {
         const employee = getPerson(review.employeeId)
@@ -230,11 +244,7 @@ export function CycleDetailView() {
           department: employee?.department ?? '—',
           managerId: review.managerId,
           managerName: reviewReviewerDisplayName(review, getPerson),
-          reviewerType: review.reviewerType,
-          workflowStage: (cycle ? getReviewWorkflowStage(cycle, review) : 'not_started') as
-            | WorkflowReviewStage
-            | 'complete',
-          statusLabel: cycle ? getReviewWorkflowStage(cycle, review) : 'not_started',
+          displayStatus: (cycle ? getReviewDisplayStatus(cycle, review) : 'not_started') as ReviewDisplayStatus,
         }
       })
   }, [cycle, state.reviews, getPerson, filters])
@@ -254,7 +264,7 @@ export function CycleDetailView() {
       { id: 'department', header: 'Department', accessor: 'department', sortable: true },
       {
         id: 'manager',
-        header: 'Reviewer',
+        header: 'Assign reviewer',
         accessor: 'managerName',
         sortable: true,
         cellRenderer: (_value: unknown, row: unknown) => {
@@ -263,7 +273,6 @@ export function CycleDetailView() {
             managerId: string
             managerName: string
             employeeName: string
-            reviewerType?: string
           }
           return createManagerSelectCell(
             record.managerId,
@@ -276,11 +285,11 @@ export function CycleDetailView() {
       {
         id: 'status',
         header: 'Status',
-        accessor: 'statusLabel',
+        accessor: 'displayStatus',
         sortable: true,
         cellRenderer: (_value: unknown, row: unknown) =>
-          createWorkflowReviewStageBadge(
-            (row as { workflowStage: WorkflowReviewStage | 'complete' }).workflowStage,
+          createReviewDisplayStatusBadge(
+            (row as { displayStatus: ReviewDisplayStatus }).displayStatus,
           ),
       },
       {
@@ -637,11 +646,12 @@ export function CycleDetailView() {
               costCenterOptions={costCenterOptions}
               titleOptions={titleOptions}
               unionOptions={unionOptions}
+              reviewerOptions={reviewerOptions}
               activeFilterCount={activeFilterCount}
               filterFieldsKey={filterFieldsKey}
               showViewToggle={false}
               showStatusChips={false}
-              searchAriaLabel="Search by employee name, department, cost center, or title"
+              searchAriaLabel="Search by employee name, department, cost center, title, or reviewer"
               filterPanelId="cycle-detail-filter-panel"
               onFiltersChange={updateFilters}
               onClearFilters={clearFilters}

@@ -153,6 +153,27 @@ export interface PhaseAnswers {
   savedAt?: string
 }
 
+export type ReviewAcceptanceDecision = 'agree' | 'disagree'
+
+export interface ReviewAcceptanceSubmission {
+  decision: ReviewAcceptanceDecision
+  comment: string
+  signature: string
+  /** YYYY-MM-DD */
+  signedDate: string
+}
+
+export interface ReviewAcknowledgement {
+  acknowledged: boolean
+  completedAt?: string
+  decision?: ReviewAcceptanceDecision
+  comment?: string
+  signature?: string
+  signedDate?: string
+  /** True when the employee disagreed — HR should follow up. */
+  hrEscalationRequired?: boolean
+}
+
 export interface PerformanceReview {
   id: string
   cycleId: string
@@ -163,7 +184,7 @@ export interface PerformanceReview {
   status: ReviewStatus
   selfEval?: PhaseAnswers
   managerReview?: PhaseAnswers
-  acknowledgement?: { acknowledged: boolean; completedAt?: string }
+  acknowledgement?: ReviewAcknowledgement
 }
 
 export interface AppState {

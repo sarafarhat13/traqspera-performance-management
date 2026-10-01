@@ -47,6 +47,11 @@ export function reviewerPreviewLabel(
   }
 }
 
+export function reviewerTypeLabel(reviewerType?: ReviewerRoleType): string {
+  if (!reviewerType) return '—'
+  return REVIEWER_TYPE_OPTIONS.find((option) => option.value === reviewerType)?.label ?? '—'
+}
+
 export function reviewReviewerDisplayName(
   review: PerformanceReview,
   getPerson: (id: string) => Person | undefined,

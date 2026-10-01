@@ -1,4 +1,5 @@
 import type { PerformanceReview, Person, ReviewCycle } from '../types'
+import { getReviewDisplayStatus } from './workflow'
 
 export const DASHBOARD_FILTER_ALL = '__all__'
 
@@ -17,6 +18,7 @@ export type DashboardFilters = {
   costCenter: string
   title: string
   union: string
+  reviewerId: string
   status: DashboardStatusFilter
 }
 
@@ -27,6 +29,7 @@ export function createDefaultDashboardFilters(): DashboardFilters {
     costCenter: DASHBOARD_FILTER_ALL,
     title: DASHBOARD_FILTER_ALL,
     union: DASHBOARD_FILTER_ALL,
+    reviewerId: DASHBOARD_FILTER_ALL,
     status: 'all',
   }
 }
@@ -52,6 +55,7 @@ export type DashboardReviewFilterOptions = {
   employeeIds?: Set<string>
   /** Manager Team Reviews: Pending follows workflow status, not calendar due alone. */
   managerTeamReviewStatus?: boolean
+  getPerson?: (id: string) => Person | undefined
 }
 
 type PersonFilterKey = 'department' | 'costCenter' | 'title' | 'union'
@@ -79,8 +83,9 @@ export function managerTeamReviewStatusCategory(
   cycle: ReviewCycle,
   now = new Date(),
 ): Exclude<DashboardReviewStatusFilter, 'all' | 'draft'> {
-  if (review.status === 'completed') return 'completed'
-  if (isCyclePastDue(cycle, now)) return 'overdue'
+  const display = getReviewDisplayStatus(cycle, review, now)
+  if (display === 'complete') return 'completed'
+  if (display === 'overdue') return 'overdue'
   return 'pending'
 }
 
@@ -89,8 +94,9 @@ function reviewBucket(
   cycle: ReviewCycle,
   now = new Date(),
 ): ReviewBucket {
-  if (review.status === 'completed') return 'completed'
-  if (isCyclePastDue(cycle, now)) return 'overdue'
+  const display = getReviewDisplayStatus(cycle, review, now)
+  if (display === 'complete') return 'completed'
+  if (display === 'overdue') return 'overdue'
   return 'pending'
 }
 
@@ -128,6 +134,21 @@ export function hasActiveEmployeeFieldFilters(filters: DashboardFilters): boolea
     filters.costCenter !== DASHBOARD_FILTER_ALL ||
     filters.title !== DASHBOARD_FILTER_ALL ||
     filters.union !== DASHBOARD_FILTER_ALL
+  )
+}
+
+export function hasActiveReviewerFilter(
+  filters: Pick<DashboardFilters, 'reviewerId'>,
+): boolean {
+  return filters.reviewerId !== DASHBOARD_FILTER_ALL
+}
+
+/** Employee field filters plus reviewer — used when narrowing cycles/reviews (not search-only). */
+export function hasActiveReviewScopedFilters(
+  filters: Pick<DashboardFilters, 'department' | 'costCenter' | 'title' | 'union' | 'reviewerId'>,
+): boolean {
+  return (
+    hasActiveEmployeeFieldFilters(filters as DashboardFilters) || hasActiveReviewerFilter(filters)
   )
 }
 
@@ -180,17 +201,26 @@ export function reviewMatchesDashboardFilters(
   employee: Person | undefined,
   filters: DashboardFilters,
   now = new Date(),
-  options?: Pick<DashboardReviewFilterOptions, 'managerTeamReviewStatus'>,
+  options?: DashboardReviewFilterOptions,
 ): boolean {
   const query = filters.search.trim().toLowerCase()
 
   if (query) {
     const employeeHit = employeeMatchesSearch(employee, query)
     const cycleHit = cycleMatchesSearch(cycle, query)
-    if (!employeeHit && !cycleHit) return false
+    const reviewer = options?.getPerson?.(review.managerId)
+    const reviewerHit = employeeMatchesSearch(reviewer, query)
+    if (!employeeHit && !cycleHit && !reviewerHit) return false
   }
 
   if (!employeeMatchesFieldFilters(employee, filters)) {
+    return false
+  }
+
+  if (
+    filters.reviewerId !== DASHBOARD_FILTER_ALL &&
+    review.managerId !== filters.reviewerId
+  ) {
     return false
   }
 
@@ -224,22 +254,31 @@ function cycleMatchesListFilters(
   const listFilters: DashboardFilters = { ...filters, status: 'all' }
 
   if (cycle.status === 'draft') {
+    if (hasActiveReviewerFilter(filters)) return false
     return draftCycleMatchesListFilters(cycle, people, filters)
   }
 
   const query = filters.search.trim().toLowerCase()
-  if (!query && !hasActiveEmployeeFieldFilters(listFilters)) {
+  if (!query && !hasActiveReviewScopedFilters(listFilters)) {
     return true
   }
 
-  if (query && cycleMatchesSearch(cycle, query) && !hasActiveEmployeeFieldFilters(listFilters)) {
+  if (query && cycleMatchesSearch(cycle, query) && !hasActiveReviewScopedFilters(listFilters)) {
     return true
   }
 
   const cycleReviews = reviews.filter((review) => review.cycleId === cycle.id)
+  const getPerson = (id: string) => people.find((person) => person.id === id)
   return cycleReviews.some((review) => {
     const employee = people.find((person) => person.id === review.employeeId)
-    return reviewMatchesDashboardFilters(review, cycle, employee, { ...filters, status: 'all' })
+    return reviewMatchesDashboardFilters(
+      review,
+      cycle,
+      employee,
+      { ...filters, status: 'all' },
+      undefined,
+      { getPerson },
+    )
   })
 }
 
@@ -306,7 +345,11 @@ export function filterReviewsForDashboard(
     const cycle = cycles.find((item) => item.id === review.cycleId)
     if (!cycle) return false
     const employee = people.find((person) => person.id === review.employeeId)
-    return reviewMatchesDashboardFilters(review, cycle, employee, filters, now, options)
+    const getPerson = (id: string) => people.find((person) => person.id === id)
+    return reviewMatchesDashboardFilters(review, cycle, employee, filters, now, {
+      ...options,
+      getPerson,
+    })
   })
 }
 
@@ -337,8 +380,16 @@ export function computeScopedDashboardReviewCounts(
     const cycle = cycles.find((item) => item.id === review.cycleId)
     if (!cycle) continue
     const employee = people.find((person) => person.id === review.employeeId)
+    const getPerson = (id: string) => people.find((person) => person.id === id)
     if (
-      !reviewMatchesDashboardFilters(review, cycle, employee, { ...filters, status: 'all' }, now, options)
+      !reviewMatchesDashboardFilters(
+        review,
+        cycle,
+        employee,
+        { ...filters, status: 'all' },
+        now,
+        { ...options, getPerson },
+      )
     ) {
       continue
     }
@@ -365,6 +416,7 @@ export function countActiveDashboardFilters(filters: DashboardFilters): number {
   if (filters.costCenter !== DASHBOARD_FILTER_ALL) count += 1
   if (filters.title !== DASHBOARD_FILTER_ALL) count += 1
   if (filters.union !== DASHBOARD_FILTER_ALL) count += 1
+  if (filters.reviewerId !== DASHBOARD_FILTER_ALL) count += 1
   if (filters.status !== 'all') count += 1
   return count
 }
@@ -375,6 +427,7 @@ export function countActivePanelFilters(filters: DashboardFilters): number {
   if (filters.costCenter !== DASHBOARD_FILTER_ALL) count += 1
   if (filters.title !== DASHBOARD_FILTER_ALL) count += 1
   if (filters.union !== DASHBOARD_FILTER_ALL) count += 1
+  if (filters.reviewerId !== DASHBOARD_FILTER_ALL) count += 1
   return count
 }
 
@@ -403,4 +456,44 @@ export function titleOptionsFromPeople(people: Person[]): { label: string; value
 
 export function unionOptionsFromPeople(people: Person[]): { label: string; value: string }[] {
   return distinctOptionsFromPeople(people, 'union')
+}
+
+export function reviewerOptionsFromReviews(
+  reviews: PerformanceReview[],
+  getPerson: (id: string) => Person | undefined,
+): { label: string; value: string }[] {
+  const managerIds = [...new Set(reviews.map((review) => review.managerId).filter(Boolean))].sort(
+    (a, b) => {
+      const nameA = getPerson(a)?.name ?? a
+      const nameB = getPerson(b)?.name ?? b
+      return nameA.localeCompare(nameB)
+    },
+  )
+  return [
+    { label: 'All reviewers', value: DASHBOARD_FILTER_ALL },
+    ...managerIds.map((id) => ({
+      label: getPerson(id)?.name ?? 'Unknown reviewer',
+      value: id,
+    })),
+  ]
+}
+
+/** Short summary of distinct reviewers assigned in a cycle (for dashboard table rows). */
+export function cycleReviewersSummary(
+  cycleId: string,
+  reviews: PerformanceReview[],
+  getPerson: (id: string) => Person | undefined,
+): string {
+  const names = [
+    ...new Set(
+      reviews
+        .filter((review) => review.cycleId === cycleId)
+        .map((review) => getPerson(review.managerId)?.name)
+        .filter((name): name is string => Boolean(name)),
+    ),
+  ].sort((a, b) => a.localeCompare(b))
+
+  if (names.length === 0) return '—'
+  if (names.length <= 2) return names.join(', ')
+  return `${names.slice(0, 2).join(', ')} (+${names.length - 2} more)`
 }

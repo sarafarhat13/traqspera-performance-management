@@ -1225,6 +1225,7 @@ export function LaunchCycleWizard() {
         <footer className="tq-launch-wizard-page__footer">
           <div className="tq-launch-wizard-page__footer-inner">
             <ModusWcButton
+              key={stepIndex === 0 ? 'wizard-footer-cancel' : 'wizard-footer-back'}
               variant="outlined"
               color="tertiary"
               size="sm"

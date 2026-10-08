@@ -803,6 +803,11 @@ type WalkthroughCopy = {
   acceptanceComment: string
   /** Active-cycle sample: employee self-eval due vs. ready for acceptance. */
   activeCycleSample?: 'self_eval_pending' | 'acknowledgement_pending'
+  /** When false, only completed + active-cycle samples are shown (clearer My Performance demo). */
+  includeNotStartedSample?: boolean
+  /** Extra 90-day check-in ready for employee acceptance (manager review complete). */
+  includeAcknowledgementSample?: boolean
+  acknowledgementManagerAnswers?: Record<string, string>
 }
 
 function createMyPerformanceWalkthroughReviews(copy: WalkthroughCopy): PerformanceReview[] {
@@ -858,13 +863,38 @@ function createMyPerformanceWalkthroughReviews(copy: WalkthroughCopy): Performan
       },
     },
     activeCycleReview,
-    {
-      id: `rev-walk-${token}-90day`,
-      cycleId: 'cycle-90-days',
-      employeeId: copy.employeeId,
-      managerId: copy.managerId,
-      status: 'not_started',
-    },
+    ...(copy.includeNotStartedSample !== false
+      ? [
+          {
+            id: `rev-walk-${token}-90day`,
+            cycleId: 'cycle-90-days',
+            employeeId: copy.employeeId,
+            managerId: copy.managerId,
+            status: 'not_started' as const,
+          },
+        ]
+      : []),
+    ...(copy.includeAcknowledgementSample
+      ? [
+          {
+            id: `rev-walk-${token}-90day-ack`,
+            cycleId: 'cycle-90-days',
+            employeeId: copy.employeeId,
+            managerId: copy.managerId,
+            status: 'acknowledgement_pending' as const,
+            managerReview: {
+              answers: copy.acknowledgementManagerAnswers ?? {
+                '90d1': 'Strong start on HR program communications and cycle coordination.',
+                '90d2': 'Onboarding goals are on track; one reporting dashboard item in progress.',
+                '90d3': 'Continue building HR analytics and change-management skills.',
+                '90d4': 'Effective collaboration with finance and operations partners.',
+                '90d5': 'Support for advanced analytics training and manager enablement time.',
+              },
+              completedAt: '2025-10-22T14:00:00Z',
+            },
+          },
+        ]
+      : []),
   ]
 }
 
@@ -903,6 +933,15 @@ export const myPerformanceWalkthroughReviews: PerformanceReview[] = [
     employeeId: 'hr-1',
     managerId: 'mgr-2',
     activeCycleSample: 'self_eval_pending',
+    includeNotStartedSample: false,
+    includeAcknowledgementSample: true,
+    acknowledgementManagerAnswers: {
+      '90d1': 'Delivered timely policy updates and supported two division rollouts in the first quarter.',
+      '90d2': 'Compliance training goals met; HRIS acceptance reporting on track.',
+      '90d3': 'Growing strength in analytics; recommend continued dashboard and enablement work.',
+      '90d4': 'Works well with finance leadership and cross-functional stakeholders.',
+      '90d5': 'Budget for analytics coursework and protected time for manager toolkit work.',
+    },
     signatureName: 'Hannah Reed',
     completedSelf: {
       q1: 'Supported three annual review cycles and policy updates on schedule.',

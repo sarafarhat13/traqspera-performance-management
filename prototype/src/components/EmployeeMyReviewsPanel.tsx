@@ -173,13 +173,23 @@ export function EmployeeMyReviewsPanel({
   onAcknowledge,
   onViewDetails,
 }: EmployeeMyReviewsPanelProps) {
-  const { awaitingAcknowledgment, notStarted, completed, inProgress } = useMemo(() => {
+  const { awaitingAcknowledgment, notStarted, completed, inProgress, selfEvalDue } = useMemo(() => {
     const awaitingAcknowledgmentRows: ReviewRow[] = []
     const notStartedRows: ReviewRow[] = []
     const completedRows: ReviewRow[] = []
     const inProgressRows: ReviewRow[] = []
+    const selfEvalDueRows: ReviewRow[] = []
 
     for (const row of reviews) {
+      const needsSelfEval = row.cycle
+        ? needsEmployeeSelfEval(row.cycle, row.review)
+        : row.review.status === 'self_eval_pending'
+
+      if (needsSelfEval) {
+        selfEvalDueRows.push(row)
+        continue
+      }
+
       switch (row.review.status) {
         case 'completed':
           completedRows.push(row)
@@ -200,6 +210,7 @@ export function EmployeeMyReviewsPanel({
       notStarted: sortRowsByDueDate(notStartedRows),
       completed: sortRowsByDueDate(completedRows),
       inProgress: sortRowsByDueDate(inProgressRows),
+      selfEvalDue: sortRowsByDueDate(selfEvalDueRows),
     }
   }, [reviews])
 
@@ -213,33 +224,56 @@ export function EmployeeMyReviewsPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      {awaitingAcknowledgment.length > 0 && (
+      {selfEvalDue.length > 0 && (
         <ModusWcAlert
-          variant="info"
-          alertTitle="Review acceptance"
-          alertDescription="These reviews are ready for your acceptance. Read the summary, choose agree or disagree, and sign."
+          variant="warning"
+          alertTitle="Self-evaluation due"
+          alertDescription="Complete your self-evaluation so your manager can continue the review."
         />
       )}
 
-      <ReviewSection
-        title="Awaiting acknowledgment"
-        description="Manager feedback is complete — record your acceptance to finish the review."
-        rows={awaitingAcknowledgment}
-        emptyLabel="No reviews are waiting for your acceptance."
-        onSelfEval={onSelfEval}
-        onAcknowledge={onAcknowledge}
-        onViewDetails={onViewDetails}
-      />
+      {selfEvalDue.length > 0 && (
+        <ReviewSection
+          title="Complete your review"
+          description="Answer the self-evaluation questions for your active review cycle."
+          rows={selfEvalDue}
+          emptyLabel=""
+          onSelfEval={onSelfEval}
+          onAcknowledge={onAcknowledge}
+          onViewDetails={onViewDetails}
+        />
+      )}
 
-      <ReviewSection
-        title="Not started"
-        description="Reviews that have not been started yet."
-        rows={notStarted}
-        emptyLabel="You have no reviews in the not started state."
-        onSelfEval={onSelfEval}
-        onAcknowledge={onAcknowledge}
-        onViewDetails={onViewDetails}
-      />
+      {awaitingAcknowledgment.length > 0 && (
+        <>
+          <ModusWcAlert
+            variant="info"
+            alertTitle="Review acceptance"
+            alertDescription="These reviews are ready for your acceptance. Read the summary, choose agree or disagree, and sign."
+          />
+          <ReviewSection
+            title="Awaiting acknowledgment"
+            description="Manager feedback is complete — record your acceptance to finish the review."
+            rows={awaitingAcknowledgment}
+            emptyLabel=""
+            onSelfEval={onSelfEval}
+            onAcknowledge={onAcknowledge}
+            onViewDetails={onViewDetails}
+          />
+        </>
+      )}
+
+      {notStarted.length > 0 && (
+        <ReviewSection
+          title="Not started"
+          description="Reviews that have not been started yet."
+          rows={notStarted}
+          emptyLabel=""
+          onSelfEval={onSelfEval}
+          onAcknowledge={onAcknowledge}
+          onViewDetails={onViewDetails}
+        />
+      )}
 
       {inProgress.length > 0 && (
         <ReviewSection
@@ -253,15 +287,17 @@ export function EmployeeMyReviewsPanel({
         />
       )}
 
-      <ReviewSection
-        title="Completed"
-        description="Finished reviews, including signed acceptances."
-        rows={completed}
-        emptyLabel="No completed reviews yet."
-        onSelfEval={onSelfEval}
-        onAcknowledge={onAcknowledge}
-        onViewDetails={onViewDetails}
-      />
+      {completed.length > 0 && (
+        <ReviewSection
+          title="Completed"
+          description="Finished reviews, including signed acceptances."
+          rows={completed}
+          emptyLabel=""
+          onSelfEval={onSelfEval}
+          onAcknowledge={onAcknowledge}
+          onViewDetails={onViewDetails}
+        />
+      )}
     </div>
   )
 }

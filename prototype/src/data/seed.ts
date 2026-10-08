@@ -779,7 +779,7 @@ const cycle2025Reviews = create2025AnnualReviews(seedPeople).map((review) => {
   }
 })
 
-/** My Performance walkthrough — completed, awaiting acceptance, and not started (pinned on load). */
+/** My Performance walkthrough — completed, in-progress self-eval or acceptance, and not started (pinned on load). */
 export const MY_PERFORMANCE_WALKTHROUGH_EMPLOYEE_IDS = ['emp-3', 'hr-1'] as const
 
 const MY_PERFORMANCE_WALKTHROUGH_EMPLOYEE_ID_SET = new Set<string>(MY_PERFORMANCE_WALKTHROUGH_EMPLOYEE_IDS)
@@ -801,10 +801,38 @@ type WalkthroughCopy = {
   pendingSelf: Record<string, string>
   pendingManager: Record<string, string>
   acceptanceComment: string
+  /** Active-cycle sample: employee self-eval due vs. ready for acceptance. */
+  activeCycleSample?: 'self_eval_pending' | 'acknowledgement_pending'
 }
 
 function createMyPerformanceWalkthroughReviews(copy: WalkthroughCopy): PerformanceReview[] {
   const token = copy.employeeId.replace(/-/g, '')
+  const activeSample = copy.activeCycleSample ?? 'acknowledgement_pending'
+  const activeCycleReview: PerformanceReview =
+    activeSample === 'self_eval_pending'
+      ? {
+          id: `rev-walk-${token}-2025`,
+          cycleId: 'cycle-2025',
+          employeeId: copy.employeeId,
+          managerId: copy.managerId,
+          status: 'self_eval_pending',
+        }
+      : {
+          id: `rev-walk-${token}-2025`,
+          cycleId: 'cycle-2025',
+          employeeId: copy.employeeId,
+          managerId: copy.managerId,
+          status: 'acknowledgement_pending',
+          selfEval: {
+            answers: copy.pendingSelf,
+            completedAt: '2025-10-18T10:00:00Z',
+          },
+          managerReview: {
+            answers: copy.pendingManager,
+            completedAt: '2025-11-08T14:30:00Z',
+          },
+        }
+
   return [
     {
       id: `rev-walk-${token}-2024`,
@@ -829,21 +857,7 @@ function createMyPerformanceWalkthroughReviews(copy: WalkthroughCopy): Performan
         signedDate: '2024-03-02',
       },
     },
-    {
-      id: `rev-walk-${token}-2025`,
-      cycleId: 'cycle-2025',
-      employeeId: copy.employeeId,
-      managerId: copy.managerId,
-      status: 'acknowledgement_pending',
-      selfEval: {
-        answers: copy.pendingSelf,
-        completedAt: '2025-10-18T10:00:00Z',
-      },
-      managerReview: {
-        answers: copy.pendingManager,
-        completedAt: '2025-11-08T14:30:00Z',
-      },
-    },
+    activeCycleReview,
     {
       id: `rev-walk-${token}-90day`,
       cycleId: 'cycle-90-days',
@@ -888,6 +902,7 @@ export const myPerformanceWalkthroughReviews: PerformanceReview[] = [
   ...createMyPerformanceWalkthroughReviews({
     employeeId: 'hr-1',
     managerId: 'mgr-2',
+    activeCycleSample: 'self_eval_pending',
     signatureName: 'Hannah Reed',
     completedSelf: {
       q1: 'Supported three annual review cycles and policy updates on schedule.',

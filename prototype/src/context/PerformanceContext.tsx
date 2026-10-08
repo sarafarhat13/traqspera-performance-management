@@ -47,7 +47,7 @@ import { resolveManagerDashboardPersonId } from '../utils/managerDashboardContex
 
 const STORAGE_KEY = 'traqspera-performance-management-v3'
 /** Bump when bundled seed cycles/reviews change so stale localStorage is refreshed. */
-const SEED_VERSION = 22
+const SEED_VERSION = 23
 
 const UNASSIGNED_DEMO_ID_SET = new Set<string>(UNASSIGNED_DEMO_EMPLOYEE_IDS)
 

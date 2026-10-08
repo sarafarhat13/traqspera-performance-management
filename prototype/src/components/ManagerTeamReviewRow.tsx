@@ -6,7 +6,11 @@ import {
 } from '@trimble-oss/moduswebcomponents-react'
 import type { PerformanceReview, Person, ReviewCycle } from '../types'
 import { formatDate } from '../utils/status'
-import { getCurrentStageDeadline, hasManagerReviewDraft } from '../utils/workflow'
+import {
+  formatReviewProcessText,
+  getCurrentStageDeadline,
+  hasManagerReviewDraft,
+} from '../utils/workflow'
 import { ManagerReviewStatusBadge } from './ManagerReviewStatusBadge'
 
 function employeeInitials(name: string): string {
@@ -36,7 +40,7 @@ export function ManagerTeamReviewRow({
   onDetails,
 }: ManagerTeamReviewRowProps) {
   const dueDate = cycle ? getCurrentStageDeadline(cycle, review) : undefined
-  const selfEvalCompletedAt = review.selfEval?.completedAt
+  const processLabel = formatReviewProcessText(cycle, review)
   const completedAt = review.acknowledgement?.completedAt ?? review.managerReview?.completedAt
   const hasDraft = hasManagerReviewDraft(review)
 
@@ -77,17 +81,12 @@ export function ManagerTeamReviewRow({
                 />
               </div>
             )}
-            {selfEvalCompletedAt && (
-              <div className="flex items-center gap-1">
-                <ModusWcIcon name="check_circle" size="xs" decorative />
-                <ModusWcTypography
-                  hierarchy="p"
-                  size="xs"
-                  customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
-                  label={`Self-eval completed: ${formatDate(selfEvalCompletedAt)}`}
-                />
-              </div>
-            )}
+            <ModusWcTypography
+              hierarchy="p"
+              size="xs"
+              customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
+              label={processLabel}
+            />
             {hasDraft && review.managerReview?.savedAt && (
               <div className="flex items-center gap-1">
                 <ModusWcIcon name="document" size="xs" decorative />

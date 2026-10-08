@@ -30,6 +30,7 @@ import {
   type DashboardFilters,
 } from '../utils/dashboardFilters'
 import {
+  formatReviewProcessText,
   getCurrentStageDeadline,
   hasManagerReviewDraft,
   getReviewDisplayStatus,
@@ -39,6 +40,28 @@ import type { PerformanceReview, Person, ReviewCycle, ReviewStatus, ReviewTempla
 import { resolveManagerDashboardPersonId } from '../utils/managerDashboardContext'
 
 type ManagerDashboardViewMode = 'card' | 'table'
+
+const DEFAULT_MANAGER_DASHBOARD_VIEW: ManagerDashboardViewMode = 'table'
+
+function TeamReviewsSectionTitle() {
+  return (
+    <div slot="title" className="tq-section-card-title mb-4 flex w-full min-w-0 flex-col gap-1">
+      <ModusWcTypography
+        hierarchy="h4"
+        size="md"
+        weight="semibold"
+        customClass="!m-0"
+        label="Team Performance Reviews"
+      />
+      <ModusWcTypography
+        hierarchy="p"
+        size="sm"
+        customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
+        label="One review per direct report. Items needing your manager feedback are listed first."
+      />
+    </div>
+  )
+}
 
 function reviewStatusPriority(status: ReviewStatus): number {
   switch (status) {
@@ -95,9 +118,7 @@ function buildReviewTableRows(
         ? REVIEW_DISPLAY_STATUS_LABELS[getReviewDisplayStatus(cycle, review)]
         : review.status,
       dueDate: dueDate ? formatDate(dueDate) : '—',
-      selfEvalCompleted: review.selfEval?.completedAt
-        ? formatDate(review.selfEval.completedAt)
-        : '—',
+      processLabel: formatReviewProcessText(cycle, review),
       managerReviewDraft: hasManagerReviewDraft(review),
       managerActionRequired: cycle ? needsManagerReview(cycle, review) : review.status === 'manager_pending',
     }
@@ -126,7 +147,7 @@ export function ManagerDashboard() {
       setActivePersonId(managerId)
     }
   }, [managerId, state.activePersonId, setActivePersonId])
-  const [viewMode, setViewMode] = useState<ManagerDashboardViewMode>('table')
+  const [viewMode, setViewMode] = useState<ManagerDashboardViewMode>(DEFAULT_MANAGER_DASHBOARD_VIEW)
   const [filters, setFilters] = useState<DashboardFilters>(() => createDefaultDashboardFilters())
   const [filterFieldsKey, setFilterFieldsKey] = useState(0)
 
@@ -296,9 +317,9 @@ export function ManagerDashboard() {
       },
       { id: 'due', header: 'Due', accessor: 'dueDate', sortable: true },
       {
-        id: 'selfEval',
-        header: 'Self-eval completed',
-        accessor: 'selfEvalCompleted',
+        id: 'process',
+        header: 'Process',
+        accessor: 'processLabel',
         sortable: true,
       },
       {
@@ -456,27 +477,13 @@ export function ManagerDashboard() {
           onViewModeChange={setViewMode}
         />
 
-        <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
-          <div slot="title" className="tq-section-card-title mb-4 flex w-full min-w-0 flex-col gap-1">
-            <ModusWcTypography
-              hierarchy="h4"
-              size="md"
-              weight="semibold"
-              customClass="!m-0"
-              label="Team Performance Reviews"
-            />
-            <ModusWcTypography
-              hierarchy="p"
-              size="sm"
-              customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
-              label="One review per direct report. Items needing your manager feedback are listed first."
-            />
-          </div>
-          <div
-            hidden={!teamReviewsFilteredEmpty}
-            aria-hidden={!teamReviewsFilteredEmpty}
-            className={teamReviewsFilteredEmpty ? 'flex flex-col gap-2' : undefined}
-          >
+        <div
+          hidden={!teamReviewsFilteredEmpty}
+          aria-hidden={!teamReviewsFilteredEmpty}
+          className={teamReviewsFilteredEmpty ? 'flex flex-col gap-2' : undefined}
+        >
+          <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
+            <TeamReviewsSectionTitle />
             <ModusWcTypography
               hierarchy="p"
               size="sm"
@@ -490,20 +497,27 @@ export function ManagerDashboard() {
                 </ModusWcButton>
               </div>
             )}
-          </div>
-          <div
-            hidden={viewMode !== 'card' || teamReviewsFilteredEmpty}
-            aria-hidden={viewMode !== 'card' || teamReviewsFilteredEmpty}
-            className={
-              viewMode === 'card' && !teamReviewsFilteredEmpty ? 'flex flex-col gap-2' : undefined
-            }
-          >
-            {filteredTeamReviews.map((review) => renderReviewRow(review, true))}
-          </div>
-        </ModusWcCard>
+          </ModusWcCard>
+        </div>
+
+        <div
+          hidden={viewMode !== 'card' || teamReviewsFilteredEmpty}
+          aria-hidden={viewMode !== 'card' || teamReviewsFilteredEmpty}
+          className={
+            viewMode === 'card' && !teamReviewsFilteredEmpty ? 'flex flex-col gap-2' : undefined
+          }
+        >
+          <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
+            <TeamReviewsSectionTitle />
+            <div className="flex flex-col gap-2">
+              {filteredTeamReviews.map((review) => renderReviewRow(review, true))}
+            </div>
+          </ModusWcCard>
+        </div>
 
         {viewMode === 'table' && !teamReviewsFilteredEmpty ? (
           <ModusWcCard bordered padding="compact" customClass={`${TRAQ_CARD_CLASS} tq-table-card`}>
+            <TeamReviewsSectionTitle />
             <PerformanceDataTable
               key="manager-team-reviews-table"
               caption="Team performance reviews"

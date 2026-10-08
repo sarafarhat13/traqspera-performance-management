@@ -517,6 +517,63 @@ export function getWorkflowStepCardStatusLabel(
   return WORKFLOW_STEP_STATUS_LABELS[stepType] ?? WORKFLOW_REVIEW_STAGE_LABELS.not_started
 }
 
+export function formatReviewProcessText(
+  cycle: ReviewCycle | undefined,
+  review: PerformanceReview,
+): string {
+  const stage = resolveReviewWorkflowStage(cycle, review)
+  const employeeCompletedAt = review.selfEval?.completedAt
+  const managerCompletedAt = review.managerReview?.completedAt
+  const completedAt = review.acknowledgement?.completedAt ?? managerCompletedAt
+
+  switch (stage) {
+    case 'employee_review':
+      return employeeCompletedAt
+        ? `Employee review completed on ${formatDate(employeeCompletedAt)}`
+        : WORKFLOW_REVIEW_STAGE_LABELS.employee_review
+    case 'manager_review':
+      if (employeeCompletedAt) {
+        return `Employee review completed on ${formatDate(employeeCompletedAt)}`
+      }
+      if (managerCompletedAt) {
+        return `Manager review completed on ${formatDate(managerCompletedAt)}`
+      }
+      return WORKFLOW_REVIEW_STAGE_LABELS.manager_review
+    case 'employee_acknowledgment':
+      if (managerCompletedAt) {
+        return `Manager review completed on ${formatDate(managerCompletedAt)}`
+      }
+      if (employeeCompletedAt) {
+        return `Employee review completed on ${formatDate(employeeCompletedAt)}`
+      }
+      return WORKFLOW_REVIEW_STAGE_LABELS.employee_acknowledgment
+    case 'complete':
+      return completedAt ? `Completed on ${formatDate(completedAt)}` : WORKFLOW_REVIEW_STAGE_LABELS.complete
+    default:
+      return WORKFLOW_REVIEW_STAGE_LABELS.not_started
+  }
+}
+
+export function resolveReviewWorkflowStage(
+  cycle: ReviewCycle | undefined,
+  review: PerformanceReview,
+): WorkflowReviewStage | 'complete' {
+  if (cycle) return getReviewWorkflowStage(cycle, review)
+  switch (review.status) {
+    case 'self_eval_pending':
+      return 'employee_review'
+    case 'manager_pending':
+    case 'parallel_review_pending':
+      return 'manager_review'
+    case 'acknowledgement_pending':
+      return 'employee_acknowledgment'
+    case 'completed':
+      return 'complete'
+    default:
+      return 'not_started'
+  }
+}
+
 export function getReviewWorkflowStage(
   cycle: ReviewCycle,
   review: PerformanceReview,

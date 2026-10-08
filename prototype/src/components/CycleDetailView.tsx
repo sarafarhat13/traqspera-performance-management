@@ -106,9 +106,12 @@ export function CycleDetailView() {
 
   const cyclePeople = useMemo(() => {
     if (!cycle) return [] as Person[]
-    const employeeIds = new Set(
-      state.reviews.filter((review) => review.cycleId === cycle.id).map((review) => review.employeeId),
-    )
+    const employeeIds = new Set([
+      ...cycle.employeeIds,
+      ...state.reviews
+        .filter((review) => review.cycleId === cycle.id)
+        .map((review) => review.employeeId),
+    ])
     return state.people.filter((person) => employeeIds.has(person.id))
   }, [cycle, state.reviews, state.people])
 

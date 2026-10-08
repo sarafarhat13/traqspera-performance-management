@@ -12,7 +12,7 @@ import { PerformanceDashboardKpiCard } from './PerformanceDashboardKpiCard'
 import { PerformanceDashboardFilterBar } from './PerformanceDashboardFilterBar'
 import { ManagerTeamReviewRow } from './ManagerTeamReviewRow'
 import { PerformanceDataTable } from './PerformanceDataTable'
-import { formatDate, REVIEW_DISPLAY_STATUS_LABELS } from '../utils/status'
+import { formatDate, isLaunchedReviewCycle, REVIEW_DISPLAY_STATUS_LABELS } from '../utils/status'
 import {
   createReviewDisplayStatusBadge,
   createTableActionButton,
@@ -163,14 +163,21 @@ export function ManagerDashboard() {
   )
 
   const managerReviews = useMemo(
-    () => state.reviews.filter((review) => review.managerId === managerId),
-    [state.reviews, managerId],
+    () =>
+      state.reviews.filter(
+        (review) =>
+          review.managerId === managerId && isLaunchedReviewCycle(getCycle(review.cycleId)),
+      ),
+    [state.reviews, managerId, getCycle],
   )
 
   const teamReviews = useMemo(() => {
     const reportIds = new Set(directReports.map((person) => person.id))
     const relevant = state.reviews.filter(
-      (review) => review.managerId === managerId && reportIds.has(review.employeeId),
+      (review) =>
+        review.managerId === managerId &&
+        reportIds.has(review.employeeId) &&
+        isLaunchedReviewCycle(getCycle(review.cycleId)),
     )
     const byEmployee = new Map<string, PerformanceReview>()
 
@@ -190,7 +197,7 @@ export function ManagerDashboard() {
       const rightName = getPerson(right.employeeId)?.name ?? ''
       return leftName.localeCompare(rightName)
     })
-  }, [state.reviews, managerId, directReports, getPerson])
+  }, [state.reviews, managerId, directReports, getPerson, getCycle])
 
   const reportIds = useMemo(
     () => new Set(directReports.map((person) => person.id)),

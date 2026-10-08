@@ -49,7 +49,7 @@ export type DashboardReviewCounts = {
   draft: number
 }
 
-type ReviewBucket = 'pending' | 'completed' | 'overdue'
+type ReviewBucket = 'pending' | 'completed' | 'overdue' | 'draft'
 
 export type DashboardReviewFilterOptions = {
   employeeIds?: Set<string>
@@ -97,6 +97,7 @@ function reviewBucket(
   const display = getReviewDisplayStatus(cycle, review, now)
   if (display === 'complete') return 'completed'
   if (display === 'overdue') return 'overdue'
+  if (display === 'draft') return 'draft'
   return 'pending'
 }
 
@@ -224,17 +225,18 @@ export function reviewMatchesDashboardFilters(
     return false
   }
 
-  if (filters.status === 'draft') {
-    return false
-  }
-
   if (options?.managerTeamReviewStatus) {
     if (filters.status === 'all') return true
     const category = managerTeamReviewStatusCategory(review, cycle, now)
     return category === filters.status
   }
 
-  const reviewStatusFilters: DashboardReviewStatusFilter[] = ['pending', 'completed', 'overdue']
+  const reviewStatusFilters: DashboardReviewStatusFilter[] = [
+    'pending',
+    'completed',
+    'overdue',
+    'draft',
+  ]
   if (
     reviewStatusFilters.includes(filters.status as DashboardReviewStatusFilter) &&
     statusBucketForReview(review, cycle, now) !== filters.status
@@ -254,8 +256,11 @@ function cycleMatchesListFilters(
   const listFilters: DashboardFilters = { ...filters, status: 'all' }
 
   if (cycle.status === 'draft') {
-    if (hasActiveReviewerFilter(filters)) return false
-    return draftCycleMatchesListFilters(cycle, people, filters)
+    const draftReviews = reviews.filter((review) => review.cycleId === cycle.id)
+    if (draftReviews.length === 0) {
+      if (hasActiveReviewerFilter(filters)) return false
+      return draftCycleMatchesListFilters(cycle, people, filters)
+    }
   }
 
   const query = filters.search.trim().toLowerCase()
@@ -371,9 +376,7 @@ export function computeScopedDashboardReviewCounts(
     pending: 0,
     completed: 0,
     overdue: 0,
-    draft: options?.managerTeamReviewStatus
-      ? 0
-      : countDraftCycles(cycles, people, filters),
+    draft: 0,
   }
 
   for (const review of scopedReviews) {
@@ -404,6 +407,10 @@ export function computeScopedDashboardReviewCounts(
 
     const bucket = statusBucketForReview(review, cycle, now)
     counts[bucket] += 1
+  }
+
+  if (!options?.managerTeamReviewStatus && counts.draft === 0) {
+    counts.draft = countDraftCycles(cycles, people, filters)
   }
 
   return counts

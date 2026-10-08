@@ -222,6 +222,7 @@ export function statusAfterManagerPhaseComplete(
 }
 
 export function needsEmployeeSelfEval(cycle: ReviewCycle, review: PerformanceReview): boolean {
+  if (cycle.status === 'draft') return false
   if (review.selfEval?.completedAt) return false
   if (!cycleIncludesSelfEvaluation(cycle)) return false
   if (review.status === 'acknowledgement_pending' || review.status === 'completed') return false
@@ -232,6 +233,7 @@ export function needsEmployeeSelfEval(cycle: ReviewCycle, review: PerformanceRev
 }
 
 export function needsManagerReview(cycle: ReviewCycle, review: PerformanceReview): boolean {
+  if (cycle.status === 'draft') return false
   if (review.managerReview?.completedAt) return false
   const workflow = cycle.workflow ?? workflowFromLegacy(cycle.includesSelfEvaluation)
   const managerEnabled = workflow.some((s) => s.enabled && s.type === 'manager')
@@ -448,6 +450,7 @@ export function getReviewDisplayStatus(
   review: PerformanceReview,
   now = new Date(),
 ): ReviewDisplayStatus {
+  if (cycle.status === 'draft') return 'draft'
   if (review.status === 'completed') return 'complete'
   if (review.status === 'acknowledgement_pending') return 'employee_acknowledgement'
 

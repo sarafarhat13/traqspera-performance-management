@@ -47,7 +47,7 @@ import { resolveManagerDashboardPersonId } from '../utils/managerDashboardContex
 
 const STORAGE_KEY = 'traqspera-performance-management-v3'
 /** Bump when bundled seed cycles/reviews change so stale localStorage is refreshed. */
-const SEED_VERSION = 21
+const SEED_VERSION = 22
 
 const UNASSIGNED_DEMO_ID_SET = new Set<string>(UNASSIGNED_DEMO_EMPLOYEE_IDS)
 
@@ -213,6 +213,20 @@ function resolveReviews(persisted: Partial<PersistedState>): PerformanceReview[]
   return pinMyPerformanceWalkthroughReviews(pinLisaFinalApprovalDemoReviews(mergeMissingSeedReviews(stored)))
 }
 
+function hydrateDraftCycleReviews(
+  cycles: ReviewCycle[],
+  reviews: PerformanceReview[],
+  people: Person[],
+): PerformanceReview[] {
+  return cycles.reduce(
+    (next, cycle) =>
+      cycle.status === 'draft'
+        ? reviewsForCycleLaunch(cycle, next, people, cycle.reviewerAssignments)
+        : next,
+    reviews,
+  )
+}
+
 function loadPersisted(): Partial<PersistedState> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -324,7 +338,11 @@ const PerformanceContext = createContext<PerformanceContextValue | null>(null)
 export function PerformanceProvider({ children }: { children: ReactNode }) {
   const persisted = loadPersisted()
   const initialCycles = resolveCycles(persisted)
-  const initialReviews = resolveReviews(persisted)
+  const initialReviews = hydrateDraftCycleReviews(
+    initialCycles,
+    resolveReviews(persisted),
+    seedPeople,
+  )
 
   const [state, setState] = useState<AppState>(() => ({
     activePersonId: persisted.activePersonId ?? DEFAULT_ACTIVE_PERSON_ID,
@@ -539,7 +557,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
         employeeIds: [...cycle.employeeIds, ...toAdd],
       }
       const reviews =
-        updatedCycle.status === 'active'
+        updatedCycle.status === 'active' || updatedCycle.status === 'draft'
           ? reviewsForCycleLaunch(
               updatedCycle,
               s.reviews,
@@ -607,6 +625,12 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       setState((s) => ({
         ...s,
         cycles: [...s.cycles, cycle],
+        reviews: reviewsForCycleLaunch(
+          cycle,
+          s.reviews,
+          s.people,
+          options?.reviewerAssignments,
+        ),
         view: 'hr_dashboard',
       }))
     },

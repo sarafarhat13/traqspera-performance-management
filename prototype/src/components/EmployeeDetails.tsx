@@ -8,7 +8,7 @@ import {
 } from '@trimble-oss/moduswebcomponents-react'
 import { usePerformance } from '../context/PerformanceContext'
 import type { EmployeeDetailsTab, PerformanceReview, ReviewCycle, ReviewTemplate } from '../types'
-import { formatReviewPeriod } from '../utils/status'
+import { formatReviewPeriod, isLaunchedReviewCycle } from '../utils/status'
 import { isReviewManager } from '../utils/viewerContext'
 import { CurrentStageDueLine } from './CurrentStageDueLine'
 import { StatusBadge } from './StatusBadge'
@@ -194,7 +194,11 @@ export function EmployeeDetails({ myPerformanceVisit = 0 }: { myPerformanceVisit
         const template = cycle ? getTemplate(cycle.templateId) : undefined
         return { review, cycle, template }
       })
-  }, [person, state.reviews, getCycle, getTemplate])
+      .filter(({ cycle, review }) => {
+        if (isLaunchedReviewCycle(cycle)) return true
+        return state.selectedReviewId === review.id
+      })
+  }, [person, state.reviews, getCycle, getTemplate, state.selectedReviewId])
 
   const openReviewDetail = (reviewId: string) => {
     selectReview(reviewId)

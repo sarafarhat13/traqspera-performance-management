@@ -10,6 +10,7 @@ import { ReviewScheduleLines } from './ReviewScheduleLines'
 import { StatusBadge } from './StatusBadge'
 import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
+import { isLaunchedReviewCycle } from '../utils/status'
 import { needsEmployeeSelfEval } from '../utils/workflow'
 
 export function EmployeeDashboard() {
@@ -17,8 +18,11 @@ export function EmployeeDashboard() {
   const employeeId = state.activePersonId
 
   const myReviews = useMemo(
-    () => state.reviews.filter((r) => r.employeeId === employeeId),
-    [state.reviews, employeeId],
+    () =>
+      state.reviews.filter(
+        (r) => r.employeeId === employeeId && isLaunchedReviewCycle(getCycle(r.cycleId)),
+      ),
+    [state.reviews, employeeId, getCycle],
   )
 
   const primaryAction = myReviews.find((r) => {

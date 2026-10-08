@@ -35,7 +35,7 @@ export function computeCycleStats(
       completed += 1
       continue
     }
-    if (display === 'not_started') {
+    if (display === 'not_started' || display === 'draft') {
       notStarted += 1
     } else {
       pending += 1

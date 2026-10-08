@@ -1,8 +1,9 @@
-import type { CycleStatus, ReviewStatus } from '../types'
+import type { CycleStatus, ReviewCycle, ReviewStatus } from '../types'
 
 /** Unified review status shown on employee/manager dashboards and review lists. */
 export type ReviewDisplayStatus =
   | 'not_started'
+  | 'draft'
   | 'pending'
   | 'overdue'
   | 'employee_acknowledgement'
@@ -10,10 +11,16 @@ export type ReviewDisplayStatus =
 
 export const REVIEW_DISPLAY_STATUS_LABELS: Record<ReviewDisplayStatus, string> = {
   not_started: 'Not started',
+  draft: 'Draft',
   pending: 'Pending',
   overdue: 'Overdue',
   employee_acknowledgement: 'Employee Acknowledgement',
   complete: 'Complete',
+}
+
+/** Reviews are visible to employees and managers only after the cycle is launched. */
+export function isLaunchedReviewCycle(cycle: ReviewCycle | undefined): boolean {
+  return cycle != null && cycle.status !== 'draft'
 }
 
 /** Fallback when cycle context is unavailable (overdue cannot be detected). */
@@ -32,7 +39,7 @@ export function reviewDisplayStatusFromReviewStatus(status: ReviewStatus): Revie
 
 export function reviewDisplayStatusBadgeColor(
   status: ReviewDisplayStatus,
-): 'primary' | 'warning' | 'success' | 'danger' | 'secondary' {
+): 'primary' | 'warning' | 'success' | 'danger' | 'secondary' | 'tertiary' {
   switch (status) {
     case 'complete':
       return 'success'
@@ -42,6 +49,8 @@ export function reviewDisplayStatusBadgeColor(
     case 'pending':
     case 'employee_acknowledgement':
       return 'warning'
+    case 'draft':
+      return 'tertiary'
     default:
       return 'secondary'
   }

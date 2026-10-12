@@ -88,6 +88,7 @@ export function ReviewGroupMembersModal({
                 <PerformanceDataTable
                   caption={`Employees in ${group?.name ?? 'review group'}`}
                   density="comfortable"
+                  zebra={false}
                   columns={[
                     { id: 'name', header: 'Employee', accessor: 'name', sortable: true },
                     { id: 'title', header: 'Title', accessor: 'title', sortable: true },

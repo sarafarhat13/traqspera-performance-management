@@ -258,6 +258,7 @@ export function ReviewGroupsAdmin() {
           ) : (
             <PerformanceDataTable
               caption="Review employee groups"
+              zebra={false}
               columns={[
                 { id: 'name', header: 'Group name', accessor: 'name', sortable: true },
                 {
@@ -293,7 +294,7 @@ export function ReviewGroupsAdmin() {
                           'people_group',
                           () => setMembersGroup(group),
                         ),
-                        createTableIconActionButton('Edit group', 'edit', () => openEdit(group)),
+                        createTableIconActionButton('Edit group', 'pencil', () => openEdit(group)),
                         createTableIconActionButton(
                           'Duplicate group',
                           'documents',

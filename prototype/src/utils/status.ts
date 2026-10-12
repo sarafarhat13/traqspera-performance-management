@@ -90,16 +90,6 @@ export const STATUS_LABELS: Record<ReviewStatus, string> = {
 /** @deprecated Prefer `REVIEW_DISPLAY_STATUS_LABELS` via `getReviewDisplayStatus`. */
 export const MANAGER_DASHBOARD_STATUS_LABELS: Record<ReviewStatus, string> = STATUS_LABELS
 
-export function managerDashboardStatusBadgeColor(
-  status: ReviewStatus,
-): 'primary' | 'warning' | 'success' | 'danger' | 'secondary' {
-  return reviewDisplayStatusBadgeColor(reviewDisplayStatusFromReviewStatus(status))
-}
-
-export function statusBadgeColor(status: ReviewStatus): 'primary' | 'warning' | 'success' | 'danger' | 'secondary' {
-  return reviewDisplayStatusBadgeColor(reviewDisplayStatusFromReviewStatus(status))
-}
-
 export type StatusBadgeSemanticColor =
   | 'primary'
   | 'warning'
@@ -107,6 +97,14 @@ export type StatusBadgeSemanticColor =
   | 'danger'
   | 'secondary'
   | 'tertiary'
+
+export function managerDashboardStatusBadgeColor(status: ReviewStatus): StatusBadgeSemanticColor {
+  return reviewDisplayStatusBadgeColor(reviewDisplayStatusFromReviewStatus(status))
+}
+
+export function statusBadgeColor(status: ReviewStatus): StatusBadgeSemanticColor {
+  return reviewDisplayStatusBadgeColor(reviewDisplayStatusFromReviewStatus(status))
+}
 
 export function statusBadgeCustomClass(color: StatusBadgeSemanticColor): string {
   return `tq-status-badge tq-status-badge--${color}`

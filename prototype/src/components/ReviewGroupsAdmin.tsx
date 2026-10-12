@@ -12,8 +12,8 @@ import { usePerformance } from '../context/PerformanceContext'
 import type { ReviewEmployeeGroup } from '../types'
 import { readInputString } from '../utils/modusFormEvents'
 import {
-  createTableActionButton,
   createTableActionGroup,
+  createTableIconActionButton,
 } from '../utils/modusTableCells'
 import { reviewerPreviewLabel } from '../utils/reviewer'
 import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
@@ -286,12 +286,28 @@ export function ReviewGroupsAdmin() {
                       empty.textContent = ''
                       return empty
                     }
-                    return createTableActionGroup([
-                      createTableActionButton('Members', () => setMembersGroup(group)),
-                      createTableActionButton('Edit', () => openEdit(group)),
-                      createTableActionButton('Duplicate', () => openDuplicate(group)),
-                      createTableActionButton('Delete', () => setDeleteTarget(group), 'danger'),
-                    ])
+                    return createTableActionGroup(
+                      [
+                        createTableIconActionButton(
+                          'View members',
+                          'people_group',
+                          () => setMembersGroup(group),
+                        ),
+                        createTableIconActionButton('Edit group', 'edit', () => openEdit(group)),
+                        createTableIconActionButton(
+                          'Duplicate group',
+                          'documents',
+                          () => openDuplicate(group),
+                        ),
+                        createTableIconActionButton(
+                          'Delete group',
+                          'delete',
+                          () => setDeleteTarget(group),
+                          'danger',
+                        ),
+                      ],
+                      true,
+                    )
                   },
                 },
               ]}

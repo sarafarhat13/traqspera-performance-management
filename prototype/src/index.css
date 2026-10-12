@@ -124,6 +124,24 @@ body {
   background-color: #ffffff;
 }
 
+.tq-data-table .tq-table-action-icons modus-wc-button.tq-table-icon-action-btn {
+  --modus-wc-btn-bg: var(--modus-wc-color-base-200);
+  --modus-wc-btn-hover-bg: var(--modus-wc-color-base-300);
+  --modus-wc-btn-active-bg: var(--modus-wc-color-base-300);
+}
+
+[data-theme='modus-modern-dark'] .tq-data-table .tq-table-action-icons modus-wc-button.tq-table-icon-action-btn {
+  --modus-wc-btn-bg: var(--modus-wc-color-base-200);
+  --modus-wc-btn-hover-bg: var(--modus-wc-color-base-300);
+  --modus-wc-btn-active-bg: var(--modus-wc-color-base-300);
+}
+
+.tq-data-table .tq-table-action-icons modus-wc-button.tq-table-icon-action-btn[color='danger'] {
+  --modus-wc-btn-bg: var(--modus-wc-color-base-200);
+  --modus-wc-btn-hover-bg: var(--modus-wc-color-base-300);
+  --modus-wc-icon-color: var(--modus-wc-color-danger);
+}
+
 /* Review group members — fullscreen modal body scroll */
 .review-group-members-modal-content {
   flex: 1;

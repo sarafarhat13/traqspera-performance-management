@@ -56,6 +56,37 @@ export function createTableActionButton(
   return button
 }
 
+const TABLE_ICON_ACTION_CLASS = 'tq-table-icon-action-btn'
+
+export function createTableIconActionButton(
+  ariaLabel: string,
+  iconName: string,
+  onClick: () => void,
+  color: TableButtonColor = 'tertiary',
+  disabled = false,
+) {
+  const button = document.createElement('modus-wc-button')
+  button.setAttribute('variant', 'filled')
+  button.setAttribute('color', color)
+  button.setAttribute('size', 'sm')
+  button.setAttribute('shape', 'square')
+  button.setAttribute('aria-label', ariaLabel)
+  button.setAttribute('custom-class', TABLE_ICON_ACTION_CLASS)
+  if (disabled) button.setAttribute('disabled', 'true')
+
+  const icon = document.createElement('modus-wc-icon')
+  icon.setAttribute('name', iconName)
+  icon.setAttribute('size', 'xs')
+  icon.setAttribute('decorative', 'true')
+  button.appendChild(icon)
+
+  button.addEventListener('buttonClick', (event) => {
+    event.stopPropagation()
+    if (!disabled) onClick()
+  })
+  return button
+}
+
 type ModusBadgeElement = HTMLElement & {
   variant?: string
   color?: string
@@ -130,9 +161,11 @@ export function createNeutralTagBadge(label: string) {
   return createTagBadge(label, 'tertiary')
 }
 
-export function createTableActionGroup(children: HTMLElement[]) {
+export function createTableActionGroup(children: HTMLElement[], iconRow = false) {
   const group = document.createElement('div')
-  group.className = 'flex flex-wrap items-center gap-2'
+  group.className = iconRow
+    ? 'tq-table-action-icons flex flex-wrap items-center justify-end gap-1'
+    : 'flex flex-wrap items-center gap-2'
   children.forEach((child) => group.appendChild(child))
   return group
 }

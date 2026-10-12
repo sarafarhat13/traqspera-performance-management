@@ -32,6 +32,7 @@ import type {
   ReviewEmployeeGroup,
   ReviewTemplate,
   ReviewStatus,
+  SupportingDocumentAttachment,
   ViewId,
 } from '../types'
 import {
@@ -47,7 +48,7 @@ import { resolveManagerDashboardPersonId } from '../utils/managerDashboardContex
 
 const STORAGE_KEY = 'traqspera-performance-management-v3'
 /** Bump when bundled seed cycles/reviews change so stale localStorage is refreshed. */
-const SEED_VERSION = 25
+const SEED_VERSION = 27
 
 const UNASSIGNED_DEMO_ID_SET = new Set<string>(UNASSIGNED_DEMO_EMPLOYEE_IDS)
 
@@ -79,19 +80,30 @@ function normalizeTemplate(template: ReviewTemplate): ReviewTemplate {
 function normalizeCycle(cycle: ReviewCycle): ReviewCycle {
   const deprecatedTemplateIds = new Set<string>(DEPRECATED_TEMPLATE_IDS)
   const templateId = deprecatedTemplateIds.has(cycle.templateId) ? 'tpl-90-days' : cycle.templateId
-  const withTemplate = templateId !== cycle.templateId ? { ...cycle, templateId } : cycle
+  let normalized: ReviewCycle =
+    templateId !== cycle.templateId ? { ...cycle, templateId } : cycle
 
-  if (withTemplate.startDate) return withTemplate
-  const due = new Date(withTemplate.dueDate)
-  const start = new Date(due)
-  if (!Number.isNaN(start.getTime())) {
-    start.setDate(start.getDate() - 30)
+  if (!normalized.startDate) {
+    const due = new Date(normalized.dueDate)
+    const start = new Date(due)
+    if (!Number.isNaN(start.getTime())) {
+      start.setDate(start.getDate() - 30)
+    }
+    normalized = {
+      ...normalized,
+      startDate: Number.isNaN(start.getTime())
+        ? normalized.dueDate
+        : start.toISOString().slice(0, 10),
+    }
   }
+
+  const seed = seedCycles.find((c) => c.id === normalized.id)
+  const allowSupportingDocuments =
+    normalized.allowSupportingDocuments ?? seed?.allowSupportingDocuments
+
   return {
-    ...withTemplate,
-    startDate: Number.isNaN(start.getTime())
-      ? withTemplate.dueDate
-      : start.toISOString().slice(0, 10),
+    ...normalized,
+    ...(allowSupportingDocuments !== undefined ? { allowSupportingDocuments } : {}),
   }
 }
 
@@ -169,7 +181,15 @@ function resolveCycles(persisted: Partial<PersistedState>): ReviewCycle[] {
         ? seedCycles.map(normalizeCycle)
         : pinLisaFinalApprovalDemoCycle(mergeMissingSeedCycles(stored)).map(normalizeCycle)
   }
-  return pinUnassignedDemoCycles(cycles)
+  return pinUnassignedDemoCycles(pinWalkthroughSupportingDocuments(cycles))
+}
+
+/** Demo annual cycles always allow uploads unless HR explicitly disabled on a custom cycle. */
+function pinWalkthroughSupportingDocuments(cycles: ReviewCycle[]): ReviewCycle[] {
+  const demoCycleIds = new Set(['cycle-2024', 'cycle-2025'])
+  return cycles.map((cycle) =>
+    demoCycleIds.has(cycle.id) ? { ...cycle, allowSupportingDocuments: true } : cycle,
+  )
 }
 
 function mergeMissingSeedReviews(stored: PerformanceReview[]): PerformanceReview[] {
@@ -321,9 +341,21 @@ interface PerformanceContextValue {
   updateCycle: (cycleId: string, patch: Pick<ReviewCycle, 'name' | 'dueDate'>) => void
   setCycleFinalApprover: (cycleId: string, finalApproverId: string | undefined) => void
   closeReviewCycle: (cycleId: string, attestation: ReviewCycleCompletionAttestation) => boolean
-  saveSelfEval: (reviewId: string, answers: Record<string, string>) => void
-  saveManagerReview: (reviewId: string, answers: Record<string, string>) => void
-  saveManagerReviewDraft: (reviewId: string, answers: Record<string, string>) => void
+  saveSelfEval: (
+    reviewId: string,
+    answers: Record<string, string>,
+    supportingDocuments?: SupportingDocumentAttachment[],
+  ) => void
+  saveManagerReview: (
+    reviewId: string,
+    answers: Record<string, string>,
+    supportingDocuments?: SupportingDocumentAttachment[],
+  ) => void
+  saveManagerReviewDraft: (
+    reviewId: string,
+    answers: Record<string, string>,
+    supportingDocuments?: SupportingDocumentAttachment[],
+  ) => void
   submitReviewAcceptance: (reviewId: string, submission: ReviewAcceptanceSubmission) => void
   updateReviewManager: (reviewId: string, managerId: string) => void
   getPerson: (id: string) => AppState['people'][0] | undefined
@@ -710,7 +742,12 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
     [],
   )
 
-  const saveSelfEval = useCallback((reviewId: string, answers: Record<string, string>) => {
+  const saveSelfEval = useCallback(
+    (
+      reviewId: string,
+      answers: Record<string, string>,
+      supportingDocuments?: SupportingDocumentAttachment[],
+    ) => {
     setState((s) => ({
       ...s,
       reviews: s.reviews.map((r) => {
@@ -718,7 +755,14 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
         const cycle = s.cycles.find((c) => c.id === r.cycleId)
         const nextReview: PerformanceReview = {
           ...r,
-          selfEval: { answers, completedAt: new Date().toISOString() },
+          selfEval: {
+            answers,
+            completedAt: new Date().toISOString(),
+            supportingDocuments:
+              supportingDocuments && supportingDocuments.length > 0
+                ? supportingDocuments
+                : undefined,
+          },
         }
         const nextStatus: ReviewStatus = cycle
           ? statusAfterEmployeePhaseComplete(cycle, nextReview)
@@ -730,9 +774,16 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       employeeDetailsTab: 'performance',
       selectedReviewId: null,
     }))
-  }, [])
+  },
+  [],
+  )
 
-  const saveManagerReviewDraft = useCallback((reviewId: string, answers: Record<string, string>) => {
+  const saveManagerReviewDraft = useCallback(
+    (
+      reviewId: string,
+      answers: Record<string, string>,
+      supportingDocuments?: SupportingDocumentAttachment[],
+    ) => {
     setState((s) => ({
       ...s,
       reviews: s.reviews.map((r) =>
@@ -742,14 +793,25 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
               managerReview: {
                 answers,
                 savedAt: new Date().toISOString(),
+                ...(supportingDocuments !== undefined && {
+                  supportingDocuments:
+                    supportingDocuments.length > 0 ? supportingDocuments : undefined,
+                }),
               },
             }
           : r,
       ),
     }))
-  }, [])
+  },
+  [],
+  )
 
-  const saveManagerReview = useCallback((reviewId: string, answers: Record<string, string>) => {
+  const saveManagerReview = useCallback(
+    (
+      reviewId: string,
+      answers: Record<string, string>,
+      supportingDocuments?: SupportingDocumentAttachment[],
+    ) => {
     const completedAt = new Date().toISOString()
     setState((s) => ({
       ...s,
@@ -758,7 +820,15 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
         const cycle = s.cycles.find((c) => c.id === r.cycleId)
         const nextReview: PerformanceReview = {
           ...r,
-          managerReview: { answers, completedAt, savedAt: completedAt },
+          managerReview: {
+            answers,
+            completedAt,
+            savedAt: completedAt,
+            supportingDocuments:
+              supportingDocuments && supportingDocuments.length > 0
+                ? supportingDocuments
+                : undefined,
+          },
         }
         const nextStatus: ReviewStatus = cycle
           ? statusAfterManagerPhaseComplete(cycle, nextReview)
@@ -772,7 +842,9 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       }),
       view: 'manager_dashboard',
     }))
-  }, [])
+  },
+  [],
+  )
 
   const submitReviewAcceptance = useCallback(
     (reviewId: string, submission: ReviewAcceptanceSubmission) => {

@@ -97,6 +97,8 @@ export interface ReviewCycle {
   attachedGroupIds?: string[]
   /** Saved reviewer picks when cycle is still a draft */
   reviewerAssignments?: Record<string, EmployeeReviewerAssignment>
+  /** When true, participants can attach supporting files at the end of each review form. */
+  allowSupportingDocuments?: boolean
   /** Person who performs final approval and closes the cycle */
   finalApproverId?: string
   /** When the final approver closed the cycle (ISO timestamp) */
@@ -146,11 +148,20 @@ export interface Person {
   supervisorId?: string
 }
 
+export interface SupportingDocumentAttachment {
+  id: string
+  fileName: string
+  sizeBytes: number
+  mimeType?: string
+  uploadedAt: string
+}
+
 export interface PhaseAnswers {
   answers: Record<string, string>
   completedAt?: string
   /** Set when answers are saved without submitting (manager draft / live save). */
   savedAt?: string
+  supportingDocuments?: SupportingDocumentAttachment[]
 }
 
 export type ReviewAcceptanceDecision = 'agree' | 'disagree'
@@ -161,6 +172,7 @@ export interface ReviewAcceptanceSubmission {
   signature: string
   /** YYYY-MM-DD */
   signedDate: string
+  supportingDocuments?: SupportingDocumentAttachment[]
 }
 
 export interface ReviewAcknowledgement {
@@ -172,6 +184,7 @@ export interface ReviewAcknowledgement {
   signedDate?: string
   /** True when the employee disagreed — HR should follow up. */
   hrEscalationRequired?: boolean
+  supportingDocuments?: SupportingDocumentAttachment[]
 }
 
 export interface PerformanceReview {

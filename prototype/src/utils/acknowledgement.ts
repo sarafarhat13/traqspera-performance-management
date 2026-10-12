@@ -28,6 +28,10 @@ export function buildReviewAcknowledgement(
     signature: submission.signature.trim(),
     signedDate: submission.signedDate.trim(),
     hrEscalationRequired: decision === 'disagree',
+    supportingDocuments:
+      submission.supportingDocuments && submission.supportingDocuments.length > 0
+        ? submission.supportingDocuments
+        : undefined,
   }
 }
 

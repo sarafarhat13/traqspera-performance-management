@@ -4,12 +4,15 @@ import {
   ModusWcTextarea,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
+import type { SupportingDocumentAttachment } from '../types'
 import { usePerformance } from '../context/PerformanceContext'
 import { readInputString } from '../utils/modusFormEvents'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { PageBackButton } from './PageBackButton'
 import { seedQuestionAnswerKeys } from '../utils/questionReview'
 import { SelfEvaluationFooter } from './SelfEvaluationFooter'
+import { SupportingDocumentsSection } from './SupportingDocumentsSection'
+import { selfEvalAllowsSupportingDocuments } from '../utils/supportingDocuments'
 
 type EmployeeSelfEvalPanelProps = {
   reviewId: string
@@ -26,6 +29,9 @@ export function EmployeeSelfEvalPanel({ reviewId, onBack, onSubmitted }: Employe
   const [answers, setAnswers] = useState<Record<string, string>>(() =>
     seedQuestionAnswerKeys(template?.questions ?? [], review?.selfEval?.answers),
   )
+  const [supportingDocuments, setSupportingDocuments] = useState<SupportingDocumentAttachment[]>(
+    () => review?.selfEval?.supportingDocuments ?? [],
+  )
 
   if (!review || !template) {
     return (
@@ -33,8 +39,14 @@ export function EmployeeSelfEvalPanel({ reviewId, onBack, onSubmitted }: Employe
     )
   }
 
+  const showSupportingDocuments = selfEvalAllowsSupportingDocuments(cycle)
+
   const handleSubmit = () => {
-    saveSelfEval(review.id, answers)
+    saveSelfEval(
+      review.id,
+      answers,
+      showSupportingDocuments ? supportingDocuments : undefined,
+    )
     onSubmitted?.()
   }
 
@@ -78,6 +90,15 @@ export function EmployeeSelfEvalPanel({ reviewId, onBack, onSubmitted }: Employe
             ))}
           </div>
         </ModusWcCard>
+
+        {showSupportingDocuments ? (
+          <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
+            <SupportingDocumentsSection
+              documents={supportingDocuments}
+              onDocumentsChange={setSupportingDocuments}
+            />
+          </ModusWcCard>
+        ) : null}
       </div>
 
       <SelfEvaluationFooter onSaveForLater={onBack} onSubmit={handleSubmit} />

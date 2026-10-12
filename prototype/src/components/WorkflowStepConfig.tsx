@@ -34,6 +34,8 @@ type WorkflowStepConfigProps = {
   onWorkflowKickoffModeChange: (mode: WorkflowKickoffMode) => void
   ratingScale: RatingScaleConfig
   onRatingScaleChange: (scale: RatingScaleConfig) => void
+  allowSupportingDocuments: boolean
+  onAllowSupportingDocumentsChange: (enabled: boolean) => void
 }
 
 function flowBulletClass(type: WorkflowStepType): string {
@@ -48,6 +50,8 @@ export function WorkflowStepConfig({
   onWorkflowKickoffModeChange,
   ratingScale,
   onRatingScaleChange,
+  allowSupportingDocuments,
+  onAllowSupportingDocumentsChange,
 }: WorkflowStepConfigProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
@@ -303,6 +307,37 @@ export function WorkflowStepConfig({
                   }
                 />
               </div>
+
+              {stepType === 'employee' ? (
+                <div className="tq-workflow-step__nested-block">
+                  <div className="tq-workflow-step__nested-option">
+                    <ModusWcCheckbox
+                      size="sm"
+                      value={allowSupportingDocuments && step.enabled}
+                      disabled={!step.enabled}
+                      aria-label="Allow supporting document uploads on review forms"
+                      onInputChange={(e) =>
+                        onAllowSupportingDocumentsChange(readInputChecked(e as CustomEvent))
+                      }
+                    />
+                    <div className="tq-workflow-step__nested-copy min-w-0 flex-1">
+                      <ModusWcTypography
+                        hierarchy="p"
+                        size="sm"
+                        weight="semibold"
+                        customClass="!m-0"
+                        label="Supporting document uploads"
+                      />
+                      <ModusWcTypography
+                        hierarchy="p"
+                        size="xs"
+                        customClass="!m-0 mt-1 text-[var(--modus-wc-color-base-content-low-contrast)]"
+                        label="When enabled, employees can attach files at the end of each review form (self-evaluation, manager evaluation, and acknowledgment)."
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : null}
 
               {stepType === 'manager' && ratingStep ? (
                 <div className="tq-workflow-step__nested-block">

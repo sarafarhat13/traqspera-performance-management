@@ -5,18 +5,27 @@ import {
   ModusWcButton,
   ModusWcCard,
   ModusWcDate,
+  ModusWcDivider,
   ModusWcIcon,
   ModusWcSelect,
   ModusWcTextInput,
   ModusWcTextarea,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
-import type { PerformanceReview, ReviewAcceptanceSubmission, ReviewCycle, ReviewTemplate } from '../types'
+import type {
+  PerformanceReview,
+  ReviewAcceptanceSubmission,
+  ReviewCycle,
+  ReviewTemplate,
+  SupportingDocumentAttachment,
+} from '../types'
 import { usePerformance } from '../context/PerformanceContext'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { REVIEW_ACCEPTANCE_COMMENT_MAX } from '../utils/acknowledgement'
 import { readInputString } from '../utils/modusFormEvents'
 import { ReviewAcceptanceSummary } from './ReviewAcceptanceSummary'
+import { SupportingDocumentsSection } from './SupportingDocumentsSection'
+import { cycleAllowsSupportingDocuments } from '../utils/supportingDocuments'
 
 const DECISION_OPTIONS: ISelectOption[] = [
   { label: 'Select your response', value: '' },
@@ -64,6 +73,10 @@ export function ReviewEmployeeAcceptanceForm({
   const [comment, setComment] = useState('')
   const [signature, setSignature] = useState(employeeName)
   const [signedDate, setSignedDate] = useState(todayIsoDate)
+  const [supportingDocuments, setSupportingDocuments] = useState<SupportingDocumentAttachment[]>(
+    () => review.acknowledgement?.supportingDocuments ?? [],
+  )
+  const showSupportingDocuments = cycleAllowsSupportingDocuments(cycle)
 
   const commentLength = comment.length
   const disagreeSelected = decision === 'disagree'
@@ -82,6 +95,7 @@ export function ReviewEmployeeAcceptanceForm({
       comment,
       signature: signature.trim(),
       signedDate: signedDate.trim(),
+      supportingDocuments: showSupportingDocuments ? supportingDocuments : undefined,
     })
   }
 
@@ -163,6 +177,15 @@ export function ReviewEmployeeAcceptanceForm({
             value={signedDate}
             onInputChange={(e) => setSignedDate(readInputString(e as CustomEvent))}
           />
+          {showSupportingDocuments ? (
+            <>
+              <ModusWcDivider />
+              <SupportingDocumentsSection
+                documents={supportingDocuments}
+                onDocumentsChange={setSupportingDocuments}
+              />
+            </>
+          ) : null}
         </div>
         <div
           slot="footer"

@@ -1036,6 +1036,7 @@ export const seedCycles: ReviewCycle[] = [
     startDate: '2024-01-15',
     dueDate: '2024-03-30',
     includesSelfEvaluation: true,
+    allowSupportingDocuments: true,
     workflow: workflowWithDeadlines(createDefaultWorkflowSteps(), {
       employee: '2024-02-15',
       manager: '2024-03-01',
@@ -1055,6 +1056,7 @@ export const seedCycles: ReviewCycle[] = [
     startDate: '2025-01-15',
     dueDate: '2025-03-30',
     includesSelfEvaluation: true,
+    allowSupportingDocuments: true,
     workflow: workflowWithDeadlines(createDefaultWorkflowSteps(), {
       employee: '2025-02-15',
       manager: '2025-03-01',
@@ -1074,6 +1076,7 @@ export const seedCycles: ReviewCycle[] = [
     startDate: '2026-06-01',
     dueDate: '2026-12-15',
     includesSelfEvaluation: true,
+    allowSupportingDocuments: true,
     workflow: workflowWithDeadlines(createDefaultWorkflowSteps(), {
       employee: '2026-08-31',
       manager: '2026-10-31',

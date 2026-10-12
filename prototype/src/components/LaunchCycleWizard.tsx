@@ -123,6 +123,7 @@ export function LaunchCycleWizard() {
   const [ratingScale, setRatingScale] = useState<RatingScaleConfig>(() =>
     normalizeRatingScale(DEFAULT_RATING_SCALE),
   )
+  const [allowSupportingDocuments, setAllowSupportingDocuments] = useState(false)
   const [individualEmployeeIds, setIndividualEmployeeIds] = useState<string[]>([])
   const [attachedGroupIds, setAttachedGroupIds] = useState<string[]>([])
   const [participantsTabIndex, setParticipantsTabIndex] = useState(0)
@@ -275,6 +276,7 @@ export function LaunchCycleWizard() {
       workflow,
       workflowKickoffMode,
       ratingScale: normalizeRatingScale(ratingScale),
+      allowSupportingDocuments,
       employeeIds: derivedParticipantIds,
       attachedGroupIds: attachedGroupIds.length > 0 ? attachedGroupIds : undefined,
     }
@@ -1013,6 +1015,8 @@ export function LaunchCycleWizard() {
               onWorkflowKickoffModeChange={setWorkflowKickoffMode}
               ratingScale={ratingScale}
               onRatingScaleChange={setRatingScale}
+              allowSupportingDocuments={allowSupportingDocuments}
+              onAllowSupportingDocumentsChange={setAllowSupportingDocuments}
             />
           </ModusWcCard>
         )}
@@ -1212,6 +1216,7 @@ export function LaunchCycleWizard() {
             workflow={workflow}
             workflowKickoffMode={workflowKickoffMode}
             ratingScale={ratingScale}
+            allowSupportingDocuments={allowSupportingDocuments}
             selectedEmployees={selectedEmployees}
             attachedGroups={attachedGroups}
             conflictsWereResolved={conflicts.length === 0 && derivedParticipantIds.length > 0}

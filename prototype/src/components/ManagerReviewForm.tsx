@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ModusWcButton,
   ModusWcCard,
+  ModusWcDivider,
   ModusWcIcon,
   ModusWcTextarea,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
+import type { SupportingDocumentAttachment } from '../types'
 import { usePerformance } from '../context/PerformanceContext'
 import { readInputString } from '../utils/modusFormEvents'
 import { formatDate } from '../utils/status'
@@ -17,6 +19,8 @@ import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { seedQuestionAnswerKeys } from '../utils/questionReview'
 import { PerformanceRatingScaleField } from './PerformanceRatingScaleField'
+import { SupportingDocumentsSection } from './SupportingDocumentsSection'
+import { cycleAllowsSupportingDocuments } from '../utils/supportingDocuments'
 const AUTO_SAVE_MS = 800
 
 function readStoredRating(answers?: Record<string, string>): number {
@@ -60,6 +64,11 @@ export function ManagerReviewForm() {
     readStoredRating(review?.managerReview?.answers),
   )
 
+  const [supportingDocuments, setSupportingDocuments] = useState<SupportingDocumentAttachment[]>(
+    () => review?.managerReview?.supportingDocuments ?? [],
+  )
+  const showSupportingDocuments = cycleAllowsSupportingDocuments(cycle)
+
   const [draftDirty, setDraftDirty] = useState(false)
   const [draftSaveState, setDraftSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
   const lastPersistedRef = useRef<Record<string, string>>({})
@@ -78,11 +87,15 @@ export function ManagerReviewForm() {
     if (answersEqual(payload, lastPersistedRef.current)) return
 
     setDraftSaveState('saving')
-    saveManagerReviewDraft(review.id, payload)
+    saveManagerReviewDraft(
+      review.id,
+      payload,
+      showSupportingDocuments ? supportingDocuments : undefined,
+    )
     lastPersistedRef.current = payload
     setDraftDirty(false)
     setDraftSaveState('saved')
-  }, [buildPayload, review, saveManagerReviewDraft])
+  }, [buildPayload, review, saveManagerReviewDraft, showSupportingDocuments, supportingDocuments])
 
   useEffect(() => {
     if (!review || !draftDirty) return
@@ -92,7 +105,7 @@ export function ManagerReviewForm() {
     }, AUTO_SAVE_MS)
 
     return () => window.clearTimeout(timer)
-  }, [answers, overallRating, draftDirty, persistDraft, review])
+  }, [answers, overallRating, supportingDocuments, draftDirty, persistDraft, review])
 
   useEffect(() => {
     if (!review || !template) return
@@ -105,9 +118,10 @@ export function ManagerReviewForm() {
     }
     lastPersistedRef.current = seed
     setAnswers(seed)
+    setSupportingDocuments(review.managerReview?.supportingDocuments ?? [])
     setDraftDirty(false)
     setDraftSaveState('idle')
-  }, [review?.id, template, includesRatingScale])
+  }, [review?.id, template, includesRatingScale, review?.managerReview?.supportingDocuments])
 
   if (!review || !template) {
     return (
@@ -136,7 +150,11 @@ export function ManagerReviewForm() {
   }
 
   const handleSubmit = () => {
-    saveManagerReview(review.id, buildPayload())
+    saveManagerReview(
+      review.id,
+      buildPayload(),
+      showSupportingDocuments ? supportingDocuments : undefined,
+    )
   }
 
   const draftStatusLabel =
@@ -212,6 +230,18 @@ export function ManagerReviewForm() {
                 </div>
               </div>
             ))}
+            {showSupportingDocuments ? (
+              <>
+                <ModusWcDivider />
+                <SupportingDocumentsSection
+                  documents={supportingDocuments}
+                  onDocumentsChange={(next) => {
+                    markDirty()
+                    setSupportingDocuments(next)
+                  }}
+                />
+              </>
+            ) : null}
           </div>
 
           <div slot="footer" className="tq-card-footer-actions tq-manager-review-footer">

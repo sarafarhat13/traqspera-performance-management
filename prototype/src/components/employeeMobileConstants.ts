@@ -69,10 +69,7 @@ export const EMPLOYEE_MOBILE_SECTION_TITLES: Record<EmployeeMobileHubSection, st
   direct_deposits: 'Direct Deposits',
 }
 
-export function formatEmployeeCode(personId: string): string {
-  const digits = personId.replace(/\D/g, '')
-  return `E${digits.padStart(4, '0')}`
-}
+export { formatEmployeeCode } from '../utils/employeeCode'
 
 export function personInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)

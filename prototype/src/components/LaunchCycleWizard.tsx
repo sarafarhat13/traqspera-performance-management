@@ -66,15 +66,10 @@ import {
   computeParticipantIdsFromProvenance,
   detectConflicts,
 } from '../utils/participantSelection'
+import { formatEmployeeNameWithCode } from '../utils/employeeCode'
 
 const FILTER_ALL = '__all__'
 const TEMPLATE_PREVIEW_MODAL_ID = 'launch-wizard-template-preview'
-
-function estimateTemplateDuration(questionCount: number): string {
-  if (questionCount <= 3) return '30–45 minutes'
-  if (questionCount <= 5) return '45–60 minutes'
-  return '60–90 minutes'
-}
 
 const WIZARD_STEPS = [
   'Cycle Details',
@@ -529,7 +524,7 @@ export function LaunchCycleWizard() {
           (isIndividuallySelected ? defaultReviewerAssignment() : undefined)
         return {
           id: person.id,
-          name: person.name,
+          name: formatEmployeeNameWithCode(person.name, person.id),
           title: person.title,
           department: person.department,
           costCenter: person.costCenter,
@@ -921,15 +916,6 @@ export function LaunchCycleWizard() {
                             size="sm"
                             customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
                             label={`${template.questions.length} questions`}
-                          />
-                        </span>
-                        <span className="tq-template-picker-card__meta-item">
-                          <ModusWcIcon name="calendar_clock" size="xs" decorative />
-                          <ModusWcTypography
-                            hierarchy="p"
-                            size="sm"
-                            customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
-                            label={estimateTemplateDuration(template.questions.length)}
                           />
                         </span>
                       </div>

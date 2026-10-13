@@ -1,11 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ModusWcCard, ModusWcTabs, ModusWcTypography } from '@trimble-oss/moduswebcomponents-react'
 import { usePerformance } from '../context/PerformanceContext'
 import { formatDate, formatReviewPeriod } from '../utils/status'
 import { employeeCanViewManagerReviewContent } from '../utils/reviewAccess'
-import { MANAGER_OVERALL_RATING_KEY } from '../utils/workflow'
+import { reviewOverallRatingLabel } from '../utils/workflow'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { CurrentStageDueLine } from './CurrentStageDueLine'
+import { ReviewEmployeeAcceptanceForm } from './ReviewEmployeeAcceptanceForm'
+import {
+  ReviewOverallRatingBanner,
+  ReviewOverallRatingCompareColumn,
+} from './ReviewOverallRating'
 import { ReviewWorkflowStepCards } from './ReviewWorkflowStepCards'
 
 const TAB_OVERVIEW = 0
@@ -13,8 +18,17 @@ const TAB_SELF = 1
 const TAB_MANAGER = 2
 const TAB_COMPARE = 3
 
-export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string }) {
-  const { state, getReview, getCycle, getTemplate, getPerson } = usePerformance()
+type PerformanceReviewDetailContentProps = {
+  reviewId: string
+  onAcceptanceCancel?: () => void
+}
+
+export function PerformanceReviewDetailContent({
+  reviewId,
+  onAcceptanceCancel,
+}: PerformanceReviewDetailContentProps) {
+  const { state, getReview, getCycle, getTemplate, getPerson, submitReviewAcceptance } =
+    usePerformance()
   const review = getReview(reviewId)
   const cycle = review ? getCycle(review.cycleId) : undefined
   const template = cycle ? getTemplate(cycle.templateId) : undefined
@@ -23,8 +37,12 @@ export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string 
     ? employeeCanViewManagerReviewContent(review, state.activePersonId)
     : true
 
-  const [activeTab, setActiveTab] = useState(0)
+  const [activeTab, setActiveTab] = useState(TAB_OVERVIEW)
   const isMobile = state.layoutMode === 'mobile'
+
+  useEffect(() => {
+    setActiveTab(canViewManager ? TAB_COMPARE : TAB_OVERVIEW)
+  }, [reviewId, canViewManager])
 
   const tabs = useMemo(() => {
     const labels = isMobile
@@ -54,6 +72,14 @@ export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string 
     )
   }
 
+  const employee = getPerson(review.employeeId)
+  const showAcceptanceForm =
+    review.status === 'acknowledgement_pending' &&
+    review.employeeId === state.activePersonId &&
+    Boolean(cycle)
+
+  const overallRatingLabel = cycle ? reviewOverallRatingLabel(cycle, review) : null
+
   const managerHiddenMessage = (
     <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
       <ModusWcTypography
@@ -81,6 +107,21 @@ export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string 
       )}
 
       {!canViewManager && managerHiddenMessage}
+
+      {canViewManager && cycle && <ReviewOverallRatingBanner cycle={cycle} review={review} />}
+
+      {showAcceptanceForm && cycle && (
+        <ReviewEmployeeAcceptanceForm
+          review={review}
+          cycle={cycle}
+          template={template}
+          employeeName={employee?.name ?? 'Employee'}
+          managerName={manager?.name ?? 'Manager'}
+          compactActions
+          onCancel={() => onAcceptanceCancel?.()}
+          onSubmit={(submission) => submitReviewAcceptance(review.id, submission)}
+        />
+      )}
 
       <div className="tq-review-detail-tabs">
         <ModusWcTabs
@@ -145,6 +186,17 @@ export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string 
                 <ModusWcTypography hierarchy="p" size="sm" label={formatDate(review.managerReview.completedAt)} />
               </div>
             )}
+            {overallRatingLabel && (
+              <div>
+                <ModusWcTypography
+                  hierarchy="p"
+                  size="xs"
+                  weight="semibold"
+                  label="Overall performance rating"
+                />
+                <ModusWcTypography hierarchy="p" size="sm" label={overallRatingLabel} />
+              </div>
+            )}
           </dl>
         </ModusWcCard>
       </div>
@@ -179,27 +231,22 @@ export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string 
               <ModusWcTypography slot="title" hierarchy="h4" size="md" weight="semibold" label="Manager Review" />
               {review.managerReview?.completedAt ? (
                 <div className="flex flex-col gap-4">
-                  {cycle?.ratingScale &&
-                    review.managerReview.answers[MANAGER_OVERALL_RATING_KEY] && (
-                      <div>
-                        <ModusWcTypography
-                          hierarchy="p"
-                          size="sm"
-                          weight="semibold"
-                          label="Overall performance rating"
-                        />
-                        <ModusWcTypography
-                          hierarchy="p"
-                          size="sm"
-                          customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                          label={(() => {
-                            const rating = Number(review.managerReview?.answers[MANAGER_OVERALL_RATING_KEY])
-                            const label = cycle.ratingScale?.labels[rating - (cycle.ratingScale?.min ?? 1)]
-                            return label ? `${rating} — ${label}` : String(rating)
-                          })()}
-                        />
-                      </div>
-                    )}
+                  {overallRatingLabel && (
+                    <div>
+                      <ModusWcTypography
+                        hierarchy="p"
+                        size="sm"
+                        weight="semibold"
+                        label="Overall performance rating"
+                      />
+                      <ModusWcTypography
+                        hierarchy="p"
+                        size="sm"
+                        customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                        label={overallRatingLabel}
+                      />
+                    </div>
+                  )}
                   {template.questions.map((q) => (
                     <div key={q.id} className="flex flex-col gap-1">
                       <ModusWcTypography hierarchy="p" size="sm" weight="semibold" label={q.label} />
@@ -228,6 +275,7 @@ export function PerformanceReviewDetailContent({ reviewId }: { reviewId: string 
             <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
               <ModusWcTypography slot="title" hierarchy="h4" size="md" weight="semibold" label="Side-by-Side Comparison" />
               <div className="flex flex-col gap-6">
+                {cycle && <ReviewOverallRatingCompareColumn cycle={cycle} review={review} />}
                 {template.questions.map((q) => (
                   <div key={q.id} className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                     <div className="rounded-lg bg-[var(--modus-wc-color-base-100)] p-3">

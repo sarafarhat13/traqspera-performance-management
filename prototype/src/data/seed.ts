@@ -9,7 +9,12 @@ import type {
   WorkflowStep,
   WorkflowStepType,
 } from '../types'
-import { createDefaultWorkflowSteps, workflowFromLegacy } from '../utils/workflow'
+import {
+  createDefaultWorkflowSteps,
+  cycleIncludesRatingScale,
+  MANAGER_OVERALL_RATING_KEY,
+  workflowFromLegacy,
+} from '../utils/workflow'
 
 function workflowWithDeadlines(
   steps: WorkflowStep[],
@@ -28,6 +33,49 @@ export const DEFAULT_RATING_SCALE: RatingScaleConfig = {
 }
 
 const defaultRatingScale = DEFAULT_RATING_SCALE
+
+/** Demo overall rating (3–5) when seed manager answers omit the stored rating key. */
+function demoOverallRatingForEmployee(employeeId: string): number {
+  const digits = employeeId.match(/\d+/g)
+  const n = digits ? Number(digits[digits.length - 1]) : 0
+  return 3 + (n % 3)
+}
+
+function withDemoOverallRating(
+  answers: Record<string, string>,
+  employeeId: string,
+): Record<string, string> {
+  if (answers[MANAGER_OVERALL_RATING_KEY]) return answers
+  return {
+    ...answers,
+    [MANAGER_OVERALL_RATING_KEY]: String(demoOverallRatingForEmployee(employeeId)),
+  }
+}
+
+export function enrichReviewsWithOverallRatings(
+  reviews: PerformanceReview[],
+  cycles: ReviewCycle[],
+): PerformanceReview[] {
+  const cycleById = new Map(cycles.map((cycle) => [cycle.id, cycle]))
+
+  return reviews.map((review) => {
+    const managerReview = review.managerReview
+    if (!managerReview?.completedAt || !managerReview.answers) return review
+
+    const cycle = cycleById.get(review.cycleId)
+    if (!cycle || !cycleIncludesRatingScale(cycle)) return review
+
+    if (managerReview.answers[MANAGER_OVERALL_RATING_KEY]) return review
+
+    return {
+      ...review,
+      managerReview: {
+        ...managerReview,
+        answers: withDemoOverallRating(managerReview.answers, review.employeeId),
+      },
+    }
+  })
+}
 
 const annualQuestions: Question[] = [
   { id: 'q1', label: 'What were your key accomplishments this period?', required: true, weight: 25, order: 1, type: 'textarea' },
@@ -1148,7 +1196,7 @@ export const seedCycles: ReviewCycle[] = [
   },
 ]
 
-export const seedReviews: PerformanceReview[] = [
+const seedReviewsRaw: PerformanceReview[] = [
   {
     id: 'rev-2024-1',
     cycleId: 'cycle-2024',
@@ -1534,6 +1582,11 @@ export const seedReviews: PerformanceReview[] = [
     },
   },
 ]
+
+export const seedReviews: PerformanceReview[] = enrichReviewsWithOverallRatings(
+  seedReviewsRaw,
+  seedCycles,
+)
 
 export function createEmptyQuestion(order: number): Question {
   return {

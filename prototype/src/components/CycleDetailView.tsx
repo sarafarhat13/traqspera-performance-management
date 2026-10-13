@@ -21,6 +21,7 @@ import {
 } from '../utils/cycleFinalApproval'
 import { computeCycleStats } from '../utils/cycleStats'
 import { readInputString } from '../utils/modusFormEvents'
+import { formatEmployeeNameWithCode } from '../utils/employeeCode'
 import { formatDate, isReviewDateRangeValid } from '../utils/status'
 import { CycleStatusBadge } from './CycleStatusBadge'
 import { PerformanceDataTable } from './PerformanceDataTable'
@@ -44,7 +45,14 @@ import {
   unionOptionsFromPeople,
   type DashboardFilters,
 } from '../utils/dashboardFilters'
-import { getReviewDisplayStatus } from '../utils/workflow'
+import {
+  getReviewDisplayStatus,
+  reviewOverallRatingLabel,
+  stepDeadlineOrCycleEnd,
+  WORKFLOW_STEP_META,
+  workflowFromLegacy,
+} from '../utils/workflow'
+import type { WorkflowStepType } from '../types'
 import type { ReviewDisplayStatus } from '../utils/status'
 import { CycleWorkflowStageCards } from './CycleWorkflowStageCards'
 import { PerformanceDashboardFilterBar } from './PerformanceDashboardFilterBar'
@@ -72,7 +80,9 @@ export function CycleDetailView() {
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [closeModalOpen, setCloseModalOpen] = useState(false)
   const [draftName, setDraftName] = useState('')
-  const [draftDueDate, setDraftDueDate] = useState('')
+  const [draftSelfEvalDue, setDraftSelfEvalDue] = useState('')
+  const [draftManagerDue, setDraftManagerDue] = useState('')
+  const [draftAckDue, setDraftAckDue] = useState('')
   const [draftFinalApproverId, setDraftFinalApproverId] = useState(FINAL_APPROVER_UNASSIGNED)
   const [filters, setFilters] = useState<DashboardFilters>(() => createDefaultDashboardFilters())
   const [filterFieldsKey, setFilterFieldsKey] = useState(0)
@@ -170,10 +180,28 @@ export function CycleDetailView() {
     dialog?.close()
   }, [editModalOpen])
 
+  const workflowForCycle = useMemo(() => {
+    if (!cycle) return []
+    return cycle.workflow ?? workflowFromLegacy(cycle.includesSelfEvaluation)
+  }, [cycle])
+
+  const workflowStepEnabled = useCallback(
+    (type: WorkflowStepType) =>
+      workflowForCycle.some((step) => step.type === type && step.enabled),
+    [workflowForCycle],
+  )
+
   const openEditModal = () => {
     if (!cycle) return
+    const workflow = cycle.workflow ?? workflowFromLegacy(cycle.includesSelfEvaluation)
+    const dueFor = (type: WorkflowStepType) => {
+      const step = workflow.find((s) => s.type === type)
+      return stepDeadlineOrCycleEnd(cycle, step)
+    }
     setDraftName(cycle.name)
-    setDraftDueDate(cycle.dueDate)
+    setDraftSelfEvalDue(workflowStepEnabled('employee') ? dueFor('employee') : '')
+    setDraftManagerDue(workflowStepEnabled('manager') ? dueFor('manager') : '')
+    setDraftAckDue(workflowStepEnabled('acknowledgement') ? dueFor('acknowledgement') : '')
     setDraftFinalApproverId(cycle.finalApproverId ?? FINAL_APPROVER_UNASSIGNED)
     setEditModalOpen(true)
   }
@@ -184,15 +212,59 @@ export function CycleDetailView() {
     dialog?.close()
   }
 
+  const cycleEditDatesValid = useMemo(() => {
+    if (!cycle) return false
+    const checks: string[] = []
+    if (workflowStepEnabled('employee')) checks.push(draftSelfEvalDue)
+    if (workflowStepEnabled('manager')) checks.push(draftManagerDue)
+    if (workflowStepEnabled('acknowledgement')) checks.push(draftAckDue)
+    if (checks.length === 0) return true
+    return checks.every((date) => isReviewDateRangeValid(cycle.startDate, date))
+  }, [
+    cycle,
+    draftSelfEvalDue,
+    draftManagerDue,
+    draftAckDue,
+    workflowStepEnabled,
+  ])
+
   const canSaveCycleEdit =
-    draftName.trim().length > 0 &&
-    Boolean(cycle) &&
-    isReviewDateRangeValid(cycle!.startDate, draftDueDate)
+    draftName.trim().length > 0 && Boolean(cycle) && cycleEditDatesValid
 
   const handleSaveCycleEdit = () => {
     if (!cycle || !canSaveCycleEdit) return
     if (cycle.status === 'active' || cycle.status === 'draft') {
-      updateCycle(cycle.id, { name: draftName.trim(), dueDate: draftDueDate })
+      const workflow = cycle.workflow ?? workflowFromLegacy(cycle.includesSelfEvaluation)
+
+      let nextWorkflow = workflow
+      const applyStepDeadline = (type: WorkflowStepType, date: string) => {
+        nextWorkflow = nextWorkflow.map((step) =>
+          step.type === type ? { ...step, deadline: date } : step,
+        )
+      }
+      if (workflowStepEnabled('employee')) {
+        applyStepDeadline('employee', draftSelfEvalDue)
+      }
+      if (workflowStepEnabled('manager')) {
+        applyStepDeadline('manager', draftManagerDue)
+      }
+      if (workflowStepEnabled('acknowledgement')) {
+        applyStepDeadline('acknowledgement', draftAckDue)
+      }
+
+      const deadlineValues = [
+        workflowStepEnabled('employee') ? draftSelfEvalDue : '',
+        workflowStepEnabled('manager') ? draftManagerDue : '',
+        workflowStepEnabled('acknowledgement') ? draftAckDue : '',
+      ].filter(Boolean)
+      const latestDue =
+        deadlineValues.sort().at(-1) ?? cycle.dueDate
+
+      updateCycle(cycle.id, {
+        name: draftName.trim(),
+        dueDate: latestDue,
+        workflow: nextWorkflow,
+      })
     }
     setCycleFinalApprover(
       cycle.id,
@@ -243,11 +315,14 @@ export function CycleDetailView() {
         const employee = getPerson(review.employeeId)
         return {
           id: review.id,
-          employeeName: employee?.name ?? 'Unknown',
+          employeeName: employee
+            ? formatEmployeeNameWithCode(employee.name, employee.id)
+            : 'Unknown',
           department: employee?.department ?? '—',
           managerId: review.managerId,
           managerName: reviewReviewerDisplayName(review, getPerson),
           displayStatus: (cycle ? getReviewDisplayStatus(cycle, review) : 'not_started') as ReviewDisplayStatus,
+          overallRating: reviewOverallRatingLabel(cycle, review) ?? '—',
         }
       })
   }, [cycle, state.reviews, getPerson, filters])
@@ -294,6 +369,12 @@ export function CycleDetailView() {
           createReviewDisplayStatusBadge(
             (row as { displayStatus: ReviewDisplayStatus }).displayStatus,
           ),
+      },
+      {
+        id: 'rating',
+        header: 'Rating',
+        accessor: 'overallRating',
+        sortable: true,
       },
       {
         id: 'stageDue',
@@ -397,19 +478,39 @@ export function CycleDetailView() {
                   value={draftName}
                   onInputChange={(e) => setDraftName(readInputString(e as CustomEvent))}
                 />
-                <ModusWcDate
-                  label="End date"
-                  size="sm"
-                  required
-                  value={draftDueDate}
-                  onInputChange={(e) => setDraftDueDate(readInputString(e as CustomEvent))}
-                />
-                {!isReviewDateRangeValid(cycle.startDate, draftDueDate) && draftDueDate && (
+                {workflowStepEnabled('employee') && (
+                  <ModusWcDate
+                    label={WORKFLOW_STEP_META.employee.dueDateLabel}
+                    size="sm"
+                    required
+                    value={draftSelfEvalDue}
+                    onInputChange={(e) => setDraftSelfEvalDue(readInputString(e as CustomEvent))}
+                  />
+                )}
+                {workflowStepEnabled('manager') && (
+                  <ModusWcDate
+                    label={WORKFLOW_STEP_META.manager.dueDateLabel}
+                    size="sm"
+                    required
+                    value={draftManagerDue}
+                    onInputChange={(e) => setDraftManagerDue(readInputString(e as CustomEvent))}
+                  />
+                )}
+                {workflowStepEnabled('acknowledgement') && (
+                  <ModusWcDate
+                    label={WORKFLOW_STEP_META.acknowledgement.dueDateLabel}
+                    size="sm"
+                    required
+                    value={draftAckDue}
+                    onInputChange={(e) => setDraftAckDue(readInputString(e as CustomEvent))}
+                  />
+                )}
+                {!cycleEditDatesValid && (
                   <ModusWcTypography
                     hierarchy="p"
                     size="sm"
                     customClass="text-[var(--modus-wc-color-danger)]"
-                    label="End date must be on or after the start date."
+                    label="Each due date must be on or after the cycle start date."
                   />
                 )}
               </>

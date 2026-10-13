@@ -47,7 +47,7 @@ export function AcknowledgementScreen() {
       />
 
       <div
-        className={`flex flex-col gap-4 ${isTablet ? 'max-w-3xl mx-auto w-full' : 'max-w-md mx-auto w-full'}`}
+        className={`flex min-w-0 flex-col gap-4 ${isTablet ? 'mx-auto w-full max-w-7xl px-0' : 'mx-auto w-full max-w-md'}`}
       >
         <ReviewEmployeeAcceptanceForm
           review={review}

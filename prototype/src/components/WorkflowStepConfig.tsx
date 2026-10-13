@@ -80,18 +80,30 @@ export function WorkflowStepConfig({
     onWorkflowChange(workflow.map((step) => (step.id === id ? { ...step, ...patch } : step)))
   }
 
+  const managerStep = workflow.find((step) => step.type === 'manager')
+  const managerEvaluationEnabled = Boolean(managerStep?.enabled)
+
   const updateManagerStep = (id: string, patch: Partial<WorkflowStep>) => {
-    const managerStep = workflow.find((step) => step.type === 'manager')
-    if (
-      patch.enabled === false &&
-      ratingStep &&
-      managerStep &&
-      id === managerStep.id
-    ) {
+    if (!managerStep || id !== managerStep.id) {
+      updateStep(id, patch)
+      return
+    }
+    if (patch.enabled === false) {
       onWorkflowChange(
         workflow.map((step) => {
           if (step.id === id) return { ...step, ...patch }
           if (step.type === 'rating_scale') return { ...step, enabled: false }
+          if (step.type === 'acknowledgement') return { ...step, enabled: false }
+          return step
+        }),
+      )
+      return
+    }
+    if (patch.enabled === true) {
+      onWorkflowChange(
+        workflow.map((step) => {
+          if (step.id === id) return { ...step, ...patch }
+          if (step.type === 'acknowledgement') return { ...step, enabled: true }
           return step
         }),
       )
@@ -393,7 +405,14 @@ export function WorkflowStepConfig({
         })}
 
         {acknowledgementStep && (
-          <div className="tq-workflow-step tq-workflow-step--acknowledgement tq-workflow-step--no-handle">
+          <div
+            className={[
+              'tq-workflow-step tq-workflow-step--acknowledgement tq-workflow-step--no-handle',
+              !managerEvaluationEnabled ? 'tq-workflow-step--disabled' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
             <div className="tq-workflow-step__top">
               <span
                 className="tq-workflow-step__mandatory"
@@ -417,7 +436,11 @@ export function WorkflowStepConfig({
                   hierarchy="p"
                   size="sm"
                   customClass="!m-0 mt-1 text-[var(--modus-wc-color-base-content-low-contrast)]"
-                  label={WORKFLOW_STEP_META.acknowledgement.description}
+                  label={
+                    managerEvaluationEnabled
+                      ? WORKFLOW_STEP_META.acknowledgement.description
+                      : 'Enable Manager Evaluation to include employee acknowledgment in this cycle.'
+                  }
                 />
               </div>
 
@@ -433,6 +456,7 @@ export function WorkflowStepConfig({
               <ModusWcDate
                 label={WORKFLOW_STEP_META.acknowledgement.dueDateLabel}
                 size="sm"
+                disabled={!managerEvaluationEnabled}
                 value={acknowledgementStep.deadline}
                 onInputChange={(e) =>
                   updateStep(acknowledgementStep.id, {

@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { ISelectOption } from '@trimble-oss/moduswebcomponents'
 import {
-  ModusWcAlert,
   ModusWcButton,
   ModusWcCard,
   ModusWcDate,
   ModusWcDivider,
   ModusWcIcon,
-  ModusWcSelect,
   ModusWcTextInput,
   ModusWcTextarea,
   ModusWcTypography,
@@ -26,12 +23,6 @@ import { readInputString } from '../utils/modusFormEvents'
 import { ReviewAcceptanceSummary } from './ReviewAcceptanceSummary'
 import { SupportingDocumentsSection } from './SupportingDocumentsSection'
 import { cycleAllowsSupportingDocuments } from '../utils/supportingDocuments'
-
-const DECISION_OPTIONS: ISelectOption[] = [
-  { label: 'Select your response', value: '' },
-  { label: 'I agree with this review', value: 'agree' },
-  { label: 'I disagree with this review', value: 'disagree' },
-]
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10)
@@ -69,7 +60,6 @@ export function ReviewEmployeeAcceptanceForm({
     return () => mq.removeEventListener('change', sync)
   }, [])
   const fullWidthButtons = stackFooter || narrowViewport
-  const [decision, setDecision] = useState<'agree' | 'disagree' | ''>('')
   const [comment, setComment] = useState('')
   const [signature, setSignature] = useState(employeeName)
   const [signedDate, setSignedDate] = useState(todayIsoDate)
@@ -79,19 +69,15 @@ export function ReviewEmployeeAcceptanceForm({
   const showSupportingDocuments = cycleAllowsSupportingDocuments(cycle)
 
   const commentLength = comment.length
-  const disagreeSelected = decision === 'disagree'
 
   const canSubmit = useMemo(() => {
-    if (decision !== 'agree' && decision !== 'disagree') return false
-    if (!signature.trim() || !signedDate.trim()) return false
-    if (disagreeSelected && !comment.trim()) return false
-    return true
-  }, [decision, signature, signedDate, disagreeSelected, comment])
+    return Boolean(signature.trim() && signedDate.trim())
+  }, [signature, signedDate])
 
   const handleSubmit = () => {
-    if (!canSubmit || decision === '') return
+    if (!canSubmit) return
     onSubmit({
-      decision,
+      decision: 'agree',
       comment,
       signature: signature.trim(),
       signedDate: signedDate.trim(),
@@ -120,37 +106,14 @@ export function ReviewEmployeeAcceptanceForm({
           <ModusWcTypography
             hierarchy="p"
             size="sm"
-            label="After discussing this review with your manager, record whether you agree with the feedback, add any comments, and sign below."
+            label="After discussing this review with your manager, sign below to confirm you accept the feedback."
           />
-          <ModusWcSelect
-            label="Response"
-            size="sm"
-            required
-            value={decision}
-            options={DECISION_OPTIONS}
-            onInputChange={(e) => {
-              const value = readInputString(e as CustomEvent)
-              setDecision(value === 'agree' || value === 'disagree' ? value : '')
-            }}
-          />
-          {disagreeSelected && (
-            <ModusWcAlert
-              variant="warning"
-              alertTitle="HR follow-up required"
-              alertDescription="Disagreeing flags this review for HR. Add a comment explaining your concerns before submitting."
-            />
-          )}
           <ModusWcTextarea
             label="Comment"
             size="sm"
             rows={4}
-            placeholder={
-              disagreeSelected
-                ? 'Required when you disagree — share what you discussed with your manager.'
-                : 'Optional — note anything you want on record.'
-            }
+            placeholder="Optional — note anything you want on record."
             value={comment}
-            required={disagreeSelected}
             onInputChange={(e) => {
               const next = readInputString(e as CustomEvent).slice(0, REVIEW_ACCEPTANCE_COMMENT_MAX)
               setComment(next)

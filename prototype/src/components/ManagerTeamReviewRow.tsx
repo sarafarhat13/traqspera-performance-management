@@ -11,6 +11,8 @@ import {
   getCurrentStageDeadline,
   hasManagerReviewDraft,
 } from '../utils/workflow'
+import { ReviewOverallRatingInline } from './ReviewOverallRating'
+import { formatEmployeeNameWithCode } from '../utils/employeeCode'
 import { ManagerReviewStatusBadge } from './ManagerReviewStatusBadge'
 
 function employeeInitials(name: string): string {
@@ -59,7 +61,11 @@ export function ManagerTeamReviewRow({
               size="md"
               weight="semibold"
               customClass="!m-0"
-              label={employee?.name ?? 'Employee'}
+              label={
+                employee
+                  ? formatEmployeeNameWithCode(employee.name, employee.id)
+                  : 'Employee'
+              }
             />
             <ManagerReviewStatusBadge status={review.status} cycle={cycle} review={review} />
           </div>
@@ -69,6 +75,7 @@ export function ManagerTeamReviewRow({
             customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
             label={`${employee?.title ?? 'Employee'} • ${templateName}`}
           />
+          {cycle ? <ReviewOverallRatingInline cycle={cycle} review={review} /> : null}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             {dueDate && (
               <div className="flex items-center gap-1">

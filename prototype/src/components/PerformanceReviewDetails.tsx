@@ -7,7 +7,9 @@ import { StatusBadge } from './StatusBadge'
 import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
 import { PerformanceReviewDetailContent } from './PerformanceReviewDetailContent'
 import { PageBackButton } from './PageBackButton'
+import { formatEmployeeNameWithCode } from '../utils/employeeCode'
 import { PrototypeReviewDownloadButton } from './PrototypeReviewDownloadButton'
+import { ReviewOverallRatingHeaderBadge } from './ReviewOverallRating'
 
 export function PerformanceReviewDetails() {
   const { state, setView, setEmployeeDetailsTab, selectPerson, getReview, getCycle, getPerson } = usePerformance()
@@ -48,9 +50,17 @@ export function PerformanceReviewDetails() {
         <ModusWcAvatar initials={employee?.name?.slice(0, 2) ?? 'EE'} size="lg" />
         <div className="mb-1 flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <TraqsperaPageHeader title={employee?.name ?? 'Employee'} subtitle={cycle?.name ?? ''} />
+            <TraqsperaPageHeader
+              title={
+                employee
+                  ? formatEmployeeNameWithCode(employee.name, employee.id)
+                  : 'Employee'
+              }
+              subtitle={cycle?.name ?? ''}
+            />
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {cycle && <ReviewOverallRatingHeaderBadge cycle={cycle} review={review} />}
             <StatusBadge status={review.status} cycle={cycle} review={review} />
             {review.status === 'completed' && <PrototypeReviewDownloadButton />}
           </div>

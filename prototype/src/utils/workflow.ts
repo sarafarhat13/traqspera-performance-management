@@ -283,6 +283,28 @@ export function cycleIncludesRatingScale(cycle: ReviewCycle): boolean {
 /** Stored in managerReview.answers when the cycle includes a rating scale step. */
 export const MANAGER_OVERALL_RATING_KEY = '__overall_rating'
 
+export function formatManagerOverallRating(
+  cycle: ReviewCycle,
+  answers?: Record<string, string>,
+): string | null {
+  const raw = answers?.[MANAGER_OVERALL_RATING_KEY]
+  if (!raw || !cycle.ratingScale) return null
+  const rating = Number(raw)
+  if (!Number.isFinite(rating)) return null
+  const label = cycle.ratingScale.labels[rating - (cycle.ratingScale.min ?? 1)]
+  return label ? `${rating} — ${label}` : String(rating)
+}
+
+/** Overall rating after the manager has submitted their review (not draft-only). */
+export function reviewOverallRatingLabel(
+  cycle: ReviewCycle | undefined,
+  review: PerformanceReview,
+): string | null {
+  if (!cycle || !cycleIncludesRatingScale(cycle)) return null
+  if (!review.managerReview?.completedAt) return null
+  return formatManagerOverallRating(cycle, review.managerReview.answers)
+}
+
 export function hasManagerReviewDraft(review: PerformanceReview): boolean {
   if (review.managerReview?.completedAt) return false
   const answers = review.managerReview?.answers
@@ -395,7 +417,7 @@ function isDeadlinePast(deadlineIso: string, now: Date): boolean {
   return due < now
 }
 
-function stepDeadlineOrCycleEnd(cycle: ReviewCycle, step?: WorkflowStep): string {
+export function stepDeadlineOrCycleEnd(cycle: ReviewCycle, step?: WorkflowStep): string {
   const fromStep = step?.deadline?.trim()
   return fromStep || cycle.dueDate
 }

@@ -10,7 +10,7 @@ import type { PerformanceReview, ReviewCycle, ReviewTemplate } from '../types'
 import { ReviewScheduleLines } from './ReviewScheduleLines'
 import { StatusBadge } from './StatusBadge'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
-import { needsEmployeeSelfEval } from '../utils/workflow'
+import { needsEmployeeSelfEval, reviewOverallRatingLabel } from '../utils/workflow'
 
 type ReviewRow = {
   review: PerformanceReview
@@ -39,6 +39,7 @@ function ReviewCard({
   const { review, cycle, template } = row
   const needsSelfEval = cycle ? needsEmployeeSelfEval(cycle, review) : review.status === 'self_eval_pending'
   const needsAcknowledgement = review.status === 'acknowledgement_pending'
+  const overallRatingLabel = cycle ? reviewOverallRatingLabel(cycle, review) : null
 
   return (
     <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
@@ -65,6 +66,14 @@ function ReviewCard({
           label={template?.name ?? ''}
         />
         {cycle && <ReviewScheduleLines cycle={cycle} review={review} />}
+        {overallRatingLabel && (
+          <ModusWcTypography
+            hierarchy="p"
+            size="sm"
+            weight="semibold"
+            label={`Overall rating: ${overallRatingLabel}`}
+          />
+        )}
         <div className="mt-1 flex flex-wrap gap-2">
           {needsSelfEval && (
             <ModusWcButton

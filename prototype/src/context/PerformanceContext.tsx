@@ -17,6 +17,7 @@ import {
   seedPeople,
   seedReviewGroups,
   seedReviews,
+  enrichReviewsWithOverallRatings,
   seedTemplates,
   UNASSIGNED_DEMO_EMPLOYEE_IDS,
 } from '../data/seed'
@@ -338,7 +339,10 @@ interface PerformanceContextValue {
     cycle: Omit<ReviewCycle, 'id' | 'status'>,
     options?: { reviewerAssignments?: Record<string, EmployeeReviewerAssignment> },
   ) => void
-  updateCycle: (cycleId: string, patch: Pick<ReviewCycle, 'name' | 'dueDate'>) => void
+  updateCycle: (
+    cycleId: string,
+    patch: Pick<ReviewCycle, 'name' | 'dueDate'> & { workflow?: ReviewCycle['workflow'] },
+  ) => void
   setCycleFinalApprover: (cycleId: string, finalApproverId: string | undefined) => void
   closeReviewCycle: (cycleId: string, attestation: ReviewCycleCompletionAttestation) => boolean
   saveSelfEval: (
@@ -350,6 +354,7 @@ interface PerformanceContextValue {
     reviewId: string,
     answers: Record<string, string>,
     supportingDocuments?: SupportingDocumentAttachment[],
+    options?: { navigate?: boolean },
   ) => void
   saveManagerReviewDraft: (
     reviewId: string,
@@ -372,7 +377,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
   const initialCycles = resolveCycles(persisted)
   const initialReviews = hydrateDraftCycleReviews(
     initialCycles,
-    resolveReviews(persisted),
+    enrichReviewsWithOverallRatings(resolveReviews(persisted), initialCycles),
     seedPeople,
   )
 
@@ -670,14 +675,21 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
   )
 
   const updateCycle = useCallback(
-    (cycleId: string, patch: Pick<ReviewCycle, 'name' | 'dueDate'>) => {
+    (
+      cycleId: string,
+      patch: Pick<ReviewCycle, 'name' | 'dueDate'> & { workflow?: ReviewCycle['workflow'] },
+    ) => {
       setState((s) => ({
         ...s,
-        cycles: s.cycles.map((cycle) =>
-          cycle.id === cycleId
-            ? { ...cycle, name: patch.name.trim(), dueDate: patch.dueDate }
-            : cycle,
-        ),
+        cycles: s.cycles.map((cycle) => {
+          if (cycle.id !== cycleId) return cycle
+          return {
+            ...cycle,
+            name: patch.name.trim(),
+            dueDate: patch.dueDate,
+            ...(patch.workflow !== undefined ? { workflow: patch.workflow } : {}),
+          }
+        }),
       }))
     },
     [],
@@ -811,8 +823,10 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       reviewId: string,
       answers: Record<string, string>,
       supportingDocuments?: SupportingDocumentAttachment[],
+      options?: { navigate?: boolean },
     ) => {
     const completedAt = new Date().toISOString()
+    const navigate = options?.navigate !== false
     setState((s) => ({
       ...s,
       reviews: s.reviews.map((r) => {
@@ -840,7 +854,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
           acknowledgement: autoAcknowledge ? legacyAutoAcknowledgement() : r.acknowledgement,
         }
       }),
-      view: 'manager_dashboard',
+      ...(navigate ? { view: 'manager_dashboard' as const } : {}),
     }))
   },
   [],

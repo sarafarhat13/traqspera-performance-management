@@ -29,7 +29,9 @@ import {
   unionOptionsFromPeople,
   type DashboardFilters,
 } from '../utils/dashboardFilters'
+import { formatEmployeeNameWithCode } from '../utils/employeeCode'
 import {
+  reviewOverallRatingLabel,
   formatReviewProcessText,
   getCurrentStageDeadline,
   hasManagerReviewDraft,
@@ -109,7 +111,9 @@ function buildReviewTableRows(
 
     return {
       id: review.id,
-      employeeName: employee?.name ?? 'Employee',
+      employeeName: employee
+        ? formatEmployeeNameWithCode(employee.name, employee.id)
+        : 'Employee',
       title: employee?.title ?? '—',
       reviewName: template?.name ?? cycle?.name ?? 'Performance review',
       status: review.status,
@@ -121,6 +125,7 @@ function buildReviewTableRows(
       processLabel: formatReviewProcessText(cycle, review),
       managerReviewDraft: hasManagerReviewDraft(review),
       managerActionRequired: cycle ? needsManagerReview(cycle, review) : review.status === 'manager_pending',
+      overallRating: cycle ? reviewOverallRatingLabel(cycle, review) ?? '—' : '—',
     }
   })
 }
@@ -323,6 +328,12 @@ export function ManagerDashboard() {
         },
       },
       { id: 'due', header: 'Due', accessor: 'dueDate', sortable: true },
+      {
+        id: 'rating',
+        header: 'Rating',
+        accessor: 'overallRating',
+        sortable: true,
+      },
       {
         id: 'process',
         header: 'Process',

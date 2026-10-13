@@ -4,6 +4,7 @@ import {
   ModusWcCard,
   ModusWcDivider,
   ModusWcIcon,
+  ModusWcModal,
   ModusWcTextarea,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
@@ -14,6 +15,7 @@ import { formatDate } from '../utils/status'
 import {
   cycleIncludesRatingScale,
   MANAGER_OVERALL_RATING_KEY,
+  statusAfterManagerPhaseComplete,
 } from '../utils/workflow'
 import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
@@ -21,7 +23,9 @@ import { seedQuestionAnswerKeys } from '../utils/questionReview'
 import { PerformanceRatingScaleField } from './PerformanceRatingScaleField'
 import { SupportingDocumentsSection } from './SupportingDocumentsSection'
 import { cycleAllowsSupportingDocuments } from '../utils/supportingDocuments'
+import { formatEmployeeNameWithCode } from '../utils/employeeCode'
 const AUTO_SAVE_MS = 800
+const MANAGER_ACK_SENT_MODAL_ID = 'manager-ack-sent-modal'
 
 function readStoredRating(answers?: Record<string, string>): number {
   const raw = answers?.[MANAGER_OVERALL_RATING_KEY]
@@ -71,6 +75,7 @@ export function ManagerReviewForm() {
 
   const [draftDirty, setDraftDirty] = useState(false)
   const [draftSaveState, setDraftSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [ackSentModalOpen, setAckSentModalOpen] = useState(false)
   const lastPersistedRef = useRef<Record<string, string>>({})
 
   const buildPayload = useCallback(() => {
@@ -123,6 +128,15 @@ export function ManagerReviewForm() {
     setDraftSaveState('idle')
   }, [review?.id, template, includesRatingScale, review?.managerReview?.supportingDocuments])
 
+  useEffect(() => {
+    const dialog = document.getElementById(MANAGER_ACK_SENT_MODAL_ID) as HTMLDialogElement | null
+    if (ackSentModalOpen) {
+      dialog?.showModal()
+      return
+    }
+    dialog?.close()
+  }, [ackSentModalOpen])
+
   if (!review || !template) {
     return (
       <TraqsperaPageBody>
@@ -150,11 +164,39 @@ export function ManagerReviewForm() {
   }
 
   const handleSubmit = () => {
+    const completedAt = new Date().toISOString()
+    const payload = buildPayload()
+    const nextReview = {
+      ...review,
+      managerReview: {
+        answers: payload,
+        completedAt,
+        savedAt: completedAt,
+        supportingDocuments:
+          showSupportingDocuments && supportingDocuments.length > 0
+            ? supportingDocuments
+            : undefined,
+      },
+    }
+    const nextStatus = cycle
+      ? statusAfterManagerPhaseComplete(cycle, nextReview)
+      : 'completed'
+    const showAckSentModal = nextStatus === 'acknowledgement_pending'
+
     saveManagerReview(
       review.id,
-      buildPayload(),
+      payload,
       showSupportingDocuments ? supportingDocuments : undefined,
+      { navigate: !showAckSentModal },
     )
+    if (showAckSentModal) {
+      setAckSentModalOpen(true)
+    }
+  }
+
+  const closeAckSentModal = () => {
+    setAckSentModalOpen(false)
+    setView('manager_dashboard')
   }
 
   const draftStatusLabel =
@@ -169,7 +211,9 @@ export function ManagerReviewForm() {
   return (
     <TraqsperaPageBody>
       <TraqsperaPageHeader
-        title={`Review — ${employee?.name ?? ''}`}
+        title={`Review — ${
+          employee ? formatEmployeeNameWithCode(employee.name, employee.id) : ''
+        }`}
         subtitle={cycle?.name ?? ''}
         onBack={handleCancel}
         backAriaLabel="Back to team reviews"
@@ -277,6 +321,28 @@ export function ManagerReviewForm() {
           </div>
         </ModusWcCard>
       </div>
+
+      <ModusWcModal
+        modalId={MANAGER_ACK_SENT_MODAL_ID}
+        backdrop="default"
+        position="center"
+        showClose
+        aria-label="Employee acknowledgment sent"
+      >
+        <span slot="header">Review submitted</span>
+        <div slot="content">
+          <ModusWcTypography
+            hierarchy="p"
+            size="md"
+            label={`Employee acknowledgment has been sent to ${employee?.name ?? 'the employee'}. They will be notified to accept the review.`}
+          />
+        </div>
+        <div slot="footer" className="flex w-full justify-end">
+          <ModusWcButton variant="filled" color="primary" size="sm" onButtonClick={closeAckSentModal}>
+            OK
+          </ModusWcButton>
+        </div>
+      </ModusWcModal>
     </TraqsperaPageBody>
   )
 }

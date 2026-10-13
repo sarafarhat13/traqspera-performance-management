@@ -16,6 +16,7 @@ import type {
 } from '../types'
 import { reviewerPreviewLabel } from '../utils/reviewer'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
+import { formatEmployeeNameWithCode } from '../utils/employeeCode'
 import { formatLongDate } from '../utils/status'
 import { TagBadge } from './TagBadge'
 import {
@@ -381,7 +382,12 @@ export function LaunchCycleReviewSummary({
                       size="sm"
                     />
                     <div className="min-w-0">
-                      <ModusWcTypography hierarchy="p" size="sm" weight="semibold" label={person.name} />
+                      <ModusWcTypography
+                        hierarchy="p"
+                        size="sm"
+                        weight="semibold"
+                        label={formatEmployeeNameWithCode(person.name, person.id)}
+                      />
                       <ModusWcTypography
                         hierarchy="p"
                         size="xs"

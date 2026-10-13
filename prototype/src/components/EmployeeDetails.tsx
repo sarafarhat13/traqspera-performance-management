@@ -20,6 +20,10 @@ import { EmployeeAcknowledgementPanel } from './EmployeeAcknowledgementPanel'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { PageBackButton } from './PageBackButton'
 import { PrototypeReviewDownloadButton } from './PrototypeReviewDownloadButton'
+import {
+  ReviewOverallRatingHeaderBadge,
+  ReviewOverallRatingInline,
+} from './ReviewOverallRating'
 import { EmployeeMobileHub } from './EmployeeMobileHub'
 import { EmployeeMobileShell } from './EmployeeMobileShell'
 import {
@@ -87,12 +91,14 @@ function EmployeeReviewDetailPanel({
   activePersonId,
   showBackButton,
   onBack,
+  onAcceptanceCancel,
 }: {
   detailReviewId: string
   employeeReviews: EmployeeReviewRow[]
   activePersonId: string
   showBackButton: boolean
   onBack: () => void
+  onAcceptanceCancel?: () => void
 }) {
   const activeReview = employeeReviews.find(({ review }) => review.id === detailReviewId)
   if (!activeReview) {
@@ -112,6 +118,7 @@ function EmployeeReviewDetailPanel({
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
               <h2 className="text-[16px] font-bold text-[#252a2e]">{cycle?.name ?? 'Review cycle'}</h2>
+              {cycle && <ReviewOverallRatingHeaderBadge cycle={cycle} review={review} />}
               <span className="shrink-0">
                 <StatusBadge status={review.status} cycle={cycle} review={review} />
               </span>
@@ -137,7 +144,10 @@ function EmployeeReviewDetailPanel({
           )}
         </div>
       </div>
-      <PerformanceReviewDetailContent reviewId={detailReviewId} />
+      <PerformanceReviewDetailContent
+        reviewId={detailReviewId}
+        onAcceptanceCancel={onAcceptanceCancel}
+      />
     </div>
   )
 }
@@ -285,6 +295,7 @@ export function EmployeeDetails({ myPerformanceVisit = 0 }: { myPerformanceVisit
         activePersonId={state.activePersonId}
         showBackButton={!isMobileOwnView}
         onBack={resetPerformanceMode}
+        onAcceptanceCancel={resetPerformanceMode}
       />
     ) : (
       <EmployeeMyReviewsPanel
@@ -458,6 +469,11 @@ export function EmployeeDetails({ myPerformanceVisit = 0 }: { myPerformanceVisit
               selectReview(null)
               setPerformanceMode('list')
             }}
+            onAcceptanceCancel={() => {
+              setDetailReviewId(null)
+              selectReview(null)
+              setPerformanceMode('list')
+            }}
           />
         ) : (
           <div className="flex flex-col gap-3">
@@ -493,6 +509,11 @@ export function EmployeeDetails({ myPerformanceVisit = 0 }: { myPerformanceVisit
                           activePersonId={state.activePersonId}
                           size="sm"
                         />
+                      </div>
+                    )}
+                    {cycle && (
+                      <div className="mt-1">
+                        <ReviewOverallRatingInline cycle={cycle} review={review} />
                       </div>
                     )}
                     <div className="mt-3 flex flex-wrap gap-2">

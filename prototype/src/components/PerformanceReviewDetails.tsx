@@ -9,6 +9,7 @@ import { PerformanceReviewDetailContent } from './PerformanceReviewDetailContent
 import { PageBackButton } from './PageBackButton'
 import { formatEmployeeNameWithCode } from '../utils/employeeCode'
 import { PrototypeReviewDownloadButton } from './PrototypeReviewDownloadButton'
+import { ReturnReviewToEmployeeAction } from './ReturnReviewToEmployeeAction'
 import { ReviewOverallRatingHeaderBadge } from './ReviewOverallRating'
 
 export function PerformanceReviewDetails() {
@@ -62,6 +63,7 @@ export function PerformanceReviewDetails() {
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
             {cycle && <ReviewOverallRatingHeaderBadge cycle={cycle} review={review} />}
             <StatusBadge status={review.status} cycle={cycle} review={review} />
+            <ReturnReviewToEmployeeAction reviewId={review.id} />
             {review.status === 'completed' && <PrototypeReviewDownloadButton />}
           </div>
         </div>

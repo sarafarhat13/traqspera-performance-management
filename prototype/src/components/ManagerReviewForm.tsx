@@ -24,6 +24,7 @@ import { PerformanceRatingScaleField } from './PerformanceRatingScaleField'
 import { SupportingDocumentsSection } from './SupportingDocumentsSection'
 import { cycleAllowsSupportingDocuments } from '../utils/supportingDocuments'
 import { formatEmployeeNameWithCode } from '../utils/employeeCode'
+import { ReturnReviewToEmployeeAction } from './ReturnReviewToEmployeeAction'
 const AUTO_SAVE_MS = 800
 const MANAGER_ACK_SENT_MODAL_ID = 'manager-ack-sent-modal'
 
@@ -217,6 +218,12 @@ export function ManagerReviewForm() {
         subtitle={cycle?.name ?? ''}
         onBack={handleCancel}
         backAriaLabel="Back to team reviews"
+        actions={
+          <ReturnReviewToEmployeeAction
+            reviewId={review.id}
+            onReturned={() => setView('manager_dashboard')}
+          />
+        }
       />
 
       <div className="flex flex-col gap-3">

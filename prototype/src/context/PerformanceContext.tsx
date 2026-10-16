@@ -45,6 +45,10 @@ import {
   workflowFromLegacy,
 } from '../utils/workflow'
 import { buildReviewAcknowledgement, legacyAutoAcknowledgement } from '../utils/acknowledgement'
+import {
+  canReturnReviewToEmployee,
+  statusForEmployeeRework,
+} from '../utils/reviewPushBack'
 import { resolveManagerDashboardPersonId } from '../utils/managerDashboardContext'
 
 const STORAGE_KEY = 'traqspera-performance-management-v3'
@@ -362,6 +366,7 @@ interface PerformanceContextValue {
     supportingDocuments?: SupportingDocumentAttachment[],
   ) => void
   submitReviewAcceptance: (reviewId: string, submission: ReviewAcceptanceSubmission) => void
+  returnReviewToEmployee: (reviewId: string, note?: string) => boolean
   updateReviewManager: (reviewId: string, managerId: string) => void
   getPerson: (id: string) => AppState['people'][0] | undefined
   getTemplate: (id: string) => ReviewTemplate | undefined
@@ -776,10 +781,17 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
                 : undefined,
           },
         }
-        const nextStatus: ReviewStatus = cycle
+        let nextStatus: ReviewStatus = cycle
           ? statusAfterEmployeePhaseComplete(cycle, nextReview)
           : 'manager_pending'
-        return { ...nextReview, status: nextStatus }
+        if (
+          cycle &&
+          nextReview.managerReview?.completedAt &&
+          (nextStatus === 'manager_pending' || nextStatus === 'parallel_review_pending')
+        ) {
+          nextStatus = statusAfterManagerPhaseComplete(cycle, nextReview)
+        }
+        return { ...nextReview, status: nextStatus, returnedToEmployee: undefined }
       }),
       view: 'employee_details',
       selectedPersonId: s.activePersonId,
@@ -886,6 +898,43 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
     [],
   )
 
+  const returnReviewToEmployee = useCallback((reviewId: string, note?: string) => {
+    let applied = false
+    setState((s) => {
+      const review = s.reviews.find((r) => r.id === reviewId)
+      if (!review) return s
+      const cycle = s.cycles.find((c) => c.id === review.cycleId)
+      const viewer = s.people.find((p) => p.id === s.activePersonId)
+      if (!canReturnReviewToEmployee(review, cycle, viewer, s.people)) return s
+      const nextStatus = cycle ? statusForEmployeeRework(cycle) : null
+      if (!nextStatus) return s
+
+      const trimmedNote = note?.trim()
+      applied = true
+      return {
+        ...s,
+        reviews: s.reviews.map((r) => {
+          if (r.id !== reviewId) return r
+          const selfEval = r.selfEval
+            ? { ...r.selfEval, completedAt: undefined }
+            : r.selfEval
+          return {
+            ...r,
+            status: nextStatus,
+            selfEval,
+            acknowledgement: undefined,
+            returnedToEmployee: {
+              returnedAt: new Date().toISOString(),
+              returnedByPersonId: s.activePersonId,
+              ...(trimmedNote ? { note: trimmedNote } : {}),
+            },
+          }
+        }),
+      }
+    })
+    return applied
+  }, [])
+
   const updateReviewManager = useCallback((reviewId: string, managerId: string) => {
     setState((s) => ({
       ...s,
@@ -948,6 +997,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       saveManagerReview,
       saveManagerReviewDraft,
       submitReviewAcceptance,
+      returnReviewToEmployee,
       updateReviewManager,
       getPerson,
       getTemplate,
@@ -984,6 +1034,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       saveManagerReview,
       saveManagerReviewDraft,
       submitReviewAcceptance,
+      returnReviewToEmployee,
       updateReviewManager,
       getPerson,
       getTemplate,

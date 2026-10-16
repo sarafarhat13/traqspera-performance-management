@@ -14,6 +14,7 @@ import {
 import { ReviewOverallRatingInline } from './ReviewOverallRating'
 import { formatEmployeeNameWithCode } from '../utils/employeeCode'
 import { ManagerReviewStatusBadge } from './ManagerReviewStatusBadge'
+import { ReturnReviewToEmployeeAction } from './ReturnReviewToEmployeeAction'
 
 function employeeInitials(name: string): string {
   return name
@@ -126,6 +127,7 @@ export function ManagerTeamReviewRow({
             {hasDraft ? 'Continue review' : 'Start Review'}
           </ModusWcButton>
         )}
+        <ReturnReviewToEmployeeAction reviewId={review.id} />
         <ModusWcButton variant="borderless" color="tertiary" size="sm" onButtonClick={onDetails}>
           Details
         </ModusWcButton>

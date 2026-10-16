@@ -20,6 +20,7 @@ import { EmployeeAcknowledgementPanel } from './EmployeeAcknowledgementPanel'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { PageBackButton } from './PageBackButton'
 import { PrototypeReviewDownloadButton } from './PrototypeReviewDownloadButton'
+import { ReturnReviewToEmployeeAction } from './ReturnReviewToEmployeeAction'
 import {
   ReviewOverallRatingHeaderBadge,
   ReviewOverallRatingInline,
@@ -123,11 +124,10 @@ function EmployeeReviewDetailPanel({
                 <StatusBadge status={review.status} cycle={cycle} review={review} />
               </span>
             </div>
-            {review.status === 'completed' && (
-              <div className="shrink-0">
-                <PrototypeReviewDownloadButton />
-              </div>
-            )}
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              <ReturnReviewToEmployeeAction reviewId={review.id} />
+              {review.status === 'completed' && <PrototypeReviewDownloadButton />}
+            </div>
           </div>
           {cycle && (
             <div className="mt-1">

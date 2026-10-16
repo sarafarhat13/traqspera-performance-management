@@ -187,6 +187,13 @@ export interface ReviewAcknowledgement {
   supportingDocuments?: SupportingDocumentAttachment[]
 }
 
+/** Admin or manager sent the review back for employee self-evaluation updates. */
+export interface ReviewReturnedToEmployee {
+  returnedAt: string
+  returnedByPersonId: string
+  note?: string
+}
+
 export interface PerformanceReview {
   id: string
   cycleId: string
@@ -198,6 +205,7 @@ export interface PerformanceReview {
   selfEval?: PhaseAnswers
   managerReview?: PhaseAnswers
   acknowledgement?: ReviewAcknowledgement
+  returnedToEmployee?: ReviewReturnedToEmployee
 }
 
 export interface AppState {

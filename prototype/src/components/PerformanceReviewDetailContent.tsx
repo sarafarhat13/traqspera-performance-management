@@ -11,6 +11,7 @@ import {
   ReviewOverallRatingBanner,
   ReviewOverallRatingCompareColumn,
 } from './ReviewOverallRating'
+import { ReturnedToEmployeeNotice } from './ReturnReviewToEmployeeAction'
 import { ReviewWorkflowStepCards } from './ReviewWorkflowStepCards'
 
 const TAB_OVERVIEW = 0
@@ -99,6 +100,7 @@ export function PerformanceReviewDetailContent({
 
   return (
     <div className="flex flex-col gap-3">
+      <ReturnedToEmployeeNotice reviewId={reviewId} />
       {cycle && (
         <div className="flex flex-col gap-2">
           <ModusWcTypography hierarchy="h4" size="md" weight="semibold" label="Statuses" />

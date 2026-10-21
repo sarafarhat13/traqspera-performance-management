@@ -13,11 +13,7 @@ import {
   ModusWcTextInput,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
-import {
-  createEmptyTemplate,
-  DEFAULT_RATING_SCALE,
-  DEMO_EMPLOYEE_NO_SUPERVISOR_ID,
-} from '../data/seed'
+import { createEmptyTemplate, DEFAULT_RATING_SCALE } from '../data/seed'
 import { usePerformance } from '../context/PerformanceContext'
 import type {
   EmployeeReviewerAssignment,
@@ -249,11 +245,6 @@ export function LaunchCycleWizard() {
   )
 
   const missingSupervisorCount = missingSupervisorParticipants.length
-
-  const demoEmployeeNoSupervisor = useMemo(
-    () => getPerson(DEMO_EMPLOYEE_NO_SUPERVISOR_ID),
-    [getPerson],
-  )
 
   const syncReviewerDefaults = useCallback(
     (
@@ -650,7 +641,13 @@ export function LaunchCycleWizard() {
           reviewerSupervisorId: effectiveSupervisorId,
           supervisorMissing: isSupervisorAssignmentMissing(person, effective),
         }
-      }),
+      })
+        .sort((a, b) => {
+          if (a.supervisorMissing !== b.supervisorMissing) {
+            return a.supervisorMissing ? -1 : 1
+          }
+          return a.name.localeCompare(b.name)
+        }),
     [
       filteredEmployees,
       individualEmployeeIds,
@@ -660,23 +657,35 @@ export function LaunchCycleWizard() {
     ],
   )
 
-  const missingSupervisorInShownTableCount = useMemo(
-    () => employeeTableData.filter((row) => row.supervisorMissing).length,
+  const missingSupervisorInShownTable = useMemo(
+    () => employeeTableData.filter((row) => row.supervisorMissing),
     [employeeTableData],
   )
+
+  const missingSupervisorInShownTableCount = missingSupervisorInShownTable.length
+
+  const missingSupervisorTableAlertDescription = useMemo(() => {
+    if (missingSupervisorInShownTableCount === 0) return ''
+    const names = missingSupervisorInShownTable.map((row) => row.name).join(', ')
+    const countLabel =
+      missingSupervisorInShownTableCount === 1
+        ? '1 employee has a missing supervisor'
+        : `${missingSupervisorInShownTableCount} employees have missing supervisors`
+    return `${countLabel} (${names}). Choose a supervisor from the reviewer column below.`
+  }, [missingSupervisorInShownTable, missingSupervisorInShownTableCount])
 
   const participantAssignmentTableData = useMemo(
     () =>
       derivedParticipantIds
         .map((id) => getPerson(id))
         .filter((person): person is NonNullable<typeof person> => Boolean(person))
-        .sort((a, b) => a.name.localeCompare(b.name))
         .map((person) => {
           const assignment = getEffectiveAssignment(person.id)
           const effectiveSupervisorId = resolveEffectiveSupervisorId(person, assignment) ?? ''
+          const name = formatEmployeeNameWithCode(person.name, person.id)
           return {
             id: person.id,
-            name: formatEmployeeNameWithCode(person.name, person.id),
+            name,
             title: person.title,
             department: person.department,
             reviewerType: assignment.type,
@@ -684,6 +693,12 @@ export function LaunchCycleWizard() {
             reviewerSupervisorId: effectiveSupervisorId,
             supervisorMissing: isSupervisorAssignmentMissing(person, assignment),
           }
+        })
+        .sort((a, b) => {
+          if (a.supervisorMissing !== b.supervisorMissing) {
+            return a.supervisorMissing ? -1 : 1
+          }
+          return a.name.localeCompare(b.name)
         }),
     [derivedParticipantIds, getEffectiveAssignment, getPerson],
   )
@@ -1187,17 +1202,6 @@ export function LaunchCycleWizard() {
                 onResolve={resolveConflict}
               />
 
-              {demoEmployeeNoSupervisor ? (
-                <ModusWcAlert
-                  variant="info"
-                  alertTitle="Example: employee without a supervisor"
-                  alertDescription={`${formatEmployeeNameWithCode(
-                    demoEmployeeNoSupervisor.name,
-                    demoEmployeeNoSupervisor.id,
-                  )} (${demoEmployeeNoSupervisor.title}) has no supervisor on file. Under Select individuals, add them to the cycle, set Reviewer to Supervisor, then choose a supervisor from the dropdown in Reviewer assignments.`}
-                />
-              ) : null}
-
               <div className="tq-review-detail-tabs">
                 <ModusWcTabs
                   tabs={participantTabs}
@@ -1332,9 +1336,7 @@ export function LaunchCycleWizard() {
                     <ModusWcAlert
                       variant="warning"
                       alertTitle="Missing supervisors"
-                      alertDescription={`You have ${missingSupervisorInShownTableCount} employee${
-                        missingSupervisorInShownTableCount === 1 ? '' : 's'
-                      } with missing supervisors. Select a supervisor in the reviewer column below.`}
+                      alertDescription={missingSupervisorTableAlertDescription}
                     />
                   ) : null}
                   {participantsTabIndex === 0 ? (

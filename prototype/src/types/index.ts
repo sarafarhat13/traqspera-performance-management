@@ -142,6 +142,8 @@ export interface EmployeeReviewerAssignment {
   type: ReviewerRoleType
   /** Selected manager when type is `custom` */
   customManagerId?: string
+  /** Cycle-specific supervisor when type is `supervisor` (falls back to employee record) */
+  supervisorId?: string
 }
 
 export interface Person {

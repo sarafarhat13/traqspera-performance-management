@@ -322,6 +322,7 @@ const UNASSIGNED_DEMO_EMPLOYEES: Omit<Person, 'union'>[] = [
 
 /** Beyond bulk-generated roster (emp-21–55); not on active/draft cycles or review groups. */
 const EXTRA_UNASSIGNED_DEMO_EMPLOYEES: Omit<Person, 'union'>[] = [
+  /** Demo roster entry: no supervisor on file (see post-map clear on emp-56). */
   {
     id: 'emp-56',
     name: 'Noah Patterson',
@@ -778,7 +779,12 @@ export const seedPeople: Person[] = SEED_PEOPLE_BASE.map((person) => ({
   supervisorId:
     person.supervisorId ??
     (person.role === 'employee' ? defaultSupervisorId(person) : undefined),
-}))
+})).map((person) =>
+  person.id === 'emp-56' ? { ...person, supervisorId: undefined } : person,
+)
+
+/** Employee with no supervisor on file — used in launch-cycle participant demos. */
+export const DEMO_EMPLOYEE_NO_SUPERVISOR_ID = 'emp-56'
 
 export const seedReviewGroups: ReviewEmployeeGroup[] = [
   {
@@ -786,7 +792,7 @@ export const seedReviewGroups: ReviewEmployeeGroup[] = [
     name: 'Mike Chen — Core Team',
     description: 'Direct reports used for field operations reviews',
     memberIds: [...MGR1_CORE_TEAM_EMPLOYEE_IDS],
-    defaultReviewerAssignment: { type: 'crew_manager' },
+    defaultReviewerAssignment: { type: 'supervisor' },
     createdBy: 'HR Admin',
     createdAt: '2025-01-10',
   },

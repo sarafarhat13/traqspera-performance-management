@@ -296,7 +296,12 @@ function resolveReviewerManagerId(
   if (!person) return 'mgr-1'
   switch (assignment.type) {
     case 'supervisor':
-      return person.supervisorId ?? person.managerId ?? 'mgr-1'
+      return (
+        assignment.supervisorId?.trim() ||
+        person.supervisorId ||
+        person.managerId ||
+        'mgr-1'
+      )
     case 'custom':
       return assignment.customManagerId ?? person.managerId ?? 'mgr-1'
     default:
@@ -313,7 +318,7 @@ function reviewsForCycleLaunch(
   const newReviews: PerformanceReview[] = []
   for (const employeeId of cycle.employeeIds) {
     const person = people.find((p) => p.id === employeeId)
-    const assignment = reviewerAssignments?.[employeeId] ?? { type: 'crew_manager' }
+    const assignment = reviewerAssignments?.[employeeId] ?? { type: 'supervisor' }
     const managerId = resolveReviewerManagerId(person, assignment)
     const duplicate = existing.some(
       (r) => r.cycleId === cycle.id && r.employeeId === employeeId,

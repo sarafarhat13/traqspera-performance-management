@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  ModusWcAlert,
   ModusWcAutocomplete,
   ModusWcButton,
   ModusWcCard,
@@ -12,7 +13,11 @@ import {
   ModusWcTextInput,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
-import { createEmptyTemplate, DEFAULT_RATING_SCALE } from '../data/seed'
+import {
+  createEmptyTemplate,
+  DEFAULT_RATING_SCALE,
+  DEMO_EMPLOYEE_NO_SUPERVISOR_ID,
+} from '../data/seed'
 import { usePerformance } from '../context/PerformanceContext'
 import type {
   EmployeeReviewerAssignment,
@@ -48,6 +53,8 @@ import {
   defaultReviewerAssignment,
   buildManagerOptions,
   isReviewerAssignmentValid,
+  isSupervisorAssignmentMissing,
+  resolveEffectiveSupervisorId,
   REVIEWER_TYPE_OPTIONS,
   reviewerPreviewLabel,
 } from '../utils/reviewer'
@@ -141,8 +148,10 @@ export function LaunchCycleWizard() {
   const [reviewerAssignments, setReviewerAssignments] = useState<
     Record<string, EmployeeReviewerAssignment>
   >({})
-  const [bulkReviewerType, setBulkReviewerType] = useState<ReviewerRoleType>('crew_manager')
+  const [bulkReviewerType, setBulkReviewerType] = useState<ReviewerRoleType>('supervisor')
   const [bulkCustomManagerId, setBulkCustomManagerId] = useState('')
+  const [bulkSupervisorId, setBulkSupervisorId] = useState('')
+  const [reviewerTableKey, setReviewerTableKey] = useState(0)
   const [filterDepartment, setFilterDepartment] = useState(FILTER_ALL)
   const [filterCostCenter, setFilterCostCenter] = useState(FILTER_ALL)
   const [filterTitle, setFilterTitle] = useState(FILTER_ALL)
@@ -212,6 +221,40 @@ export function LaunchCycleWizard() {
     [provenance, reviewerAssignments],
   )
 
+  const getEffectiveAssignment = useCallback(
+    (employeeId: string): EmployeeReviewerAssignment => {
+      if (reviewerAssignments[employeeId]) {
+        return reviewerAssignments[employeeId]
+      }
+      const sources = provenance[employeeId]
+      if (sources?.length) {
+        return sources[0].assignment
+      }
+      return defaultReviewerAssignment()
+    },
+    [provenance, reviewerAssignments],
+  )
+
+  const missingSupervisorParticipants = useMemo(
+    () =>
+      derivedParticipantIds
+        .map((id) => {
+          const person = getPerson(id)
+          const assignment = getEffectiveAssignment(id)
+          if (!isSupervisorAssignmentMissing(person, assignment)) return null
+          return person
+        })
+        .filter((person): person is NonNullable<typeof person> => Boolean(person)),
+    [derivedParticipantIds, getEffectiveAssignment, getPerson],
+  )
+
+  const missingSupervisorCount = missingSupervisorParticipants.length
+
+  const demoEmployeeNoSupervisor = useMemo(
+    () => getPerson(DEMO_EMPLOYEE_NO_SUPERVISOR_ID),
+    [getPerson],
+  )
+
   const syncReviewerDefaults = useCallback(
     (
       nextAttachedGroupIds: string[],
@@ -240,12 +283,9 @@ export function LaunchCycleWizard() {
   const reviewerAssignmentsForLaunch = useMemo(
     () =>
       Object.fromEntries(
-        derivedParticipantIds.map((id) => [
-          id,
-          reviewerAssignments[id] ?? defaultReviewerAssignment(),
-        ]),
+        derivedParticipantIds.map((id) => [id, getEffectiveAssignment(id)]),
       ),
-    [derivedParticipantIds, reviewerAssignments],
+    [derivedParticipantIds, getEffectiveAssignment],
   )
 
   const participantTabs = useMemo(
@@ -338,12 +378,27 @@ export function LaunchCycleWizard() {
     [filteredEmployees],
   )
 
-  const assignmentForBulk = useCallback((): EmployeeReviewerAssignment => {
-    if (bulkReviewerType === 'custom') {
-      return { type: 'custom', customManagerId: bulkCustomManagerId }
-    }
-    return { type: bulkReviewerType }
-  }, [bulkReviewerType, bulkCustomManagerId])
+  const buildReviewerAssignmentForEmployee = useCallback(
+    (employeeId: string, type: ReviewerRoleType): EmployeeReviewerAssignment => {
+      if (type === 'custom') {
+        return { type: 'custom', customManagerId: bulkCustomManagerId }
+      }
+      if (type === 'supervisor') {
+        const person = getPerson(employeeId)
+        const fromRecord = person?.supervisorId?.trim()
+        const supervisorId = bulkSupervisorId || fromRecord || ''
+        return { type: 'supervisor', supervisorId }
+      }
+      return { type }
+    },
+    [bulkCustomManagerId, bulkSupervisorId, getPerson],
+  )
+
+  const assignmentForBulk = useCallback(
+    (employeeId: string): EmployeeReviewerAssignment =>
+      buildReviewerAssignmentForEmployee(employeeId, bulkReviewerType),
+    [buildReviewerAssignmentForEmployee, bulkReviewerType],
+  )
 
   const managerOptions = useMemo(() => buildManagerOptions(state.people), [state.people])
 
@@ -365,22 +420,51 @@ export function LaunchCycleWizard() {
     ids: string[],
     mergeWithExisting = false,
   ) => {
-    const bulkAssignment = assignmentForBulk()
     setReviewerAssignments((prev) => {
       if (mergeWithExisting) {
         const next = { ...prev }
         ids.forEach((id) => {
-          if (!next[id]) next[id] = bulkAssignment
+          if (!next[id]) next[id] = assignmentForBulk(id)
         })
         return next
       }
       const next: Record<string, EmployeeReviewerAssignment> = {}
       ids.forEach((id) => {
-        next[id] = prev[id] ?? bulkAssignment
+        next[id] = prev[id] ?? assignmentForBulk(id)
       })
       return next
     })
   }
+
+  const applyReviewerToFilteredEmployees = useCallback(
+    (type: ReviewerRoleType, options?: { customManagerId?: string; supervisorId?: string }) => {
+      if (filteredEmployeeIds.length === 0) return
+      setReviewerAssignments((prev) => {
+        const next = { ...prev }
+        filteredEmployeeIds.forEach((id) => {
+          if (type === 'custom') {
+            next[id] = {
+              type: 'custom',
+              customManagerId: options?.customManagerId ?? bulkCustomManagerId,
+            }
+            return
+          }
+          if (type === 'supervisor') {
+            const person = getPerson(id)
+            const fromRecord = person?.supervisorId?.trim()
+            const supervisorId =
+              options?.supervisorId ?? (bulkSupervisorId || fromRecord || '')
+            next[id] = { type: 'supervisor', supervisorId }
+            return
+          }
+          next[id] = { type }
+        })
+        return next
+      })
+      setReviewerTableKey((key) => key + 1)
+    },
+    [bulkCustomManagerId, bulkSupervisorId, filteredEmployeeIds, getPerson],
+  )
 
   const handleEmployeeRowSelectionChange = useCallback(
     (event: CustomEvent<{ selectedRowIds: string[] }>) => {
@@ -389,11 +473,10 @@ export function LaunchCycleWizard() {
         if (rowIdSetEqual(prev, newIds)) return prev
         const added = newIds.filter((id) => !prev.includes(id))
         if (added.length > 0) {
-          const bulkAssignment = assignmentForBulk()
           setReviewerAssignments((assignments) => {
             const next = { ...assignments }
             added.forEach((id) => {
-              if (!next[id]) next[id] = bulkAssignment
+              if (!next[id]) next[id] = assignmentForBulk(id)
             })
             return next
           })
@@ -468,20 +551,36 @@ export function LaunchCycleWizard() {
     }))
   }
 
+  const ensureIndividualParticipant = useCallback((employeeId: string) => {
+    setIndividualEmployeeIds((prev) =>
+      prev.includes(employeeId) ? prev : [...prev, employeeId],
+    )
+  }, [])
+
   const setReviewerType = (employeeId: string, type: ReviewerRoleType) => {
-    setReviewerAssignments((prev) => ({
-      ...prev,
-      [employeeId]: {
-        type,
-        customManagerId:
-          type === 'custom'
-            ? prev[employeeId]?.customManagerId || bulkCustomManagerId || ''
-            : undefined,
-      },
-    }))
+    ensureIndividualParticipant(employeeId)
+    const person = getPerson(employeeId)
+    setReviewerAssignments((prev) => {
+      const previous = prev[employeeId] ?? getEffectiveAssignment(employeeId)
+      return {
+        ...prev,
+        [employeeId]: {
+          type,
+          customManagerId:
+            type === 'custom'
+              ? previous.customManagerId || bulkCustomManagerId || ''
+              : undefined,
+          supervisorId:
+            type === 'supervisor'
+              ? previous.supervisorId || person?.supervisorId || ''
+              : undefined,
+        },
+      }
+    })
   }
 
   const setReviewerCustomManager = (employeeId: string, customManagerId: string) => {
+    ensureIndividualParticipant(employeeId)
     setReviewerAssignments((prev) => ({
       ...prev,
       [employeeId]: {
@@ -491,30 +590,32 @@ export function LaunchCycleWizard() {
     }))
   }
 
-  const applyAssignmentToSelected = (assignment: EmployeeReviewerAssignment) => {
-    if (individualEmployeeIds.length === 0) return
-    setReviewerAssignments((prev) => {
-      const next = { ...prev }
-      individualEmployeeIds.forEach((id) => {
-        next[id] = assignment
-      })
-      return next
-    })
+  const setReviewerSupervisor = (employeeId: string, supervisorId: string) => {
+    ensureIndividualParticipant(employeeId)
+    setReviewerAssignments((prev) => ({
+      ...prev,
+      [employeeId]: {
+        type: 'supervisor',
+        supervisorId,
+      },
+    }))
   }
 
   const applyBulkReviewer = (type: ReviewerRoleType) => {
     setBulkReviewerType(type)
-    applyAssignmentToSelected(
-      type === 'custom'
-        ? { type: 'custom', customManagerId: bulkCustomManagerId }
-        : { type },
-    )
+    applyReviewerToFilteredEmployees(type)
   }
 
   const applyBulkCustomManager = (managerId: string) => {
     setBulkCustomManagerId(managerId)
     setBulkReviewerType('custom')
-    applyAssignmentToSelected({ type: 'custom', customManagerId: managerId })
+    applyReviewerToFilteredEmployees('custom', { customManagerId: managerId })
+  }
+
+  const applyBulkSupervisor = (supervisorId: string) => {
+    setBulkSupervisorId(supervisorId)
+    setBulkReviewerType('supervisor')
+    applyReviewerToFilteredEmployees('supervisor', { supervisorId })
   }
 
   const selectAllFiltered = () => mergeEmployeeSelection(filteredEmployeeIds)
@@ -530,9 +631,13 @@ export function LaunchCycleWizard() {
     () =>
       filteredEmployees.map((person) => {
         const isIndividuallySelected = individualEmployeeIds.includes(person.id)
-        const assignment =
-          reviewerAssignments[person.id] ??
-          (isIndividuallySelected ? defaultReviewerAssignment() : undefined)
+        const inCycle = derivedParticipantIds.includes(person.id)
+        const effective = reviewerAssignments[person.id]
+          ? reviewerAssignments[person.id]
+          : inCycle
+            ? getEffectiveAssignment(person.id)
+            : defaultReviewerAssignment()
+        const effectiveSupervisorId = resolveEffectiveSupervisorId(person, effective) ?? ''
         return {
           id: person.id,
           name: formatEmployeeNameWithCode(person.name, person.id),
@@ -540,11 +645,82 @@ export function LaunchCycleWizard() {
           department: person.department,
           costCenter: person.costCenter,
           isSelected: isIndividuallySelected,
-          reviewerType: assignment?.type ?? 'crew_manager',
-          reviewerCustomManagerId: assignment?.customManagerId ?? '',
+          reviewerType: effective.type,
+          reviewerCustomManagerId: effective.customManagerId ?? '',
+          reviewerSupervisorId: effectiveSupervisorId,
+          supervisorMissing: isSupervisorAssignmentMissing(person, effective),
         }
       }),
-    [filteredEmployees, individualEmployeeIds, reviewerAssignments],
+    [
+      filteredEmployees,
+      individualEmployeeIds,
+      reviewerAssignments,
+      derivedParticipantIds,
+      getEffectiveAssignment,
+    ],
+  )
+
+  const missingSupervisorInShownTableCount = useMemo(
+    () => employeeTableData.filter((row) => row.supervisorMissing).length,
+    [employeeTableData],
+  )
+
+  const participantAssignmentTableData = useMemo(
+    () =>
+      derivedParticipantIds
+        .map((id) => getPerson(id))
+        .filter((person): person is NonNullable<typeof person> => Boolean(person))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((person) => {
+          const assignment = getEffectiveAssignment(person.id)
+          const effectiveSupervisorId = resolveEffectiveSupervisorId(person, assignment) ?? ''
+          return {
+            id: person.id,
+            name: formatEmployeeNameWithCode(person.name, person.id),
+            title: person.title,
+            department: person.department,
+            reviewerType: assignment.type,
+            reviewerCustomManagerId: assignment.customManagerId ?? '',
+            reviewerSupervisorId: effectiveSupervisorId,
+            supervisorMissing: isSupervisorAssignmentMissing(person, assignment),
+          }
+        }),
+    [derivedParticipantIds, getEffectiveAssignment, getPerson],
+  )
+
+  const renderReviewerAssignmentCell = useCallback(
+    (record: {
+      id: string
+      name: string
+      reviewerType: string
+      reviewerCustomManagerId: string
+      reviewerSupervisorId: string
+      supervisorMissing: boolean
+    }) => {
+      const person = getPerson(record.id)
+      const assignment: EmployeeReviewerAssignment = {
+        type: record.reviewerType as ReviewerRoleType,
+        customManagerId: record.reviewerCustomManagerId,
+        supervisorId: record.reviewerSupervisorId || undefined,
+      }
+      const effectiveSupervisorId = resolveEffectiveSupervisorId(person, assignment) ?? ''
+      return createReviewerAssignmentCell(
+        assignment,
+        managerOptions,
+        (type) => setReviewerType(record.id, type as ReviewerRoleType),
+        (managerId) => setReviewerCustomManager(record.id, managerId),
+        `Reviewer for ${record.name}`,
+        assignment.type === 'supervisor'
+          ? {
+              effectiveSupervisorId,
+              supervisorMissing: record.supervisorMissing,
+              onSupervisorChange: (supervisorId) =>
+                setReviewerSupervisor(record.id, supervisorId),
+            }
+          : undefined,
+      )
+    },
+    [getPerson, managerOptions],
   )
 
   const employeeTableColumns = useMemo(
@@ -569,32 +745,43 @@ export function LaunchCycleWizard() {
           const record = row as {
             id: string
             name: string
-            isSelected: boolean
             reviewerType: string
             reviewerCustomManagerId: string
+            reviewerSupervisorId: string
+            supervisorMissing: boolean
           }
-          if (!record.isSelected) {
-            const empty = document.createElement('span')
-            empty.className =
-              'text-sm text-[var(--modus-wc-color-base-content-low-contrast)]'
-            empty.textContent = '—'
-            return empty
-          }
-          const assignment: EmployeeReviewerAssignment = {
-            type: record.reviewerType as ReviewerRoleType,
-            customManagerId: record.reviewerCustomManagerId,
-          }
-          return createReviewerAssignmentCell(
-            assignment,
-            managerOptions,
-            (type) => setReviewerType(record.id, type as ReviewerRoleType),
-            (managerId) => setReviewerCustomManager(record.id, managerId),
-            `Reviewer for ${record.name}`,
-          )
+          return renderReviewerAssignmentCell(record)
         },
       },
     ],
-    [reviewerAssignments, managerOptions],
+    [renderReviewerAssignmentCell],
+  )
+
+  const participantAssignmentTableColumns = useMemo(
+    () => [
+      { id: 'name', header: 'Employee', accessor: 'name', sortable: true },
+      { id: 'title', header: 'Title', accessor: 'title', sortable: true },
+      { id: 'department', header: 'Department', accessor: 'department', sortable: true },
+      {
+        id: 'reviewer',
+        header: 'Reviewer',
+        accessor: 'reviewerType',
+        sortable: false,
+        className: 'tq-table-reviewer-cell',
+        cellRenderer: (_value: unknown, row: unknown) => {
+          const record = row as {
+            id: string
+            name: string
+            reviewerType: string
+            reviewerCustomManagerId: string
+            reviewerSupervisorId: string
+            supervisorMissing: boolean
+          }
+          return renderReviewerAssignmentCell(record)
+        },
+      },
+    ],
+    [renderReviewerAssignmentCell],
   )
 
   const groupPickerItems = useMemo(
@@ -647,8 +834,19 @@ export function LaunchCycleWizard() {
         : conflicts.length === 1
           ? '1 conflict to resolve'
           : `${conflicts.length} conflicts to resolve`
-    return `${employeePart} · ${groupPart} · ${conflictPart}`
-  }, [derivedParticipantIds.length, attachedGroupIds.length, conflicts.length])
+    const supervisorPart =
+      missingSupervisorCount === 0
+        ? 'All supervisors assigned'
+        : missingSupervisorCount === 1
+          ? '1 missing supervisor'
+          : `${missingSupervisorCount} missing supervisors`
+    return `${employeePart} · ${groupPart} · ${conflictPart} · ${supervisorPart}`
+  }, [
+    derivedParticipantIds.length,
+    attachedGroupIds.length,
+    conflicts.length,
+    missingSupervisorCount,
+  ])
 
   const isTemplateValid = () => {
     if (templateMode === 'select') return Boolean(selectedTemplateId)
@@ -689,9 +887,7 @@ export function LaunchCycleWizard() {
           derivedParticipantIds.length > 0 &&
           conflicts.length === 0 &&
           derivedParticipantIds.every((id) =>
-            isReviewerAssignmentValid(
-              reviewerAssignments[id] ?? defaultReviewerAssignment(),
-            ),
+            isReviewerAssignmentValid(getEffectiveAssignment(id), getPerson(id)),
           )
         )
       default:
@@ -991,6 +1187,17 @@ export function LaunchCycleWizard() {
                 onResolve={resolveConflict}
               />
 
+              {demoEmployeeNoSupervisor ? (
+                <ModusWcAlert
+                  variant="info"
+                  alertTitle="Example: employee without a supervisor"
+                  alertDescription={`${formatEmployeeNameWithCode(
+                    demoEmployeeNoSupervisor.name,
+                    demoEmployeeNoSupervisor.id,
+                  )} (${demoEmployeeNoSupervisor.title}) has no supervisor on file. Under Select individuals, add them to the cycle, set Reviewer to Supervisor, then choose a supervisor from the dropdown in Reviewer assignments.`}
+                />
+              ) : null}
+
               <div className="tq-review-detail-tabs">
                 <ModusWcTabs
                   tabs={participantTabs}
@@ -1038,7 +1245,9 @@ export function LaunchCycleWizard() {
                   </div>
                   <div
                     className={`grid grid-cols-1 gap-3 md:grid-cols-2 ${
-                      bulkReviewerType === 'custom' ? 'xl:grid-cols-5' : 'lg:grid-cols-4'
+                      bulkReviewerType === 'custom' || bulkReviewerType === 'supervisor'
+                        ? 'xl:grid-cols-5'
+                        : 'lg:grid-cols-4'
                     }`}
                   >
                     <ModusWcSelect
@@ -1063,7 +1272,7 @@ export function LaunchCycleWizard() {
                       onInputChange={(e) => setFilterTitle(readInputString(e as CustomEvent))}
                     />
                     <ModusWcSelect
-                      label="Reviewer for selected"
+                      label="Reviewer for all shown"
                       size="sm"
                       value={bulkReviewerType}
                       options={REVIEWER_TYPE_OPTIONS}
@@ -1071,6 +1280,28 @@ export function LaunchCycleWizard() {
                         applyBulkReviewer(readInputString(e as CustomEvent) as ReviewerRoleType)
                       }
                     />
+                    <div
+                      hidden={bulkReviewerType !== 'supervisor'}
+                      aria-hidden={bulkReviewerType !== 'supervisor'}
+                    >
+                      <ModusWcSelect
+                        label="Supervisor for all shown (optional)"
+                        size="sm"
+                        value={bulkSupervisorId}
+                        options={[
+                          { label: 'Use each employee’s supervisor on file', value: '' },
+                          ...managerOptions,
+                        ]}
+                        onInputChange={(e) => {
+                          const supervisorId = readInputString(e as CustomEvent)
+                          if (supervisorId) applyBulkSupervisor(supervisorId)
+                          else {
+                            setBulkSupervisorId('')
+                            applyReviewerToFilteredEmployees('supervisor', { supervisorId: '' })
+                          }
+                        }}
+                      />
+                    </div>
                     <div
                       hidden={bulkReviewerType !== 'custom'}
                       aria-hidden={bulkReviewerType !== 'custom'}
@@ -1095,10 +1326,20 @@ export function LaunchCycleWizard() {
                     hierarchy="p"
                     size="sm"
                     customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                    label="Add employees who are not in a review group, or set reviewers for specific people. Reviewer for selected applies to individually selected rows."
+                    label="Changing Reviewer for all shown updates every row in the table below (respecting filters). Row checkboxes add people to the cycle; editing a single row’s reviewer also adds that person."
                   />
+                  {missingSupervisorInShownTableCount > 0 ? (
+                    <ModusWcAlert
+                      variant="warning"
+                      alertTitle="Missing supervisors"
+                      alertDescription={`You have ${missingSupervisorInShownTableCount} employee${
+                        missingSupervisorInShownTableCount === 1 ? '' : 's'
+                      } with missing supervisors. Select a supervisor in the reviewer column below.`}
+                    />
+                  ) : null}
                   {participantsTabIndex === 0 ? (
                   <PerformanceDataTable
+                    key={reviewerTableKey}
                     caption="Employees available for this review cycle"
                     columns={employeeTableColumns}
                     data={employeeTableData}
@@ -1147,6 +1388,29 @@ export function LaunchCycleWizard() {
                 }}
                 onSubmit={handleLaunchGroupFormSubmit}
               />
+
+              {derivedParticipantIds.length > 0 ? (
+                <div className="flex flex-col gap-2 border-t border-[var(--modus-wc-color-base-200)] pt-4">
+                  <ModusWcTypography
+                    hierarchy="h4"
+                    size="md"
+                    weight="semibold"
+                    label="Reviewer assignments"
+                  />
+                  <ModusWcTypography
+                    hierarchy="p"
+                    size="sm"
+                    customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                    label="Everyone in this cycle appears here. When Reviewer is Supervisor, assign or confirm the supervisor for each employee."
+                  />
+                  <PerformanceDataTable
+                    caption="Cycle participants and reviewer assignments"
+                    columns={participantAssignmentTableColumns}
+                    data={participantAssignmentTableData}
+                    density="comfortable"
+                  />
+                </div>
+              ) : null}
             </div>
           </ModusWcCard>
         )}

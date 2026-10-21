@@ -1,4 +1,5 @@
 import type { CycleStatus, PerformanceReview, ReviewCycle, ReviewStatus } from '../types'
+import { REVIEWER_TYPE_OPTIONS } from './reviewer'
 import { reviewRequiresHrEscalation } from './acknowledgement'
 import {
   CYCLE_STATUS_LABELS,
@@ -187,11 +188,16 @@ export function createTableActionGroup(children: HTMLElement[], iconRow = false)
 }
 
 export function createReviewerAssignmentCell(
-  assignment: { type: string; customManagerId?: string },
+  assignment: { type: string; customManagerId?: string; supervisorId?: string },
   managerOptions: { label: string; value: string }[],
   onTypeChange: (type: string) => void,
   onCustomManagerChange: (managerId: string) => void,
   ariaLabel: string,
+  supervisorOptions?: {
+    effectiveSupervisorId: string
+    supervisorMissing: boolean
+    onSupervisorChange: (supervisorId: string) => void
+  },
 ) {
   const wrapper = document.createElement('div')
   wrapper.className = 'tq-table-reviewer-select flex min-w-[12rem] flex-col gap-1'
@@ -205,12 +211,12 @@ export function createReviewerAssignmentCell(
   }
   select.setAttribute('size', 'sm')
   select.setAttribute('aria-label', ariaLabel)
-  select.options = [
-    { label: 'Crew Manager', value: 'crew_manager' },
-    { label: 'Supervisor', value: 'supervisor' },
-    { label: 'Custom (select manager)', value: 'custom' },
-  ]
-  select.value = assignment.type
+  select.options = REVIEWER_TYPE_OPTIONS.map((option) => ({
+    label: option.label,
+    value: option.value,
+  }))
+  select.value =
+    assignment.type === 'crew_manager' ? 'supervisor' : assignment.type
 
   select.addEventListener('inputChange', (event) => {
     event.stopPropagation()
@@ -256,6 +262,45 @@ export function createReviewerAssignmentCell(
     autocomplete.addEventListener('inputChange', (event) => event.stopPropagation())
 
     wrapper.appendChild(autocomplete)
+  }
+
+  if (assignment.type === 'supervisor' && supervisorOptions) {
+    const { effectiveSupervisorId, supervisorMissing, onSupervisorChange } = supervisorOptions
+
+    const select = document.createElement('modus-wc-select') as HTMLElement & {
+      options: { label: string; value: string }[]
+      value: string
+      feedback?: { level: 'error' | 'info' | 'success' | 'warning'; message?: string }
+    }
+    select.setAttribute('size', 'sm')
+    select.setAttribute('aria-label', `${ariaLabel} — supervisor`)
+    if (supervisorMissing) {
+      select.setAttribute('input-aria-invalid', 'true')
+      select.feedback = { level: 'error', message: 'Missing supervisor' }
+    }
+    select.options = [
+      {
+        label: supervisorMissing ? 'Missing supervisor' : 'Select supervisor…',
+        value: '',
+      },
+      ...managerOptions,
+    ]
+    select.value = effectiveSupervisorId || ''
+
+    select.addEventListener('inputChange', (event) => {
+      event.stopPropagation()
+      const customEvent = event as CustomEvent<InputEvent>
+      const nextSupervisorId = (customEvent.detail?.target as HTMLSelectElement | null)?.value
+      if (
+        typeof nextSupervisorId === 'string' &&
+        nextSupervisorId &&
+        nextSupervisorId !== effectiveSupervisorId
+      ) {
+        onSupervisorChange(nextSupervisorId)
+      }
+    })
+
+    wrapper.appendChild(select)
   }
 
   return wrapper

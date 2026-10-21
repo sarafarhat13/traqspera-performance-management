@@ -5,8 +5,8 @@ import type {
   ReviewerRoleType,
 } from '../types'
 
+/** Reviewer types offered in launch-cycle and review-group UI (excludes legacy `crew_manager`). */
 export const REVIEWER_TYPE_OPTIONS: { label: string; value: ReviewerRoleType }[] = [
-  { label: 'Crew Manager', value: 'crew_manager' },
   { label: 'Supervisor', value: 'supervisor' },
   { label: 'Custom (select manager)', value: 'custom' },
 ]
@@ -19,7 +19,26 @@ export function buildManagerOptions(people: Person[]): { label: string; value: s
 }
 
 export function defaultReviewerAssignment(): EmployeeReviewerAssignment {
-  return { type: 'crew_manager' }
+  return { type: 'supervisor' }
+}
+
+export function resolveEffectiveSupervisorId(
+  person: Person | undefined,
+  assignment: EmployeeReviewerAssignment,
+): string | undefined {
+  if (assignment.type !== 'supervisor') return undefined
+  const override = assignment.supervisorId?.trim()
+  if (override) return override
+  const fromRecord = person?.supervisorId?.trim()
+  return fromRecord || undefined
+}
+
+export function isSupervisorAssignmentMissing(
+  person: Person | undefined,
+  assignment: EmployeeReviewerAssignment,
+): boolean {
+  if (assignment.type !== 'supervisor') return false
+  return !resolveEffectiveSupervisorId(person, assignment)
 }
 
 export function reviewerPreviewLabel(
@@ -33,8 +52,9 @@ export function reviewerPreviewLabel(
       return manager ? `Crew Manager — ${manager.name}` : 'Crew Manager'
     }
     case 'supervisor': {
-      const supervisor = person.supervisorId ? getPerson(person.supervisorId) : undefined
-      return supervisor ? `Supervisor — ${supervisor.name}` : 'Supervisor'
+      const supervisorId = resolveEffectiveSupervisorId(person, assignment)
+      const supervisor = supervisorId ? getPerson(supervisorId) : undefined
+      return supervisor ? `Supervisor — ${supervisor.name}` : 'Supervisor (not assigned)'
     }
     case 'custom': {
       const manager = assignment.customManagerId
@@ -43,7 +63,7 @@ export function reviewerPreviewLabel(
       return manager ? `Custom — ${manager.name}` : 'Custom (select manager)'
     }
     default:
-      return 'Crew Manager'
+      return 'Supervisor'
   }
 }
 
@@ -69,7 +89,15 @@ export function reviewReviewerDisplayName(
   return manager?.name ?? '—'
 }
 
-export function isReviewerAssignmentValid(assignment: EmployeeReviewerAssignment): boolean {
-  if (assignment.type !== 'custom') return true
-  return (assignment.customManagerId?.trim() ?? '').length > 0
+export function isReviewerAssignmentValid(
+  assignment: EmployeeReviewerAssignment,
+  person?: Person,
+): boolean {
+  if (assignment.type === 'custom') {
+    return (assignment.customManagerId?.trim() ?? '').length > 0
+  }
+  if (assignment.type === 'supervisor') {
+    return !isSupervisorAssignmentMissing(person, assignment)
+  }
+  return true
 }

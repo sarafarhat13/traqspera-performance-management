@@ -52,7 +52,7 @@ function createEmptyGroup(): ReviewEmployeeGroup {
     id: `rgrp-${crypto.randomUUID().slice(0, 8)}`,
     name: '',
     memberIds: [],
-    defaultReviewerAssignment: { type: 'crew_manager' },
+    defaultReviewerAssignment: { type: 'supervisor' },
     createdBy: 'HR Admin',
   }
 }

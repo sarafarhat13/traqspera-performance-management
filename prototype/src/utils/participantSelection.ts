@@ -1,5 +1,5 @@
 import type { EmployeeReviewerAssignment, Person, ReviewEmployeeGroup } from '../types'
-import { defaultReviewerAssignment } from './reviewer'
+import { defaultReviewerAssignment, resolveEffectiveSupervisorId } from './reviewer'
 
 export type ParticipantSource =
   | { kind: 'individual'; assignment: EmployeeReviewerAssignment }
@@ -10,6 +10,9 @@ export type ProvenanceMap = Record<string, ParticipantSource[]>
 export function assignmentKey(assignment: EmployeeReviewerAssignment): string {
   if (assignment.type === 'custom') {
     return `custom:${assignment.customManagerId ?? ''}`
+  }
+  if (assignment.type === 'supervisor') {
+    return `supervisor:${assignment.supervisorId ?? ''}`
   }
   return assignment.type
 }
@@ -143,8 +146,9 @@ export function assignmentOptionLabel(
       return manager ? `Crew Manager — ${manager.name}` : 'Crew Manager'
     }
     case 'supervisor': {
-      const supervisor = person.supervisorId ? getPerson(person.supervisorId) : undefined
-      return supervisor ? `Supervisor — ${supervisor.name}` : 'Supervisor'
+      const supervisorId = resolveEffectiveSupervisorId(person, assignment)
+      const supervisor = supervisorId ? getPerson(supervisorId) : undefined
+      return supervisor ? `Supervisor — ${supervisor.name}` : 'Supervisor (not assigned)'
     }
     case 'custom': {
       const manager = assignment.customManagerId
@@ -153,7 +157,7 @@ export function assignmentOptionLabel(
       return manager ? `Custom — ${manager.name}` : 'Custom (select manager)'
     }
     default:
-      return 'Crew Manager'
+      return 'Supervisor'
   }
 }
 

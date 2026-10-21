@@ -57,9 +57,12 @@ import type { ReviewDisplayStatus } from '../utils/status'
 import { CycleWorkflowStageCards } from './CycleWorkflowStageCards'
 import { PerformanceDashboardFilterBar } from './PerformanceDashboardFilterBar'
 import { ReviewCycleCompleteModal } from './ReviewCycleCompleteModal'
+import { TemplateEmployeePreview } from './TemplateEmployeePreview'
+import { useModusDialog } from '../utils/useModusDialog'
 import type { Person } from '../types'
 
 const CYCLE_EDIT_MODAL_ID = 'cycle-edit-modal'
+const CYCLE_DETAIL_TEMPLATE_PREVIEW_MODAL_ID = 'cycle-detail-template-preview'
 const FINAL_APPROVER_UNASSIGNED = ''
 
 export function CycleDetailView() {
@@ -78,6 +81,7 @@ export function CycleDetailView() {
   } = usePerformance()
 
   const [editModalOpen, setEditModalOpen] = useState(false)
+  const [templatePreviewOpen, setTemplatePreviewOpen] = useState(false)
   const [closeModalOpen, setCloseModalOpen] = useState(false)
   const [draftName, setDraftName] = useState('')
   const [draftSelfEvalDue, setDraftSelfEvalDue] = useState('')
@@ -94,6 +98,7 @@ export function CycleDetailView() {
   useEffect(() => {
     setFilters(createDefaultDashboardFilters())
     setFilterFieldsKey((key) => key + 1)
+    setTemplatePreviewOpen(false)
   }, [cycle?.id])
 
   const managerOptions = useMemo(
@@ -106,6 +111,16 @@ export function CycleDetailView() {
   )
 
   const template = cycle ? getTemplate(cycle.templateId) : undefined
+
+  const closeTemplatePreview = useCallback(() => {
+    setTemplatePreviewOpen(false)
+  }, [])
+
+  const { requestClose: closeTemplatePreviewDialog } = useModusDialog(
+    CYCLE_DETAIL_TEMPLATE_PREVIEW_MODAL_ID,
+    templatePreviewOpen,
+    closeTemplatePreview,
+  )
 
   const cycleAttachedGroups = useMemo(() => {
     if (!cycle?.attachedGroupIds?.length) return []
@@ -587,9 +602,27 @@ export function CycleDetailView() {
               <ModusWcTypography hierarchy="p" size="xs" weight="semibold" label="End date" />
               <ModusWcTypography hierarchy="p" size="sm" label={formatDate(cycle.dueDate)} />
             </div>
-            <div>
+            <div className="min-w-0">
               <ModusWcTypography hierarchy="p" size="xs" weight="semibold" label="Template" />
-              <ModusWcTypography hierarchy="p" size="sm" label={template?.name ?? '—'} />
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <ModusWcTypography
+                  hierarchy="p"
+                  size="sm"
+                  customClass="!m-0 min-w-0"
+                  label={template?.name ?? '—'}
+                />
+                {template ? (
+                  <ModusWcButton
+                    variant="outlined"
+                    color="tertiary"
+                    size="xs"
+                    onButtonClick={() => setTemplatePreviewOpen(true)}
+                  >
+                    <ModusWcIcon name="visibility_on" size="xs" decorative />
+                    Preview
+                  </ModusWcButton>
+                ) : null}
+              </div>
             </div>
             <div>
               <ModusWcTypography hierarchy="p" size="xs" weight="semibold" label="Employees" />
@@ -783,6 +816,32 @@ export function CycleDetailView() {
             )}
           </div>
         </ModusWcCard>
+
+        <ModusWcModal
+          modalId={CYCLE_DETAIL_TEMPLATE_PREVIEW_MODAL_ID}
+          backdrop="default"
+          position="center"
+          showClose={true}
+          customClass="tq-launch-wizard-template-preview-dialog"
+          aria-label="Template preview"
+        >
+          <span slot="header" className="tq-launch-wizard-template-preview-modal-title">
+            {template?.name.trim() || 'Template preview'}
+          </span>
+          <div slot="content" className="tq-launch-wizard-template-preview-modal flex flex-col">
+            {template ? <TemplateEmployeePreview key={template.id} template={template} /> : null}
+          </div>
+          <div slot="footer" className="flex w-full justify-end">
+            <ModusWcButton
+              variant="outlined"
+              color="tertiary"
+              size="sm"
+              onButtonClick={closeTemplatePreviewDialog}
+            >
+              Close
+            </ModusWcButton>
+          </div>
+        </ModusWcModal>
       </div>
     </TraqsperaPageBody>
   )

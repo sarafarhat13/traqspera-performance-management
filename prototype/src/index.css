@@ -124,6 +124,11 @@ body {
   background-color: #ffffff;
 }
 
+.tq-data-table .tq-table-action-icons {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
 .tq-data-table .tq-table-action-icons modus-wc-button.tq-table-icon-action-btn {
   --modus-wc-btn-bg: var(--modus-wc-color-base-200);
   --modus-wc-btn-hover-bg: var(--modus-wc-color-base-300);
@@ -886,6 +891,52 @@ modus-wc-card [slot='footer'].tq-review-acceptance-footer {
   white-space: nowrap;
 }
 
+/* Template library — boxed segment tabs */
+.tq-template-library-tabs {
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tq-template-library-tabs modus-wc-tabs {
+  display: block;
+  width: max-content;
+  min-width: min(100%, 28rem);
+}
+
+.tq-template-library-tabs modus-wc-tabs .tq-template-library-tabs__strip {
+  flex-wrap: nowrap;
+}
+
+.tq-template-library-tabs modus-wc-tabs .modus-wc-tabs.modus-wc-tabs-boxed {
+  background-color: var(--modus-wc-color-base-100);
+  border-radius: var(--modus-wc-border-radius-lg, 0.5rem);
+  padding: var(--modus-wc-spacing-3xs, 0.25rem);
+  gap: var(--modus-wc-spacing-3xs, 0.25rem);
+}
+
+.tq-template-library-tabs modus-wc-tabs .modus-wc-tabs.modus-wc-tabs-boxed > .modus-wc-tab {
+  flex-shrink: 0;
+  white-space: nowrap;
+  border: none;
+  background: transparent;
+  color: var(--modus-wc-color-base-content-low-contrast);
+}
+
+.tq-template-library-tabs modus-wc-tabs .modus-wc-tabs.modus-wc-tabs-boxed > .modus-wc-tab:hover {
+  background-color: transparent;
+  color: var(--modus-wc-color-base-content);
+}
+
+.tq-template-library-tabs
+  modus-wc-tabs
+  .modus-wc-tabs.modus-wc-tabs-boxed
+  > .modus-wc-tab:is(.modus-wc-tab-active, [aria-selected='true']) {
+  background-color: var(--modus-wc-color-base-page) !important;
+  color: var(--modus-wc-color-base-content) !important;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+}
+
 /* Launch cycle wizard — template picker */
 .tq-template-step {
   width: 100%;
@@ -1061,7 +1112,29 @@ modus-wc-card [slot='footer'].tq-review-acceptance-footer {
   padding-top: 1.75rem;
 }
 
-/* Launch cycle wizard — selected template preview */
+/* Launch cycle wizard — template preview modal (title slot + Modus top-right close) */
+.tq-launch-wizard-template-preview-modal-title {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-inline-end: var(--modus-wc-spacing-sm, 0.75rem);
+  font-size: var(--modus-wc-font-size-lg, 1.125rem);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.tq-launch-wizard-template-preview-modal {
+  max-height: min(60vh, 32rem);
+  overflow-y: auto;
+}
+
+.tq-launch-wizard-page__close[hidden] {
+  display: none !important;
+}
+
+/* Launch cycle wizard — selected template preview (legacy read-only) */
 .tq-template-preview {
   display: flex;
   flex-direction: column;

@@ -172,6 +172,9 @@ export const seedTemplates: ReviewTemplate[] = [
     questions: annualQuestions,
     createdBy: 'Hannah Reed',
     createdAt: '2024-02-10',
+    lifecycleStatus: 'published',
+    isArchived: false,
+    updatedAt: '2024-02-10',
   },
   {
     id: 'tpl-new-hire',
@@ -181,6 +184,9 @@ export const seedTemplates: ReviewTemplate[] = [
     isPrebuilt: true,
     createdBy: 'Traqspera',
     createdAt: '2023-06-01',
+    lifecycleStatus: 'draft',
+    isArchived: false,
+    updatedAt: '2023-06-01',
   },
   {
     id: 'tpl-90-days',
@@ -190,6 +196,9 @@ export const seedTemplates: ReviewTemplate[] = [
     isPrebuilt: true,
     createdBy: 'Traqspera',
     createdAt: '2023-06-01',
+    lifecycleStatus: 'published',
+    isArchived: false,
+    updatedAt: '2023-06-01',
   },
 ]
 
@@ -1602,10 +1611,14 @@ export function createEmptyQuestion(order: number): Question {
 }
 
 export function createEmptyTemplate(): ReviewTemplate {
+  const today = new Date().toISOString().slice(0, 10)
   return {
     id: `tpl-${crypto.randomUUID().slice(0, 8)}`,
     name: '',
     description: '',
     questions: [createEmptyQuestion(1), createEmptyQuestion(2)],
+    lifecycleStatus: 'draft',
+    isArchived: false,
+    updatedAt: today,
   }
 }

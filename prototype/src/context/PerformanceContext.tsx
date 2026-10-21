@@ -50,10 +50,21 @@ import {
   statusForEmployeeRework,
 } from '../utils/reviewPushBack'
 import { resolveManagerDashboardPersonId } from '../utils/managerDashboardContext'
+import {
+  type PersistedPerformancePayload,
+  savePerformanceState,
+} from '../api/performanceApi'
+import {
+  buildArchivedName,
+  buildDuplicateName,
+  normalizeTemplateLifecycle,
+  PUBLISHED_TEMPLATE_SAVE_NOTICE,
+  syncPublishedTemplatesFromCycles,
+} from '../utils/templateLifecycle'
 
 const STORAGE_KEY = 'traqspera-performance-management-v3'
 /** Bump when bundled seed cycles/reviews change so stale localStorage is refreshed. */
-const SEED_VERSION = 27
+const SEED_VERSION = 28
 
 const UNASSIGNED_DEMO_ID_SET = new Set<string>(UNASSIGNED_DEMO_EMPLOYEE_IDS)
 
@@ -61,6 +72,11 @@ const UNASSIGNED_DEMO_ID_SET = new Set<string>(UNASSIGNED_DEMO_EMPLOYEE_IDS)
 const TRAQSPERA_MY_PERFORMANCE_PERSON_ID = 'hr-1'
 
 const DEFAULT_ACTIVE_PERSON_ID = 'mgr-1'
+
+function templateActorName(s: AppState): string {
+  const activePerson = s.people.find((p) => p.id === s.activePersonId)
+  return activePerson?.name ?? 'HR Admin'
+}
 
 const SEED_CYCLE_IDS = new Set(seedCycles.map((cycle) => cycle.id))
 
@@ -72,14 +88,14 @@ type PersistedState = Pick<
 }
 
 function normalizeTemplate(template: ReviewTemplate): ReviewTemplate {
-  return {
+  return normalizeTemplateLifecycle({
     ...template,
     questions: template.questions.map((q, i) => ({
       ...q,
       weight: q.weight ?? 100,
       order: q.order ?? i + 1,
     })),
-  }
+  })
 }
 
 function normalizeCycle(cycle: ReviewCycle): ReviewCycle {
@@ -112,14 +128,18 @@ function normalizeCycle(cycle: ReviewCycle): ReviewCycle {
   }
 }
 
-function resolveTemplates(persisted?: ReviewTemplate[]): ReviewTemplate[] {
+function resolveTemplates(
+  persisted?: ReviewTemplate[],
+  cycles?: ReviewCycle[],
+): ReviewTemplate[] {
   const deprecatedIds = new Set<string>(DEPRECATED_TEMPLATE_IDS)
   const seedIds = new Set(seedTemplates.map((t) => t.id))
   const stored = (persisted ?? []).filter(
     (t) => t.name?.trim().length > 0 && !deprecatedIds.has(t.id),
   )
   const custom = stored.filter((t) => !seedIds.has(t.id))
-  return [...seedTemplates, ...custom].map(normalizeTemplate)
+  const merged = [...seedTemplates, ...custom].map(normalizeTemplate)
+  return cycles ? syncPublishedTemplatesFromCycles(merged, cycles) : merged
 }
 
 /** Keeps the Review Groups unassigned panel populated for the demo roster. */
@@ -330,7 +350,11 @@ interface PerformanceContextValue {
   selectReview: (id: string | null) => void
   startNewTemplate: () => void
   saveTemplate: (template: ReviewTemplate, options?: { silent?: boolean }) => void
+  clearTemplateSaveNotice: () => void
   deleteTemplate: (id: string) => void
+  duplicateTemplate: (id: string) => void
+  archiveTemplate: (id: string) => void
+  unarchiveTemplate: (id: string) => void
   saveReviewGroup: (group: ReviewEmployeeGroup) => void
   deleteReviewGroup: (id: string) => void
   addEmployeesToReviewGroup: (groupId: string, employeeIds: string[]) => void
@@ -377,8 +401,27 @@ interface PerformanceContextValue {
 
 const PerformanceContext = createContext<PerformanceContextValue | null>(null)
 
-export function PerformanceProvider({ children }: { children: ReactNode }) {
-  const persisted = loadPersisted()
+export type PerformanceDataSource = 'localStorage' | 'api'
+
+export type PerformanceProviderProps = {
+  children: ReactNode
+  dataSource?: PerformanceDataSource
+  apiBaseUrl?: string
+  /** When set (Traqspera island), skips reading localStorage for domain data. */
+  bootstrap?: Partial<PersistedState> & { people?: Person[] }
+  initialView?: ViewId
+  currentUserPersonId?: string
+}
+
+export function PerformanceProvider({
+  children,
+  dataSource = 'localStorage',
+  apiBaseUrl,
+  bootstrap,
+  initialView,
+  currentUserPersonId,
+}: PerformanceProviderProps) {
+  const persisted = bootstrap ?? loadPersisted()
   const initialCycles = resolveCycles(persisted)
   const initialReviews = hydrateDraftCycleReviews(
     initialCycles,
@@ -387,8 +430,9 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
   )
 
   const [state, setState] = useState<AppState>(() => ({
-    activePersonId: persisted.activePersonId ?? DEFAULT_ACTIVE_PERSON_ID,
-    view: 'hr_dashboard',
+    activePersonId:
+      currentUserPersonId ?? persisted.activePersonId ?? DEFAULT_ACTIVE_PERSON_ID,
+    view: initialView ?? 'hr_dashboard',
     selectedTemplateId: null,
     selectedCycleId: null,
     selectedPersonId: null,
@@ -396,15 +440,16 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
     selectedReviewId: null,
     editingTemplateId: null,
     layoutMode: 'desktop',
-    templates: resolveTemplates(persisted.templates),
+    templates: resolveTemplates(persisted.templates, initialCycles),
     reviewGroups: resolveReviewGroups(persisted),
     cycles: initialCycles,
     reviews: initialReviews,
-    people: seedPeople,
+    people: bootstrap?.people ?? seedPeople,
+    templateSaveNotice: null,
   }))
 
   useEffect(() => {
-    const payload: PersistedState = {
+    const payload: PersistedPerformancePayload = {
       activePersonId: state.activePersonId,
       templates: state.templates,
       reviewGroups: state.reviewGroups,
@@ -412,8 +457,27 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       reviews: state.reviews,
       seedVersion: SEED_VERSION,
     }
+
+    if (dataSource === 'api') {
+      if (!apiBaseUrl) return
+      const timer = window.setTimeout(() => {
+        void savePerformanceState(apiBaseUrl, payload).catch((err) => {
+          console.error(err)
+        })
+      }, 400)
+      return () => window.clearTimeout(timer)
+    }
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-  }, [state.activePersonId, state.templates, state.reviewGroups, state.cycles, state.reviews])
+  }, [
+    apiBaseUrl,
+    dataSource,
+    state.activePersonId,
+    state.templates,
+    state.reviewGroups,
+    state.cycles,
+    state.reviews,
+  ])
 
   const setView = useCallback((view: ViewId) => {
     setState((s) => ({ ...s, view }))
@@ -497,21 +561,28 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
     }))
   }, [])
 
+  const clearTemplateSaveNotice = useCallback(() => {
+    setState((s) => ({ ...s, templateSaveNotice: null }))
+  }, [])
+
   const saveTemplate = useCallback((template: ReviewTemplate, options?: { silent?: boolean }) => {
     setState((s) => {
       const existing = s.templates.find((t) => t.id === template.id)
-      const activePerson = s.people.find((p) => p.id === s.activePersonId)
-      const defaultCreator =
-        activePerson?.role === 'hr_admin'
-          ? activePerson.name
-          : (activePerson?.name ?? 'HR Admin')
+      if (existing?.isArchived) return s
+      const today = new Date().toISOString().slice(0, 10)
+      const savingPublished = existing?.lifecycleStatus === 'published'
+      const actor = templateActorName(s)
       const withMetadata: ReviewTemplate = {
         ...template,
-        createdBy: existing?.createdBy ?? template.createdBy ?? defaultCreator,
+        lifecycleStatus: existing?.lifecycleStatus ?? template.lifecycleStatus ?? 'draft',
+        isArchived: existing?.isArchived ?? template.isArchived ?? false,
+        createdBy: existing?.createdBy ?? template.createdBy ?? actor,
         createdAt:
           existing?.createdAt ??
           template.createdAt ??
-          new Date().toISOString().slice(0, 10),
+          today,
+        updatedAt: today,
+        updatedBy: actor,
       }
       return {
         ...s,
@@ -520,16 +591,90 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
           : [...s.templates, withMetadata],
         editingTemplateId: options?.silent ? s.editingTemplateId : null,
         view: options?.silent ? s.view : 'templates',
+        templateSaveNotice:
+          !options?.silent && savingPublished ? PUBLISHED_TEMPLATE_SAVE_NOTICE : s.templateSaveNotice,
       }
     })
   }, [])
 
   const deleteTemplate = useCallback((id: string) => {
-    setState((s) => ({
+    setState((s) => {
+      const existing = s.templates.find((t) => t.id === id)
+      if (existing?.lifecycleStatus === 'published') return s
+      return {
+        ...s,
+        templates: s.templates.filter((t) => t.id !== id),
+        editingTemplateId: s.editingTemplateId === id ? null : s.editingTemplateId,
+      }
+    })
+  }, [])
+
+  const duplicateTemplate = useCallback((id: string) => {
+    const today = new Date().toISOString().slice(0, 10)
+    setState((s) => {
+      const source = s.templates.find((t) => t.id === id)
+      if (!source) return s
+      const actor = templateActorName(s)
+      const copy: ReviewTemplate = {
+        ...source,
+        id: `tpl-${crypto.randomUUID().slice(0, 8)}`,
+        name: buildDuplicateName(source.name),
+        lifecycleStatus: 'draft',
+        isArchived: false,
+        isPrebuilt: false,
+        createdAt: today,
+        updatedAt: today,
+        createdBy: actor,
+        updatedBy: actor,
+        questions: source.questions.map((q, i) => ({
+          ...q,
+          id: `q-${crypto.randomUUID().slice(0, 8)}`,
+          order: i + 1,
+        })),
+      }
+      return {
+        ...s,
+        templates: [...s.templates, copy],
+        editingTemplateId: copy.id,
+        view: 'template_editor',
+      }
+    })
+  }, [])
+
+  const archiveTemplate = useCallback((id: string) => {
+    const today = new Date().toISOString().slice(0, 10)
+    setState((s) => {
+      const actor = templateActorName(s)
+      return {
       ...s,
-      templates: s.templates.filter((t) => t.id !== id),
+      templates: s.templates.map((t) => {
+        if (t.id !== id) return t
+        return {
+          ...t,
+          isArchived: true,
+          updatedAt: today,
+          updatedBy: actor,
+          name: buildArchivedName(t.name, today),
+        }
+      }),
       editingTemplateId: s.editingTemplateId === id ? null : s.editingTemplateId,
-    }))
+    }
+    })
+  }, [])
+
+  const unarchiveTemplate = useCallback((id: string) => {
+    const today = new Date().toISOString().slice(0, 10)
+    setState((s) => {
+      const actor = templateActorName(s)
+      return {
+        ...s,
+        templates: s.templates.map((t) =>
+          t.id === id
+            ? { ...t, isArchived: false, updatedAt: today, updatedBy: actor }
+            : t,
+        ),
+      }
+    })
   }, [])
 
   const saveReviewGroup = useCallback((group: ReviewEmployeeGroup) => {
@@ -632,9 +777,20 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
         status: 'active',
         reviewerAssignments: undefined,
       }
+      const today = new Date().toISOString().slice(0, 10)
       setState((s) => ({
         ...s,
         cycles: [...s.cycles, cycle],
+        templates: s.templates.map((t) =>
+          t.id === cycle.templateId
+            ? {
+                ...t,
+                lifecycleStatus: 'published',
+                updatedAt: today,
+                updatedBy: templateActorName(s),
+              }
+            : t,
+        ),
         reviews: reviewsForCycleLaunch(
           cycle,
           s.reviews,
@@ -983,7 +1139,11 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       selectReview,
       startNewTemplate,
       saveTemplate,
+      clearTemplateSaveNotice,
       deleteTemplate,
+      duplicateTemplate,
+      archiveTemplate,
+      unarchiveTemplate,
       saveReviewGroup,
       deleteReviewGroup,
       addEmployeesToReviewGroup,
@@ -1020,7 +1180,11 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       selectReview,
       startNewTemplate,
       saveTemplate,
+      clearTemplateSaveNotice,
       deleteTemplate,
+      duplicateTemplate,
+      archiveTemplate,
+      unarchiveTemplate,
       saveReviewGroup,
       deleteReviewGroup,
       addEmployeesToReviewGroup,

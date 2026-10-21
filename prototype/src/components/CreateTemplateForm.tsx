@@ -21,6 +21,7 @@ export type CreateTemplateFormProps = {
   onSubmit: () => void
   submitLabel?: string
   submitDisabled?: boolean
+  readOnly?: boolean
 }
 
 function moveQuestionToIndex(questions: Question[], sourceId: string, targetIndex: number): Question[] {
@@ -61,6 +62,7 @@ export function CreateTemplateForm({
   onSubmit,
   submitLabel = 'Create Template',
   submitDisabled,
+  readOnly = false,
 }: CreateTemplateFormProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
@@ -151,6 +153,7 @@ export function CreateTemplateForm({
             label="Template Name *"
             size="sm"
             required
+            disabled={readOnly}
             value={draft.name}
             placeholder="e.g., Annual Performance Review"
             onInputChange={(e) =>
@@ -161,6 +164,7 @@ export function CreateTemplateForm({
             label="Description *"
             rows={3}
             required
+            disabled={readOnly}
             value={draft.description}
             placeholder="Describe the purpose and scope of this review template"
             onInputChange={(e) =>
@@ -209,7 +213,8 @@ export function CreateTemplateForm({
               <button
                 type="button"
                 className="tq-create-template-question__handle"
-                draggable
+                draggable={!readOnly}
+                disabled={readOnly}
                 aria-label={`Drag to reorder question ${index + 1}`}
                 onDragStart={(event) => handleDragStart(event, q.id)}
                 onDragEnd={handleDragEnd}
@@ -228,6 +233,7 @@ export function CreateTemplateForm({
                 <ModusWcTextInput
                   label="Question Text"
                   size="sm"
+                  disabled={readOnly}
                   value={q.label}
                   placeholder="Enter your review question here..."
                   onInputChange={(e) =>
@@ -238,6 +244,7 @@ export function CreateTemplateForm({
                   <ModusWcCheckbox
                     label="This question is required"
                     size="sm"
+                    disabled={readOnly}
                     value={q.required}
                     onInputChange={(e) =>
                       updateQuestion(q.id, { required: readInputChecked(e as CustomEvent) })
@@ -253,7 +260,7 @@ export function CreateTemplateForm({
                   size="xs"
                   shape="square"
                   aria-label={`Move question ${index + 1} up`}
-                  disabled={index === 0}
+                  disabled={readOnly || index === 0}
                   onButtonClick={() => moveQuestion(q.id, 'up')}
                 >
                   <ModusWcIcon name="chevron_up" size="xs" decorative />
@@ -264,7 +271,7 @@ export function CreateTemplateForm({
                   size="xs"
                   shape="square"
                   aria-label={`Move question ${index + 1} down`}
-                  disabled={index === draft.questions.length - 1}
+                  disabled={readOnly || index === draft.questions.length - 1}
                   onButtonClick={() => moveQuestion(q.id, 'down')}
                 >
                   <ModusWcIcon name="chevron_down" size="xs" decorative />
@@ -275,7 +282,7 @@ export function CreateTemplateForm({
                   size="xs"
                   shape="square"
                   aria-label={`Delete question ${index + 1}`}
-                  disabled={draft.questions.length <= 1}
+                  disabled={readOnly || draft.questions.length <= 1}
                   onButtonClick={() => removeQuestion(q.id)}
                 >
                   <ModusWcIcon name="delete" size="xs" decorative />
@@ -284,34 +291,38 @@ export function CreateTemplateForm({
             </div>
           ))}
 
-          <div className="flex justify-center pt-1">
-            <ModusWcButton
-              variant="borderless"
-              color="tertiary"
-              size="sm"
-              disabled={draft.questions.length >= 10}
-              onButtonClick={addQuestion}
-            >
-              <ModusWcIcon name="add" size="xs" decorative />
-              Add Question
-            </ModusWcButton>
-          </div>
+          {!readOnly ? (
+            <div className="flex justify-center pt-1">
+              <ModusWcButton
+                variant="borderless"
+                color="tertiary"
+                size="sm"
+                disabled={draft.questions.length >= 10}
+                onButtonClick={addQuestion}
+              >
+                <ModusWcIcon name="add" size="xs" decorative />
+                Add Question
+              </ModusWcButton>
+            </div>
+          ) : null}
         </div>
       </ModusWcCard>
 
       <div className="flex flex-wrap justify-end gap-2">
         <ModusWcButton variant="outlined" color="tertiary" size="sm" onButtonClick={onCancel}>
-          Cancel
+          {readOnly ? 'Back' : 'Cancel'}
         </ModusWcButton>
-        <ModusWcButton
-          variant="filled"
-          color="primary"
-          size="sm"
-          disabled={submitBlocked}
-          onButtonClick={onSubmit}
-        >
-          {submitLabel}
-        </ModusWcButton>
+        {!readOnly ? (
+          <ModusWcButton
+            variant="filled"
+            color="primary"
+            size="sm"
+            disabled={submitBlocked}
+            onButtonClick={onSubmit}
+          >
+            {submitLabel}
+          </ModusWcButton>
+        ) : null}
       </div>
     </div>
   )

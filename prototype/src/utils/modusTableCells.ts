@@ -16,6 +16,11 @@ import {
   workflowReviewStageBadgeColor,
   type WorkflowReviewStage,
 } from './workflow'
+import {
+  TEMPLATE_DISPLAY_STATUS_LABELS,
+  templateDisplayStatusBadgeColor,
+  type TemplateDisplayStatus,
+} from './templateLifecycle'
 
 type TableButtonColor = 'primary' | 'tertiary' | 'danger'
 
@@ -42,9 +47,10 @@ export function createTableActionButton(
   onClick: () => void,
   color: TableButtonColor = 'primary',
   disabled = false,
+  variant: 'borderless' | 'outlined' | 'filled' = 'borderless',
 ) {
   const button = document.createElement('modus-wc-button')
-  button.setAttribute('variant', 'borderless')
+  button.setAttribute('variant', variant)
   button.setAttribute('color', color)
   button.setAttribute('size', 'sm')
   if (disabled) button.setAttribute('disabled', 'true')
@@ -113,6 +119,16 @@ export function createCycleStatusBadge(status: CycleStatus) {
   return badge
 }
 
+export function createTemplateDisplayStatusBadge(status: TemplateDisplayStatus) {
+  const badge = document.createElement('modus-wc-badge')
+  applyStatusBadgeStyle(
+    badge,
+    templateDisplayStatusBadgeColor(status),
+    TEMPLATE_DISPLAY_STATUS_LABELS[status],
+  )
+  return badge
+}
+
 export function createReviewDisplayStatusBadge(displayStatus: ReviewDisplayStatus) {
   const badge = document.createElement('modus-wc-badge')
   applyStatusBadgeStyle(
@@ -164,7 +180,7 @@ export function createNeutralTagBadge(label: string) {
 export function createTableActionGroup(children: HTMLElement[], iconRow = false) {
   const group = document.createElement('div')
   group.className = iconRow
-    ? 'tq-table-action-icons flex flex-wrap items-center justify-end gap-1'
+    ? 'tq-table-action-icons flex flex-nowrap items-center justify-end gap-1'
     : 'flex flex-wrap items-center gap-2'
   children.forEach((child) => group.appendChild(child))
   return group

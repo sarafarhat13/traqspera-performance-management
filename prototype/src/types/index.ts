@@ -65,6 +65,8 @@ export interface Question {
   enableRatingScale?: boolean
 }
 
+export type TemplateLifecycleStatus = 'draft' | 'published'
+
 export interface ReviewTemplate {
   id: string
   name: string
@@ -74,6 +76,14 @@ export interface ReviewTemplate {
   createdBy?: string
   /** ISO date (YYYY-MM-DD) */
   createdAt?: string
+  /** Person who last saved or archived the template. */
+  updatedBy?: string
+  /** Draft until used by an active review cycle; published templates are locked. */
+  lifecycleStatus?: TemplateLifecycleStatus
+  /** Hidden from Launch Cycle template step; still visible in template admin. */
+  isArchived?: boolean
+  /** ISO date (YYYY-MM-DD); updated on save and archive. */
+  updatedAt?: string
 }
 
 export interface ReviewCycle {
@@ -223,6 +233,8 @@ export interface AppState {
   cycles: ReviewCycle[]
   reviews: PerformanceReview[]
   people: Person[]
+  /** One-shot message after saving a published template (not persisted). */
+  templateSaveNotice: string | null
 }
 
 export const PUSH_LAYOUT_MIN_PX = 1024

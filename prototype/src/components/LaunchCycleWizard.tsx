@@ -38,6 +38,7 @@ import {
 import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { CreateTemplateForm, isCreateTemplateValid } from './CreateTemplateForm'
+import { TemplateEmployeePreview } from './TemplateEmployeePreview'
 import { PerformanceDataTable } from './PerformanceDataTable'
 import {
   createNeutralTagBadge,
@@ -67,6 +68,8 @@ import {
   detectConflicts,
 } from '../utils/participantSelection'
 import { formatEmployeeNameWithCode } from '../utils/employeeCode'
+import { isTemplateVisibleInCycleWizard } from '../utils/templateLifecycle'
+import { useModusDialog } from '../utils/useModusDialog'
 
 const FILTER_ALL = '__all__'
 const TEMPLATE_PREVIEW_MODAL_ID = 'launch-wizard-template-preview'
@@ -109,9 +112,20 @@ export function LaunchCycleWizard() {
   const [startDate, setStartDate] = useState(defaultStartDate())
   const [dueDate, setDueDate] = useState(defaultDueDate())
   const [templateMode, setTemplateMode] = useState<'select' | 'create'>('select')
-  const [selectedTemplateId, setSelectedTemplateId] = useState(
-    state.templates[0]?.id ?? '',
+  const wizardSelectableTemplates = useMemo(
+    () => state.templates.filter(isTemplateVisibleInCycleWizard),
+    [state.templates],
   )
+  const [selectedTemplateId, setSelectedTemplateId] = useState(
+    () => wizardSelectableTemplates[0]?.id ?? '',
+  )
+
+  useEffect(() => {
+    if (selectedTemplateId && wizardSelectableTemplates.some((t) => t.id === selectedTemplateId)) {
+      return
+    }
+    setSelectedTemplateId(wizardSelectableTemplates[0]?.id ?? '')
+  }, [wizardSelectableTemplates, selectedTemplateId])
   const [draftTemplate, setDraftTemplate] = useState<ReviewTemplate>(() => createEmptyTemplate())
   const [workflow, setWorkflow] = useState<WorkflowStep[]>(() => createDefaultWorkflowSteps())
   const [workflowKickoffMode, setWorkflowKickoffMode] = useState<WorkflowKickoffMode>('sequential')
@@ -287,23 +301,20 @@ export function LaunchCycleWizard() {
     [previewTemplateId, getTemplate],
   )
 
-  useEffect(() => {
-    const dialog = document.getElementById(TEMPLATE_PREVIEW_MODAL_ID) as HTMLDialogElement | null
-    if (!dialog) return
+  const openTemplatePreview = useCallback((templateId: string) => {
+    if (!getTemplate(templateId)) return
+    setPreviewTemplateId(templateId)
+  }, [getTemplate])
 
-    const handleClose = () => setPreviewTemplateId(null)
-    dialog.addEventListener('close', handleClose)
-    return () => dialog.removeEventListener('close', handleClose)
+  const closeTemplatePreview = useCallback(() => {
+    setPreviewTemplateId(null)
   }, [])
 
-  useEffect(() => {
-    const dialog = document.getElementById(TEMPLATE_PREVIEW_MODAL_ID) as HTMLDialogElement | null
-    if (previewTemplateId) {
-      dialog?.showModal()
-      return
-    }
-    dialog?.close()
-  }, [previewTemplateId])
+  const { requestClose: closePreviewDialog } = useModusDialog(
+    TEMPLATE_PREVIEW_MODAL_ID,
+    previewTemplateId !== null,
+    closeTemplatePreview,
+  )
 
   const stepperItems = useMemo(() => {
     type StepperColor = 'primary' | 'info' | 'neutral'
@@ -725,7 +736,11 @@ export function LaunchCycleWizard() {
   return (
     <TraqsperaPageBody>
       <div className="tq-launch-wizard-page">
-        <div className="tq-launch-wizard-page__close">
+        <div
+          className="tq-launch-wizard-page__close"
+          hidden={previewTemplateId !== null}
+          aria-hidden={previewTemplateId !== null}
+        >
           <ModusWcButton
             variant="borderless"
             color="tertiary"
@@ -848,9 +863,7 @@ export function LaunchCycleWizard() {
                 role="radiogroup"
                 aria-label="Review template"
               >
-                {state.templates
-                  .filter((template) => template.name.trim().length > 0)
-                  .map((template) => {
+                {wizardSelectableTemplates.map((template) => {
                   const selected = selectedTemplateId === template.id
                   return (
                     <div
@@ -895,7 +908,7 @@ export function LaunchCycleWizard() {
                             variant="outlined"
                             color="tertiary"
                             size="xs"
-                            onButtonClick={() => setPreviewTemplateId(template.id)}
+                            onButtonClick={() => openTemplatePreview(template.id)}
                           >
                             <ModusWcIcon name="visibility_on" size="xs" decorative />
                             Preview
@@ -925,63 +938,6 @@ export function LaunchCycleWizard() {
               </div>
             </div>
 
-            <ModusWcModal
-              modalId={TEMPLATE_PREVIEW_MODAL_ID}
-              backdrop="default"
-              position="center"
-              showClose
-              aria-label="Template preview"
-            >
-              <span slot="header">{previewTemplate?.name ?? 'Template preview'}</span>
-              <div slot="content" className="flex flex-col gap-3">
-                {previewTemplate && (
-                  <>
-                    <ModusWcTypography
-                      hierarchy="p"
-                      size="sm"
-                      customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                      label={previewTemplate.description}
-                    />
-                    <div className="tq-template-preview">
-                      <ModusWcTypography
-                        hierarchy="p"
-                        size="sm"
-                        customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
-                        label={`${previewTemplate.questions.length} questions`}
-                      />
-                      <ul className="tq-template-preview__questions">
-                        {previewTemplate.questions.map((q) => (
-                          <li key={q.id}>
-                            <ModusWcTypography
-                              hierarchy="p"
-                              size="sm"
-                              customClass="!m-0 min-w-0"
-                              label={q.label}
-                            />
-                            <ModusWcTypography
-                              hierarchy="p"
-                              size="xs"
-                              customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
-                              label={q.required ? 'Required' : 'Optional'}
-                            />
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </>
-                )}
-              </div>
-              <div slot="footer" className="flex justify-end">
-                <ModusWcButton
-                  variant="outlined"
-                  color="tertiary"
-                  size="sm"
-                  onButtonClick={() => setPreviewTemplateId(null)}
-                >
-                  Close
-                </ModusWcButton>
-              </div>
-            </ModusWcModal>
           </ModusWcCard>
         )}
 
@@ -1212,6 +1168,34 @@ export function LaunchCycleWizard() {
 
           </div>
         </div>
+
+        <ModusWcModal
+          modalId={TEMPLATE_PREVIEW_MODAL_ID}
+          backdrop="default"
+          position="center"
+          showClose={true}
+          customClass="tq-launch-wizard-template-preview-dialog"
+          aria-label="Template preview"
+        >
+          <span slot="header" className="tq-launch-wizard-template-preview-modal-title">
+            {previewTemplate?.name.trim() || 'Template preview'}
+          </span>
+          <div slot="content" className="tq-launch-wizard-template-preview-modal flex flex-col">
+            {previewTemplate ? (
+              <TemplateEmployeePreview key={previewTemplate.id} template={previewTemplate} />
+            ) : null}
+          </div>
+          <div slot="footer" className="flex w-full justify-end">
+            <ModusWcButton
+              variant="outlined"
+              color="tertiary"
+              size="sm"
+              onButtonClick={closePreviewDialog}
+            >
+              Close
+            </ModusWcButton>
+          </div>
+        </ModusWcModal>
 
         <footer className="tq-launch-wizard-page__footer">
           <div className="tq-launch-wizard-page__footer-inner">

@@ -376,7 +376,6 @@ interface PerformanceContextValue {
     cycleId: string,
     patch: Pick<ReviewCycle, 'name' | 'dueDate'> & { workflow?: ReviewCycle['workflow'] },
   ) => void
-  setCycleFinalApprover: (cycleId: string, finalApproverId: string | undefined) => void
   closeReviewCycle: (cycleId: string, attestation: ReviewCycleCompletionAttestation) => boolean
   saveSelfEval: (
     reviewId: string,
@@ -861,28 +860,6 @@ export function PerformanceProvider({
     [],
   )
 
-  const setCycleFinalApprover = useCallback(
-    (cycleId: string, finalApproverId: string | undefined) => {
-      setState((s) => ({
-        ...s,
-        cycles: s.cycles.map((cycle) => {
-          if (cycle.id !== cycleId) return cycle
-          const nextApprover = finalApproverId || undefined
-          const approverChanged = cycle.finalApproverId !== nextApprover
-          return {
-            ...cycle,
-            finalApproverId: nextApprover,
-            finalApprovalCompletedAt:
-              approverChanged && cycle.status !== 'completed'
-                ? undefined
-                : cycle.finalApprovalCompletedAt,
-          }
-        }),
-      }))
-    },
-    [],
-  )
-
   const closeReviewCycle = useCallback(
     (cycleId: string, attestation: ReviewCycleCompletionAttestation): boolean => {
       const signature = attestation.signature.trim()
@@ -893,7 +870,6 @@ export function PerformanceProvider({
       setState((s) => {
         const cycle = s.cycles.find((c) => c.id === cycleId)
         if (!cycle || cycle.status !== 'active') return s
-        if (!cycle.finalApproverId) return s
         const cycleReviews = s.reviews.filter((r) => r.cycleId === cycleId)
         if (cycleReviews.length === 0 || !cycleReviews.every((r) => r.status === 'completed')) {
           return s
@@ -1156,7 +1132,6 @@ export function PerformanceProvider({
       launchCycle,
       saveCycleDraft,
       updateCycle,
-      setCycleFinalApprover,
       closeReviewCycle,
       saveSelfEval,
       saveManagerReview,
@@ -1197,7 +1172,6 @@ export function PerformanceProvider({
       launchCycle,
       saveCycleDraft,
       updateCycle,
-      setCycleFinalApprover,
       closeReviewCycle,
       saveSelfEval,
       saveManagerReview,

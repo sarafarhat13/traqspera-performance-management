@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   ModusWcButton,
   ModusWcDate,
@@ -28,24 +28,22 @@ export function ReviewCycleCompleteModal({
   isOpen: boolean
   onClose: () => void
 }) {
-  const { closeReviewCycle, getPerson } = usePerformance()
+  const { closeReviewCycle, getPerson, state } = usePerformance()
   const modalId = reviewCycleCompleteModalId(cycle.id)
 
   const [draftCompletionSignature, setDraftCompletionSignature] = useState('')
   const [draftCompletionDate, setDraftCompletionDate] = useState(todayIsoDate)
 
-  const finalApproverPerson = cycle.finalApproverId
-    ? getPerson(cycle.finalApproverId)
-    : undefined
+  const activePersonName = getPerson(state.activePersonId)?.name ?? ''
 
   const canSubmitCompletion =
     draftCompletionSignature.trim().length > 0 && draftCompletionDate.trim().length > 0
 
   useEffect(() => {
     if (!isOpen) return
-    setDraftCompletionSignature(finalApproverPerson?.name ?? '')
+    setDraftCompletionSignature(activePersonName)
     setDraftCompletionDate(todayIsoDate())
-  }, [isOpen, finalApproverPerson?.name])
+  }, [isOpen, activePersonName])
 
   useEffect(() => {
     const dialog = document.getElementById(modalId) as HTMLDialogElement | null
@@ -70,11 +68,6 @@ export function ReviewCycleCompleteModal({
     if (ok) onClose()
   }
 
-  const finalApproverLabel = useMemo(
-    () => (finalApproverPerson ? `Final approver: ${finalApproverPerson.name}` : null),
-    [finalApproverPerson],
-  )
-
   return (
     <ModusWcModal
       modalId={modalId}
@@ -88,16 +81,8 @@ export function ReviewCycleCompleteModal({
         <ModusWcTypography
           hierarchy="p"
           size="sm"
-          label={`Confirm final approval for ${cycle.name}. This marks the cycle as finished and cannot be undone in this prototype.`}
+          label={`Confirm cycle completion for ${cycle.name}. This marks the cycle as finished and cannot be undone in this prototype.`}
         />
-        {finalApproverLabel ? (
-          <ModusWcTypography
-            hierarchy="p"
-            size="xs"
-            customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-            label={finalApproverLabel}
-          />
-        ) : null}
         <ModusWcTextInput
           label="Signature"
           size="sm"

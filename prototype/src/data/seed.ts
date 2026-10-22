@@ -1113,7 +1113,7 @@ export const seedCycles: ReviewCycle[] = [
     id: 'cycle-final-pending',
     name: '2025 Finance Annual Review',
     description:
-      'Finance team annual reviews — all participant work is complete; awaiting final approval to close.',
+      'Finance team annual reviews — all participant work is complete; awaiting cycle completion to close.',
     createdBy: 'Hannah Reed',
     templateId: 'tpl-annual',
     startDate: '2025-01-15',
@@ -1128,7 +1128,6 @@ export const seedCycles: ReviewCycle[] = [
     ratingScale: defaultRatingScale,
     status: 'active',
     employeeIds: [...FINAL_APPROVAL_PENDING_EMPLOYEE_IDS],
-    finalApproverId: 'mgr-2',
   },
   {
     id: 'cycle-2025',

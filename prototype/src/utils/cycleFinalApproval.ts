@@ -1,11 +1,5 @@
-import type { PerformanceReview, Person, ReviewCycle } from '../types'
+import type { PerformanceReview, ReviewCycle } from '../types'
 import { getCycleReviews } from './cycleStats'
-
-export function finalApproverCandidatePeople(people: Person[]): Person[] {
-  return people
-    .filter((person) => person.role === 'hr_admin' || person.role === 'manager')
-    .sort((a, b) => a.name.localeCompare(b.name))
-}
 
 export function cycleParticipantReviewsComplete(
   cycle: ReviewCycle,
@@ -21,6 +15,5 @@ export function canCompleteReviewCycle(
   reviews: PerformanceReview[],
 ): boolean {
   if (cycle.status !== 'active') return false
-  if (!cycle.finalApproverId) return false
   return cycleParticipantReviewsComplete(cycle, reviews)
 }

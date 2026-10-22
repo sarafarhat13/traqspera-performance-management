@@ -105,11 +105,17 @@ export function CycleDetailView() {
     setTemplatePreviewOpen(false)
   }, [])
 
-  const { requestClose: closeTemplatePreviewDialog } = useModusDialog(
-    CYCLE_DETAIL_TEMPLATE_PREVIEW_MODAL_ID,
-    templatePreviewOpen,
-    closeTemplatePreview,
-  )
+  const { requestClose: closeTemplatePreviewDialog, requestOpen: openTemplatePreviewDialog } =
+    useModusDialog(
+      CYCLE_DETAIL_TEMPLATE_PREVIEW_MODAL_ID,
+      templatePreviewOpen,
+      closeTemplatePreview,
+    )
+
+  const openTemplatePreview = useCallback(() => {
+    setTemplatePreviewOpen(true)
+    openTemplatePreviewDialog()
+  }, [openTemplatePreviewDialog])
 
   const cycleAttachedGroups = useMemo(() => {
     if (!cycle?.attachedGroupIds?.length) return []
@@ -575,7 +581,7 @@ export function CycleDetailView() {
                     variant="outlined"
                     color="tertiary"
                     size="xs"
-                    onButtonClick={() => setTemplatePreviewOpen(true)}
+                    onButtonClick={openTemplatePreview}
                   >
                     <ModusWcIcon name="visibility_on" size="xs" decorative />
                     Preview

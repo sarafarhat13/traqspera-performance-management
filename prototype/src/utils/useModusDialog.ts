@@ -26,6 +26,16 @@ function runDialogOpen(dialog: HTMLDialogElement) {
   }
 }
 
+function bindDialogCloseListener(
+  modalId: string,
+  handleClose: () => void,
+): HTMLDialogElement | null {
+  const dialog = getModusDialog(modalId)
+  if (!dialog) return null
+  dialog.addEventListener('close', handleClose)
+  return dialog
+}
+
 /**
  * Sync React `open` state with Modus modus-wc-modal's inner native <dialog>.
  * Always dismiss via `requestClose()` so the top layer is released before paint.
@@ -36,14 +46,28 @@ export function useModusDialog(modalId: string, open: boolean, onClose: () => vo
   const syncingCloseRef = useRef(false)
 
   useEffect(() => {
-    const dialog = getModusDialog(modalId)
-    if (!dialog) return
     const handleClose = () => {
       if (syncingCloseRef.current) return
       onCloseRef.current()
     }
-    dialog.addEventListener('close', handleClose)
-    return () => dialog.removeEventListener('close', handleClose)
+
+    let boundDialog: HTMLDialogElement | null = bindDialogCloseListener(modalId, handleClose)
+    let rafOuter = 0
+    let rafInner = 0
+
+    if (!boundDialog) {
+      rafOuter = requestAnimationFrame(() => {
+        rafInner = requestAnimationFrame(() => {
+          boundDialog = bindDialogCloseListener(modalId, handleClose)
+        })
+      })
+    }
+
+    return () => {
+      if (rafOuter) cancelAnimationFrame(rafOuter)
+      if (rafInner) cancelAnimationFrame(rafInner)
+      boundDialog?.removeEventListener('close', handleClose)
+    }
   }, [modalId])
 
   useLayoutEffect(() => {
@@ -74,8 +98,9 @@ export function useModusDialog(modalId: string, open: boolean, onClose: () => vo
   const requestClose = useCallback(() => {
     const dialog = getModusDialog(modalId)
     if (dialog?.open) {
+      syncingCloseRef.current = true
       dialog.close()
-      return
+      syncingCloseRef.current = false
     }
     onCloseRef.current()
   }, [modalId])
@@ -87,8 +112,10 @@ export function useModusDialog(modalId: string, open: boolean, onClose: () => vo
       return
     }
     requestAnimationFrame(() => {
-      const retryDialog = getModusDialog(modalId)
-      if (retryDialog) runDialogOpen(retryDialog)
+      requestAnimationFrame(() => {
+        const retryDialog = getModusDialog(modalId)
+        if (retryDialog) runDialogOpen(retryDialog)
+      })
     })
   }, [modalId])
 

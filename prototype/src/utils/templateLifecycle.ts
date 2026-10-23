@@ -29,13 +29,12 @@ export function getTemplateDisplayStatus(template: ReviewTemplate): TemplateDisp
   return 'draft'
 }
 
-/** Archived templates are read-only; published templates may still be edited. */
+/** Draft templates may be edited; published and archived templates are read-only. */
 export function isTemplateEditable(template: ReviewTemplate): boolean {
-  return !template.isArchived
+  if (template.isArchived) return false
+  if (template.lifecycleStatus === 'published') return false
+  return true
 }
-
-export const PUBLISHED_TEMPLATE_SAVE_NOTICE =
-  'Your changes were saved. They apply only to new review cycles—active and completed cycles keep the template version from when they were launched.'
 
 export function isTemplateVisibleInCycleWizard(template: ReviewTemplate): boolean {
   return template.name.trim().length > 0 && !template.isArchived

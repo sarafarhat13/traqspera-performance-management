@@ -62,7 +62,6 @@ import {
   buildArchivedName,
   buildDuplicateName,
   normalizeTemplateLifecycle,
-  PUBLISHED_TEMPLATE_SAVE_NOTICE,
   syncPublishedTemplatesFromCycles,
 } from '../utils/templateLifecycle'
 
@@ -582,9 +581,8 @@ export function PerformanceProvider({
   const saveTemplate = useCallback((template: ReviewTemplate, options?: { silent?: boolean }) => {
     setState((s) => {
       const existing = s.templates.find((t) => t.id === template.id)
-      if (existing?.isArchived) return s
+      if (existing?.isArchived || existing?.lifecycleStatus === 'published') return s
       const today = new Date().toISOString().slice(0, 10)
-      const savingPublished = existing?.lifecycleStatus === 'published'
       const actor = templateActorName(s)
       const withMetadata: ReviewTemplate = {
         ...template,
@@ -605,8 +603,6 @@ export function PerformanceProvider({
           : [...s.templates, withMetadata],
         editingTemplateId: options?.silent ? s.editingTemplateId : null,
         view: options?.silent ? s.view : 'templates',
-        templateSaveNotice:
-          !options?.silent && savingPublished ? PUBLISHED_TEMPLATE_SAVE_NOTICE : s.templateSaveNotice,
       }
     })
   }, [])

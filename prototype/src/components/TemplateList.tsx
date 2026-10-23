@@ -21,7 +21,11 @@ import {
   createTemplateDisplayStatusBadge,
 } from '../utils/modusTableCells'
 import { formatDate } from '../utils/status'
-import { getTemplateDisplayStatus, type TemplateDisplayStatus } from '../utils/templateLifecycle'
+import {
+  getTemplateDisplayStatus,
+  isTemplateEditable,
+  type TemplateDisplayStatus,
+} from '../utils/templateLifecycle'
 
 const ARCHIVE_TEMPLATE_MODAL_ID = 'template-archive-confirm-modal'
 
@@ -172,12 +176,15 @@ export function TemplateList() {
           sortable: false,
           cellRenderer: (value) => {
             const templateId = String(value)
+            const template = state.templates.find((t) => t.id === templateId)
+            const editable = template ? isTemplateEditable(template) : false
+            const editAction = editable
+              ? createTableIconActionButton('Edit template', 'pencil', () => openEditor(templateId))
+              : null
             const actions =
               mode === 'active'
                 ? [
-                    createTableIconActionButton('Edit template', 'pencil', () =>
-                      openEditor(templateId),
-                    ),
+                    ...(editAction ? [editAction] : []),
                     createTableIconActionButton('Duplicate template', 'file_copy', () =>
                       duplicateTemplate(templateId),
                     ),
@@ -186,9 +193,7 @@ export function TemplateList() {
                     ),
                   ]
                 : [
-                    createTableIconActionButton('Edit template', 'pencil', () =>
-                      openEditor(templateId),
-                    ),
+                    ...(editAction ? [editAction] : []),
                     createTableIconActionButton('Duplicate template', 'file_copy', () =>
                       duplicateTemplate(templateId),
                     ),
@@ -203,7 +208,7 @@ export function TemplateList() {
 
       return base
     },
-    [duplicateTemplate, openArchiveConfirm, openEditor, unarchiveTemplate],
+    [duplicateTemplate, openArchiveConfirm, openEditor, state.templates, unarchiveTemplate],
   )
 
   const activeColumns = useMemo(() => buildColumns('active'), [buildColumns])

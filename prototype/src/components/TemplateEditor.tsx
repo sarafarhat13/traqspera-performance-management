@@ -14,7 +14,7 @@ export function TemplateEditor() {
   const [draft, setDraft] = useState<ReviewTemplate | null>(existing ?? null)
   const isNewTemplate = useRef(!existing?.name?.trim()).current
   const readOnly = draft ? !isTemplateEditable(draft) : false
-  const editingPublished = Boolean(
+  const viewingPublished = Boolean(
     draft?.lifecycleStatus === 'published' && !draft.isArchived,
   )
 
@@ -38,7 +38,11 @@ export function TemplateEditor() {
     })
   }
 
-  const pageTitle = isNewTemplate ? 'Create Template' : 'Edit Template'
+  const pageTitle = isNewTemplate
+    ? 'Create Template'
+    : readOnly
+      ? 'View template'
+      : 'Edit Template'
 
   return (
     <TraqsperaPageBody>
@@ -49,11 +53,11 @@ export function TemplateEditor() {
       />
 
       <div className="flex flex-col gap-3">
-        {editingPublished ? (
+        {viewingPublished ? (
           <ModusWcAlert
             variant="info"
             alertTitle="Published template"
-            alertDescription="You can update this template, but changes apply only to new review cycles. Active and completed cycles keep the version from when they were launched."
+            alertDescription="Published templates cannot be edited. Duplicate this template from the library to create a draft you can change for new review cycles."
           />
         ) : null}
 

@@ -1,21 +1,11 @@
 import { useState } from 'react'
 import { PerformanceProvider, usePerformance } from './context/PerformanceContext'
 import { TraqsperaShell } from './layouts/TraqsperaShell'
-import { HRAdminDashboard } from './components/HRAdminDashboard'
-import { TemplateList } from './components/TemplateList'
-import { TemplateEditor } from './components/TemplateEditor'
-import { EmployeeDashboard } from './components/EmployeeDashboard'
-import { SelfEvaluationForm } from './components/SelfEvaluationForm'
-import { AcknowledgementScreen } from './components/AcknowledgementScreen'
-import { ManagerDashboard } from './components/ManagerDashboard'
-import { ManagerReviewForm } from './components/ManagerReviewForm'
-import { LaunchCycleWizard } from './components/LaunchCycleWizard'
-import { ReviewGroupsAdmin } from './components/ReviewGroupsAdmin'
-import { CycleDetailView } from './components/CycleDetailView'
-import { EmployeeDetails } from './components/EmployeeDetails'
-import { PerformanceReviewDetails } from './components/PerformanceReviewDetails'
+import { PerformanceViewRouter } from './components/PerformanceViewRouter'
 import { navPageFromView, navTargetFromNavPage } from './navigation'
 import type { TraqsperaNavPage } from './layouts/traqsperaShellConstants'
+import { PerformanceRouterShell } from './routing/PerformanceRouterShell'
+import { PerformanceUrlSync } from './routing/PerformanceUrlSync'
 
 /** Demo persona for Performance admin surfaces (templates, cycles, review groups). */
 const HR_ADMIN_DEMO_PERSON_ID = 'hr-1'
@@ -80,39 +70,6 @@ function PerformanceApp() {
   const employeeMobileOwnView =
     viewingOwnEmployeeDetails && state.layoutMode === 'mobile'
 
-  const content = (() => {
-    switch (state.view) {
-      case 'hr_dashboard':
-        return <HRAdminDashboard />
-      case 'cycle_details':
-        return <CycleDetailView />
-      case 'employee_details':
-        return <EmployeeDetails myPerformanceVisit={myPerformanceVisit} />
-      case 'templates':
-        return <TemplateList />
-      case 'template_editor':
-        return <TemplateEditor />
-      case 'review_groups':
-        return <ReviewGroupsAdmin />
-      case 'launch_cycle_wizard':
-        return <LaunchCycleWizard />
-      case 'employee_dashboard':
-        return <EmployeeDashboard />
-      case 'self_eval':
-        return <SelfEvaluationForm />
-      case 'acknowledgement':
-        return <AcknowledgementScreen />
-      case 'manager_dashboard':
-        return <ManagerDashboard />
-      case 'manager_review':
-        return <ManagerReviewForm />
-      case 'review_details':
-        return <PerformanceReviewDetails />
-      default:
-        return <HRAdminDashboard />
-    }
-  })()
-
   return (
     <TraqsperaShell
       activePage={activeNavPage}
@@ -122,15 +79,18 @@ function PerformanceApp() {
       }
       fullScreenContent={employeeMobileOwnView}
     >
-      {content}
+      <PerformanceViewRouter myPerformanceVisit={myPerformanceVisit} />
     </TraqsperaShell>
   )
 }
 
 export default function App() {
   return (
-    <PerformanceProvider>
-      <PerformanceApp />
-    </PerformanceProvider>
+    <PerformanceRouterShell mode="browser">
+      <PerformanceProvider>
+        <PerformanceUrlSync />
+        <PerformanceApp />
+      </PerformanceProvider>
+    </PerformanceRouterShell>
   )
 }

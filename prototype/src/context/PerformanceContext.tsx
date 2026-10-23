@@ -46,6 +46,10 @@ import {
 } from '../utils/workflow'
 import { buildReviewAcknowledgement, legacyAutoAcknowledgement } from '../utils/acknowledgement'
 import {
+  appStatePatchFromRoute,
+  type PerformanceRouteState,
+} from '../routing/performancePaths'
+import {
   canReturnReviewToEmployee,
   statusForEmployeeRework,
 } from '../utils/reviewPushBack'
@@ -343,6 +347,8 @@ function reviewsForCycleLaunch(
 interface PerformanceContextValue {
   state: AppState
   setView: (view: ViewId) => void
+  /** Apply navigation from URL (browser back/forward or deep link). */
+  applyRouteState: (route: PerformanceRouteState) => void
   setActivePersonId: (personId: string) => void
   openManagerTeamReviews: () => void
   setLayoutMode: (mode: 'desktop' | 'mobile') => void
@@ -485,6 +491,10 @@ export function PerformanceProvider({
 
   const setView = useCallback((view: ViewId) => {
     setState((s) => ({ ...s, view }))
+  }, [])
+
+  const applyRouteState = useCallback((route: PerformanceRouteState) => {
+    setState((s) => ({ ...s, ...appStatePatchFromRoute(route, s) }))
   }, [])
 
   const setActivePersonId = useCallback((personId: string) => {
@@ -1108,6 +1118,7 @@ export function PerformanceProvider({
     () => ({
       state,
       setView,
+      applyRouteState,
       setActivePersonId,
       openManagerTeamReviews,
       setLayoutMode,
@@ -1148,6 +1159,7 @@ export function PerformanceProvider({
     [
       state,
       setView,
+      applyRouteState,
       setActivePersonId,
       openManagerTeamReviews,
       setLayoutMode,

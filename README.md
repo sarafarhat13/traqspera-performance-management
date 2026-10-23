@@ -14,7 +14,14 @@ npm install
 npm run dev
 ```
 
-Open the URL printed by Vite (typically `http://localhost:5173`).
+Keep the dev terminal open — if it stops, the browser shows **connection refused**.
+
+Open the URL Vite prints (this repo uses port **5174**): `http://localhost:5174/`  
+Deep links work in dev, e.g. `http://localhost:5174/templates`.
+
+`npm run preview` (after `npm run build`) uses the same port and `http://localhost:5174/templates`.
+
+**GitHub Pages** uses a subpath: `https://sarafarhat13.github.io/traqspera-performance-management/` — deploy with `npm run deploy` (`build:gh-pages` sets the base path and adds `404.html` for SPA routes).
 
 ## Stack
 
@@ -28,6 +35,26 @@ Open the URL printed by Vite (typically `http://localhost:5173`).
 - **Manager** — Team status, side-by-side manager review form, review details
 - **Shared** — Tabbed review details (Overview, Self evaluation, Manager review, Side-by-side)
 - **Persistence** — `localStorage` for templates, cycles, reviews, and demo role
+- **URLs** — Each screen has a shareable path (browser back/forward works). Standalone app uses path routes under the Vite `base`; Traqspera island uses hash routes (`/performance#/templates`).
+
+### Route map (standalone paths)
+
+| Path | Screen |
+|------|--------|
+| `/` | HR dashboard |
+| `/cycles/:cycleId` | Cycle detail |
+| `/launch-cycle` | Launch cycle wizard |
+| `/templates` | Template list |
+| `/templates/:id/edit` | Template editor |
+| `/review-groups` | Review groups |
+| `/my/:tab` | My Info (own employee profile tab, e.g. `/my/performance`) |
+| `/my/self-eval/:reviewId` | Self evaluation |
+| `/my/acknowledge/:reviewId` | Acknowledgement |
+| `/my/reviews/:reviewId` | Review details (self) |
+| `/employees/:personId?tab=` | Employee profile (HR/manager) |
+| `/employees/:personId/reviews/:reviewId` | Review details (other employee) |
+| `/team` | Manager team dashboard |
+| `/team/reviews/:reviewId` | Manager review form |
 
 ## Prototype-only controls
 

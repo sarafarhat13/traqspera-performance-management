@@ -2,9 +2,11 @@ import { useState } from 'react'
 import {
   ModusWcButton,
   ModusWcIcon,
+  ModusWcInputLabel,
   ModusWcSelect,
   ModusWcTextInput,
 } from '@trimble-oss/moduswebcomponents-react'
+import { DashboardViewModeSegmentedControl } from './DashboardViewModeSegmentedControl'
 import { readInputString } from '../utils/modusFormEvents'
 import type {
   DashboardFilters,
@@ -15,7 +17,7 @@ import type {
 } from '../utils/dashboardFilters'
 import { countActivePanelFilters } from '../utils/dashboardFilters'
 
-type DashboardViewMode = 'card' | 'table'
+import type { DashboardViewMode } from './DashboardViewModeSegmentedControl'
 
 const PACKAGE_STATUS_FILTERS: {
   id: DashboardPackageStatusFilter
@@ -54,16 +56,19 @@ const MANAGER_TEAM_STATUS_FILTERS: {
 type PerformanceDashboardFilterBarProps = {
   filters: DashboardFilters
   counts?: DashboardPackageCounts | DashboardReviewCounts
-  departmentOptions: { label: string; value: string }[]
-  costCenterOptions: { label: string; value: string }[]
-  titleOptions: { label: string; value: string }[]
-  unionOptions: { label: string; value: string }[]
+  departmentOptions?: { label: string; value: string }[]
+  costCenterOptions?: { label: string; value: string }[]
+  titleOptions?: { label: string; value: string }[]
+  unionOptions?: { label: string; value: string }[]
   reviewerOptions?: { label: string; value: string }[]
+  ratingOptions?: { label: string; value: string }[]
   activeFilterCount: number
   filterFieldsKey: number
   viewMode?: DashboardViewMode
   showViewToggle?: boolean
   showStatusChips?: boolean
+  showFilterPanel?: boolean
+  showReviewerInBar?: boolean
   statusFilterMode?: 'package' | 'review' | 'managerTeam'
   searchAriaLabel?: string
   filterPanelId?: string
@@ -80,11 +85,14 @@ export function PerformanceDashboardFilterBar({
   titleOptions,
   unionOptions,
   reviewerOptions,
+  ratingOptions,
   activeFilterCount,
   filterFieldsKey,
   viewMode = 'table',
   showViewToggle = true,
   showStatusChips = true,
+  showFilterPanel = true,
+  showReviewerInBar = false,
   statusFilterMode = 'package',
   searchAriaLabel = 'Search by cycle name, employee, department, or cost center',
   filterPanelId = 'dashboard-filter-panel',
@@ -101,20 +109,49 @@ export function PerformanceDashboardFilterBar({
         ? MANAGER_TEAM_STATUS_FILTERS
         : REVIEW_STATUS_FILTERS
 
+  const searchInputId = `dashboard-search-${filterFieldsKey}`
+  const compactBar = showReviewerInBar
+
   return (
     <div className="tq-dashboard-filter">
-      <div className="tq-dashboard-filter-bar" role="search">
-        <div className="tq-dashboard-filter-bar__search">
-          <ModusWcIcon name="search" size="sm" decorative customClass="tq-dashboard-filter-bar__search-icon" />
+      <div
+        className={`tq-dashboard-filter-bar${compactBar ? ' tq-dashboard-filter-bar--compact' : ''}`}
+        role="search"
+      >
+        <div
+          className={`tq-dashboard-filter-bar__field tq-dashboard-filter-bar__search${
+            compactBar ? '' : ' tq-dashboard-filter-bar__search--pill'
+          }`}
+        >
           <ModusWcTextInput
-            key={`dashboard-search-${filterFieldsKey}`}
+            key={searchInputId}
+            inputId={searchInputId}
             size="sm"
+            label={compactBar ? 'Search' : undefined}
+            includeSearch
             placeholder="Search"
             aria-label={searchAriaLabel}
             value={filters.search}
-            onInputChange={(e) => onFiltersChange({ search: readInputString(e as CustomEvent) })}
+            onInputChange={(e) =>
+              onFiltersChange({ search: readInputString(e as CustomEvent) })
+            }
           />
         </div>
+
+        {showReviewerInBar && reviewerOptions && reviewerOptions.length > 1 ? (
+          <div className="tq-dashboard-filter-bar__field tq-dashboard-filter-bar__reviewer">
+            <ModusWcSelect
+              key={`dashboard-reviewer-${filterFieldsKey}`}
+              size="sm"
+              label="Reviewer"
+              value={filters.reviewerId}
+              options={reviewerOptions}
+              onInputChange={(e) =>
+                onFiltersChange({ reviewerId: readInputString(e as CustomEvent) })
+              }
+            />
+          </div>
+        ) : null}
 
         {showStatusChips && counts && (
           <div
@@ -143,85 +180,91 @@ export function PerformanceDashboardFilterBar({
           </div>
         )}
 
-        <ModusWcButton
-          variant={panelOpen ? 'filled' : 'outlined'}
-          color={panelOpen ? 'primary' : 'tertiary'}
-          size="sm"
-          shape="square"
-          customClass="tq-dashboard-filter-bar__filter-btn"
-          aria-label={
-            panelFilterCount > 0
-              ? `Filters, ${panelFilterCount} active. ${panelOpen ? 'Collapse' : 'Expand'} filter panel`
-              : `${panelOpen ? 'Collapse' : 'Expand'} filter panel`
-          }
-          aria-expanded={panelOpen}
-          aria-controls={filterPanelId}
-          onButtonClick={() => setPanelOpen((open) => !open)}
-        >
-          <ModusWcIcon name="filter" size="xs" decorative />
-          {panelFilterCount > 0 ? String(panelFilterCount) : null}
-        </ModusWcButton>
+        {showFilterPanel ? (
+          <ModusWcButton
+            variant={panelOpen ? 'filled' : 'outlined'}
+            color={panelOpen ? 'primary' : 'tertiary'}
+            size="sm"
+            shape="square"
+            customClass="tq-dashboard-filter-bar__filter-btn"
+            aria-label={
+              panelFilterCount > 0
+                ? `Filters, ${panelFilterCount} active. ${panelOpen ? 'Collapse' : 'Expand'} filter panel`
+                : `${panelOpen ? 'Collapse' : 'Expand'} filter panel`
+            }
+            aria-expanded={panelOpen}
+            aria-controls={filterPanelId}
+            onButtonClick={() => setPanelOpen((open) => !open)}
+          >
+            <ModusWcIcon name="filter" size="xs" decorative />
+            {panelFilterCount > 0 ? String(panelFilterCount) : null}
+          </ModusWcButton>
+        ) : null}
+
+        {compactBar && showViewToggle && onViewModeChange ? (
+          <div className="tq-dashboard-filter-bar__grow" aria-hidden="true" />
+        ) : null}
 
         {showViewToggle && onViewModeChange && (
-          <div className="tq-dashboard-filter-bar__view-toggle" role="group" aria-label="View mode">
-            <ModusWcButton
-              variant={viewMode === 'card' ? 'filled' : 'outlined'}
-              color={viewMode === 'card' ? 'primary' : 'tertiary'}
-              shape="square"
-              size="sm"
-              aria-label="Card view"
-              aria-pressed={viewMode === 'card'}
-              onButtonClick={() => onViewModeChange('card')}
-            >
-              <ModusWcIcon name="view_grid" size="xs" decorative />
-            </ModusWcButton>
-            <ModusWcButton
-              variant={viewMode === 'table' ? 'filled' : 'outlined'}
-              color={viewMode === 'table' ? 'primary' : 'tertiary'}
-              shape="square"
-              size="sm"
-              aria-label="Table view"
-              aria-pressed={viewMode === 'table'}
-              onButtonClick={() => onViewModeChange('table')}
-            >
-              <ModusWcIcon name="view_list" size="xs" decorative />
-            </ModusWcButton>
+          <div
+            className={`tq-dashboard-filter-bar__field tq-dashboard-filter-bar__view${
+              compactBar ? '' : ' tq-dashboard-filter-bar__view--inline'
+            }`}
+          >
+            {compactBar ? <ModusWcInputLabel labelText="View" size="sm" /> : null}
+            <DashboardViewModeSegmentedControl value={viewMode} onChange={onViewModeChange} />
           </div>
         )}
       </div>
 
-      {panelOpen && (
+      {showFilterPanel && panelOpen && (
         <div id={filterPanelId} className="tq-dashboard-filter-panel">
           <div key={filterFieldsKey} className="tq-dashboard-filter-panel__fields">
-            <ModusWcSelect
-              size="sm"
-              label="Department"
-              value={filters.department}
-              options={departmentOptions}
-              onInputChange={(e) => onFiltersChange({ department: readInputString(e as CustomEvent) })}
-            />
-            <ModusWcSelect
-              size="sm"
-              label="Cost center"
-              value={filters.costCenter}
-              options={costCenterOptions}
-              onInputChange={(e) => onFiltersChange({ costCenter: readInputString(e as CustomEvent) })}
-            />
-            <ModusWcSelect
-              size="sm"
-              label="Title"
-              value={filters.title}
-              options={titleOptions}
-              onInputChange={(e) => onFiltersChange({ title: readInputString(e as CustomEvent) })}
-            />
-            <ModusWcSelect
-              size="sm"
-              label="Union"
-              value={filters.union}
-              options={unionOptions}
-              onInputChange={(e) => onFiltersChange({ union: readInputString(e as CustomEvent) })}
-            />
-            {reviewerOptions && reviewerOptions.length > 1 ? (
+            {departmentOptions ? (
+              <ModusWcSelect
+                size="sm"
+                label="Department"
+                value={filters.department}
+                options={departmentOptions}
+                onInputChange={(e) =>
+                  onFiltersChange({ department: readInputString(e as CustomEvent) })
+                }
+              />
+            ) : null}
+            {costCenterOptions ? (
+              <ModusWcSelect
+                size="sm"
+                label="Cost center"
+                value={filters.costCenter}
+                options={costCenterOptions}
+                onInputChange={(e) =>
+                  onFiltersChange({ costCenter: readInputString(e as CustomEvent) })
+                }
+              />
+            ) : null}
+            {titleOptions ? (
+              <ModusWcSelect
+                size="sm"
+                label="Title"
+                value={filters.title}
+                options={titleOptions}
+                onInputChange={(e) =>
+                  onFiltersChange({ title: readInputString(e as CustomEvent) })
+                }
+              />
+            ) : null}
+            {unionOptions ? (
+              <ModusWcSelect
+                size="sm"
+                label="Union"
+                value={filters.union}
+                options={unionOptions}
+                onInputChange={(e) =>
+                  onFiltersChange({ union: readInputString(e as CustomEvent) })
+                }
+              />
+            ) : null}
+            {!showReviewerInBar && reviewerOptions && reviewerOptions.length > 1 ? (
               <ModusWcSelect
                 size="sm"
                 label="Reviewer"
@@ -229,6 +272,17 @@ export function PerformanceDashboardFilterBar({
                 options={reviewerOptions}
                 onInputChange={(e) =>
                   onFiltersChange({ reviewerId: readInputString(e as CustomEvent) })
+                }
+              />
+            ) : null}
+            {ratingOptions && ratingOptions.length > 1 ? (
+              <ModusWcSelect
+                size="sm"
+                label="Rating"
+                value={filters.rating}
+                options={ratingOptions}
+                onInputChange={(e) =>
+                  onFiltersChange({ rating: readInputString(e as CustomEvent) })
                 }
               />
             ) : null}

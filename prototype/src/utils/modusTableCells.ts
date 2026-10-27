@@ -130,12 +130,25 @@ export function createTemplateDisplayStatusBadge(status: TemplateDisplayStatus) 
   return badge
 }
 
-export function createReviewDisplayStatusBadge(displayStatus: ReviewDisplayStatus) {
+function reviewDisplayStatusBadgeLabel(
+  displayStatus: ReviewDisplayStatus,
+  forTable = false,
+): string {
+  if (forTable && displayStatus === 'employee_acknowledgement') {
+    return REVIEW_DISPLAY_STATUS_LABELS.pending
+  }
+  return REVIEW_DISPLAY_STATUS_LABELS[displayStatus]
+}
+
+export function createReviewDisplayStatusBadge(
+  displayStatus: ReviewDisplayStatus,
+  options?: { forTable?: boolean },
+) {
   const badge = document.createElement('modus-wc-badge')
   applyStatusBadgeStyle(
     badge,
     reviewDisplayStatusBadgeColor(displayStatus),
-    REVIEW_DISPLAY_STATUS_LABELS[displayStatus],
+    reviewDisplayStatusBadgeLabel(displayStatus, options?.forTable),
   )
   return badge
 }
@@ -311,6 +324,7 @@ export function createManagerSelectCell(
   options: { label: string; value: string }[],
   onChange: (managerId: string) => void,
   ariaLabel: string,
+  disabled = false,
 ) {
   const wrapper = document.createElement('div')
   wrapper.className = 'tq-table-manager-select min-w-[12rem]'
@@ -318,13 +332,19 @@ export function createManagerSelectCell(
   const select = document.createElement('modus-wc-select') as HTMLElement & {
     options: { label: string; value: string }[]
     value: string
+    disabled: boolean
   }
   select.setAttribute('size', 'sm')
   select.setAttribute('aria-label', ariaLabel)
+  if (disabled) {
+    select.setAttribute('disabled', 'true')
+    select.disabled = true
+  }
   select.options = options
   select.value = managerId
 
   select.addEventListener('inputChange', (event) => {
+    if (disabled) return
     event.stopPropagation()
     const customEvent = event as CustomEvent<InputEvent>
     const nextManagerId = (customEvent.detail?.target as HTMLSelectElement | null)?.value

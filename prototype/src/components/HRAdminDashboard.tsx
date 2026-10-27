@@ -9,15 +9,10 @@ import { usePerformance } from '../context/PerformanceContext'
 import { computeCycleStats } from '../utils/cycleStats'
 import {
   countActiveDashboardFilters,
-  costCenterOptionsFromPeople,
   createDefaultDashboardFilters,
-  departmentOptionsFromPeople,
   filterDashboardCycles,
-  computeDashboardPackageCounts,
   cycleReviewersSummary,
   reviewerOptionsFromReviews,
-  titleOptionsFromPeople,
-  unionOptionsFromPeople,
   type DashboardFilters,
 } from '../utils/dashboardFilters'
 import { CYCLE_STATUS_LABELS, formatDate } from '../utils/status'
@@ -55,47 +50,9 @@ export function HRAdminDashboard() {
     [selectCycle, setView],
   )
 
-  const departmentOptions = useMemo(
-    () => departmentOptionsFromPeople(state.people),
-    [state.people],
-  )
-
-  const costCenterOptions = useMemo(
-    () => costCenterOptionsFromPeople(state.people),
-    [state.people],
-  )
-
-  const titleOptions = useMemo(() => titleOptionsFromPeople(state.people), [state.people])
-
-  const unionOptions = useMemo(() => unionOptionsFromPeople(state.people), [state.people])
-
   const reviewerOptions = useMemo(
     () => reviewerOptionsFromReviews(state.reviews, getPerson),
     [state.reviews, getPerson],
-  )
-
-  const listFilters = useMemo(
-    () => ({
-      search: filters.search,
-      department: filters.department,
-      costCenter: filters.costCenter,
-      title: filters.title,
-      union: filters.union,
-      reviewerId: filters.reviewerId,
-    }),
-    [
-      filters.search,
-      filters.department,
-      filters.costCenter,
-      filters.title,
-      filters.union,
-      filters.reviewerId,
-    ],
-  )
-
-  const packageCounts = useMemo(
-    () => computeDashboardPackageCounts(state.cycles, state.reviews, state.people, listFilters),
-    [state.cycles, state.reviews, state.people, listFilters],
   )
 
   const filteredCycles = useMemo(() => {
@@ -210,16 +167,14 @@ export function HRAdminDashboard() {
 
           <PerformanceDashboardFilterBar
             filters={filters}
-            counts={packageCounts}
-            departmentOptions={departmentOptions}
-            costCenterOptions={costCenterOptions}
-            titleOptions={titleOptions}
-            unionOptions={unionOptions}
             reviewerOptions={reviewerOptions}
             activeFilterCount={activeFilterCount}
             filterFieldsKey={filterFieldsKey}
             viewMode={viewMode}
-            statusFilterMode="package"
+            showStatusChips={false}
+            showFilterPanel={false}
+            showReviewerInBar={true}
+            searchAriaLabel="Search by cycle name or reviewer"
             onFiltersChange={updateFilters}
             onClearFilters={clearFilters}
             onViewModeChange={setViewMode}
@@ -231,7 +186,7 @@ export function HRAdminDashboard() {
                 hierarchy="p"
                 size="sm"
                 customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                label="No review cycles match the current filters. Try adjusting search, department, or status."
+                label="No review cycles match the current filters. Try adjusting search or reviewer."
               />
               {activeFilterCount > 0 && (
                 <div className="mt-3">

@@ -32,13 +32,16 @@ import {
   createDefaultDashboardFilters,
   departmentOptionsFromPeople,
   reviewMatchesDashboardFilters,
+  ratingOptionsFromCycle,
   reviewerOptionsFromReviews,
   titleOptionsFromPeople,
   unionOptionsFromPeople,
   type DashboardFilters,
 } from '../utils/dashboardFilters'
 import {
+  cycleIncludesRatingScale,
   getReviewDisplayStatus,
+  getReviewWorkflowStage,
   reviewOverallRatingLabel,
   stepDeadlineOrCycleEnd,
   WORKFLOW_STEP_META,
@@ -46,7 +49,10 @@ import {
 } from '../utils/workflow'
 import type { WorkflowStepType } from '../types'
 import type { ReviewDisplayStatus } from '../utils/status'
-import { CycleWorkflowStageCards } from './CycleWorkflowStageCards'
+import {
+  CycleWorkflowStageCards,
+  type CycleWorkflowStageFilter,
+} from './CycleWorkflowStageCards'
 import { PerformanceDashboardFilterBar } from './PerformanceDashboardFilterBar'
 import { ReviewCycleCompleteModal } from './ReviewCycleCompleteModal'
 import { TemplateEmployeePreview } from './TemplateEmployeePreview'
@@ -78,6 +84,7 @@ export function CycleDetailView() {
   const [draftManagerDue, setDraftManagerDue] = useState('')
   const [draftAckDue, setDraftAckDue] = useState('')
   const [filters, setFilters] = useState<DashboardFilters>(() => createDefaultDashboardFilters())
+  const [workflowStageFilter, setWorkflowStageFilter] = useState<CycleWorkflowStageFilter>('all')
   const [filterFieldsKey, setFilterFieldsKey] = useState(0)
 
   const cycle = state.selectedCycleId ? getCycle(state.selectedCycleId) : undefined
@@ -86,6 +93,7 @@ export function CycleDetailView() {
 
   useEffect(() => {
     setFilters(createDefaultDashboardFilters())
+    setWorkflowStageFilter('all')
     setFilterFieldsKey((key) => key + 1)
     setTemplatePreviewOpen(false)
   }, [cycle?.id])
@@ -159,7 +167,28 @@ export function CycleDetailView() {
     [cycleReviews, getPerson],
   )
 
-  const activeFilterCount = useMemo(() => countActiveDashboardFilters(filters), [filters])
+  const ratingOptions = useMemo(
+    () => (cycle && cycleIncludesRatingScale(cycle) ? ratingOptionsFromCycle(cycle) : undefined),
+    [cycle],
+  )
+
+  const cycleReviewsMatchingPanelFilters = useMemo(() => {
+    if (!cycle) return []
+    return state.reviews
+      .filter((review) => review.cycleId === cycle.id)
+      .filter((review) => {
+        const employee = getPerson(review.employeeId)
+        return reviewMatchesDashboardFilters(review, cycle, employee, filters, undefined, {
+          getPerson,
+        })
+      })
+  }, [cycle, state.reviews, filters, getPerson])
+
+  const activeFilterCount = useMemo(() => {
+    let count = countActiveDashboardFilters(filters)
+    if (workflowStageFilter !== 'all') count += 1
+    return count
+  }, [filters, workflowStageFilter])
 
   const updateFilters = useCallback((patch: Partial<DashboardFilters>) => {
     setFilters((current) => ({ ...current, ...patch }))
@@ -168,6 +197,7 @@ export function CycleDetailView() {
   const clearFilters = useCallback(() => {
     requestAnimationFrame(() => {
       setFilters(createDefaultDashboardFilters())
+      setWorkflowStageFilter('all')
       setFilterFieldsKey((key) => key + 1)
     })
   }, [])
@@ -292,13 +322,11 @@ export function CycleDetailView() {
 
   const tableData = useMemo(() => {
     if (!cycle) return []
-    return state.reviews
-      .filter((review) => review.cycleId === cycle.id)
+    return cycleReviewsMatchingPanelFilters
       .filter((review) => {
-        const employee = getPerson(review.employeeId)
-        return reviewMatchesDashboardFilters(review, cycle, employee, filters, undefined, {
-          getPerson,
-        })
+        if (workflowStageFilter === 'all') return true
+        const stage = getReviewWorkflowStage(cycle, review)
+        return stage === workflowStageFilter
       })
       .map((review) => {
         const employee = getPerson(review.employeeId)
@@ -314,7 +342,7 @@ export function CycleDetailView() {
           overallRating: reviewOverallRatingLabel(cycle, review) ?? '—',
         }
       })
-  }, [cycle, state.reviews, getPerson, filters])
+  }, [cycle, cycleReviewsMatchingPanelFilters, getPerson, workflowStageFilter])
 
   const employeeTableColumns = useMemo(
     () => [
@@ -340,12 +368,17 @@ export function CycleDetailView() {
             managerId: string
             managerName: string
             employeeName: string
+            displayStatus: ReviewDisplayStatus
           }
+          const reviewComplete = record.displayStatus === 'complete'
           return createManagerSelectCell(
             record.managerId,
             managerOptions,
             (managerId) => updateReviewManager(record.id, managerId),
-            `Assign manager for ${record.employeeName}`,
+            reviewComplete
+              ? `Reviewer for ${record.employeeName} (review complete)`
+              : `Assign manager for ${record.employeeName}`,
+            reviewComplete,
           )
         },
       },
@@ -357,6 +390,7 @@ export function CycleDetailView() {
         cellRenderer: (_value: unknown, row: unknown) =>
           createReviewDisplayStatusBadge(
             (row as { displayStatus: ReviewDisplayStatus }).displayStatus,
+            { forTable: true },
           ),
       },
       {
@@ -622,7 +656,12 @@ export function CycleDetailView() {
           onClose={() => setCloseModalOpen(false)}
         />
 
-        <CycleWorkflowStageCards cycle={cycle} reviews={state.reviews} />
+        <CycleWorkflowStageCards
+          cycle={cycle}
+          reviews={cycleReviewsMatchingPanelFilters}
+          activeStage={workflowStageFilter}
+          onStageChange={setWorkflowStageFilter}
+        />
 
         {cycleAttachedGroups.length > 0 ? (
           <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
@@ -685,6 +724,7 @@ export function CycleDetailView() {
               titleOptions={titleOptions}
               unionOptions={unionOptions}
               reviewerOptions={reviewerOptions}
+              ratingOptions={ratingOptions}
               activeFilterCount={activeFilterCount}
               filterFieldsKey={filterFieldsKey}
               showViewToggle={false}
@@ -700,7 +740,7 @@ export function CycleDetailView() {
                   hierarchy="p"
                   size="sm"
                   customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                  label="No employees match the current filters. Try adjusting search or department."
+                  label="No employees match the current filters. Try adjusting search, department, rating, or workflow stage."
                 />
                 {activeFilterCount > 0 && (
                   <ModusWcButton variant="outlined" color="tertiary" size="sm" onButtonClick={clearFilters}>

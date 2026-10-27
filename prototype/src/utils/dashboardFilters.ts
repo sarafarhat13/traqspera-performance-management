@@ -1,7 +1,15 @@
 import type { PerformanceReview, Person, ReviewCycle } from '../types'
-import { getReviewDisplayStatus } from './workflow'
+import { normalizeRatingScale } from './ratingScale'
+import {
+  cycleIncludesRatingScale,
+  getReviewDisplayStatus,
+  readManagerOverallRatingValue,
+} from './workflow'
 
 export const DASHBOARD_FILTER_ALL = '__all__'
+
+/** Cycle detail — employees with no submitted overall rating yet. */
+export const DASHBOARD_RATING_UNRATED = '__unrated__'
 
 /** @deprecated Use DASHBOARD_FILTER_ALL */
 export const DASHBOARD_DEPARTMENT_ALL = DASHBOARD_FILTER_ALL
@@ -19,6 +27,7 @@ export type DashboardFilters = {
   title: string
   union: string
   reviewerId: string
+  rating: string
   status: DashboardStatusFilter
 }
 
@@ -30,6 +39,7 @@ export function createDefaultDashboardFilters(): DashboardFilters {
     title: DASHBOARD_FILTER_ALL,
     union: DASHBOARD_FILTER_ALL,
     reviewerId: DASHBOARD_FILTER_ALL,
+    rating: DASHBOARD_FILTER_ALL,
     status: 'all',
   }
 }
@@ -223,6 +233,18 @@ export function reviewMatchesDashboardFilters(
     review.managerId !== filters.reviewerId
   ) {
     return false
+  }
+
+  if (filters.rating !== DASHBOARD_FILTER_ALL) {
+    const submittedRating = readManagerOverallRatingValue(cycle, review)
+    if (filters.rating === DASHBOARD_RATING_UNRATED) {
+      if (submittedRating !== null) return false
+    } else {
+      const filterRating = Number(filters.rating)
+      if (!Number.isFinite(filterRating) || submittedRating !== filterRating) {
+        return false
+      }
+    }
   }
 
   if (options?.managerTeamReviewStatus) {
@@ -424,6 +446,7 @@ export function countActiveDashboardFilters(filters: DashboardFilters): number {
   if (filters.title !== DASHBOARD_FILTER_ALL) count += 1
   if (filters.union !== DASHBOARD_FILTER_ALL) count += 1
   if (filters.reviewerId !== DASHBOARD_FILTER_ALL) count += 1
+  if (filters.rating !== DASHBOARD_FILTER_ALL) count += 1
   if (filters.status !== 'all') count += 1
   return count
 }
@@ -435,6 +458,7 @@ export function countActivePanelFilters(filters: DashboardFilters): number {
   if (filters.title !== DASHBOARD_FILTER_ALL) count += 1
   if (filters.union !== DASHBOARD_FILTER_ALL) count += 1
   if (filters.reviewerId !== DASHBOARD_FILTER_ALL) count += 1
+  if (filters.rating !== DASHBOARD_FILTER_ALL) count += 1
   return count
 }
 
@@ -463,6 +487,28 @@ export function titleOptionsFromPeople(people: Person[]): { label: string; value
 
 export function unionOptionsFromPeople(people: Person[]): { label: string; value: string }[] {
   return distinctOptionsFromPeople(people, 'union')
+}
+
+export function ratingOptionsFromCycle(
+  cycle: ReviewCycle,
+): { label: string; value: string }[] {
+  if (!cycleIncludesRatingScale(cycle) || !cycle.ratingScale) {
+    return [{ label: 'All ratings', value: DASHBOARD_FILTER_ALL }]
+  }
+
+  const scale = normalizeRatingScale(cycle.ratingScale)
+  const options: { label: string; value: string }[] = [
+    { label: 'All ratings', value: DASHBOARD_FILTER_ALL },
+    { label: 'No rating yet', value: DASHBOARD_RATING_UNRATED },
+  ]
+
+  for (let index = 0; index < scale.labels.length; index += 1) {
+    const rating = scale.min + index
+    const label = scale.labels[index]?.trim() || `Level ${rating}`
+    options.push({ label: `${rating} — ${label}`, value: String(rating) })
+  }
+
+  return options
 }
 
 export function reviewerOptionsFromReviews(

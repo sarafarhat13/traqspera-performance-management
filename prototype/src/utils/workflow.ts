@@ -295,6 +295,18 @@ export function formatManagerOverallRating(
   return label ? `${rating} — ${label}` : String(rating)
 }
 
+/** Numeric overall rating after manager submit; null when scale off or not rated. */
+export function readManagerOverallRatingValue(
+  cycle: ReviewCycle,
+  review: PerformanceReview,
+): number | null {
+  if (!cycleIncludesRatingScale(cycle)) return null
+  if (!review.managerReview?.completedAt) return null
+  const raw = review.managerReview.answers?.[MANAGER_OVERALL_RATING_KEY]
+  const rating = Number(raw)
+  return Number.isFinite(rating) ? rating : null
+}
+
 /** Overall rating after the manager has submitted their review (not draft-only). */
 export function reviewOverallRatingLabel(
   cycle: ReviewCycle | undefined,
@@ -638,10 +650,13 @@ export function getReviewWorkflowStage(
   }
 }
 
-export function getCycleWorkflowStageCards(cycle: ReviewCycle): WorkflowReviewStage[] {
+/** Workflow stages shown as KPI cards on cycle review details (excludes not started). */
+export type CycleWorkflowStageCard = Exclude<WorkflowReviewStage, 'not_started'> | 'complete'
+
+export function getCycleWorkflowStageCards(cycle: ReviewCycle): CycleWorkflowStageCard[] {
   const workflow = cycle.workflow ?? workflowFromLegacy(cycle.includesSelfEvaluation)
   const enabled = getEnabledWorkflowSteps(workflow)
-  const cards: WorkflowReviewStage[] = ['not_started']
+  const cards: CycleWorkflowStageCard[] = []
 
   if (enabled.some((step) => step.type === 'employee')) {
     cards.push('employee_review')
@@ -652,6 +667,7 @@ export function getCycleWorkflowStageCards(cycle: ReviewCycle): WorkflowReviewSt
   if (enabled.some((step) => step.type === 'acknowledgement')) {
     cards.push('employee_acknowledgment')
   }
+  cards.push('complete')
 
   return cards
 }
@@ -659,18 +675,22 @@ export function getCycleWorkflowStageCards(cycle: ReviewCycle): WorkflowReviewSt
 export function computeCycleWorkflowStageCounts(
   cycle: ReviewCycle,
   reviews: PerformanceReview[],
-): Record<WorkflowReviewStage, number> {
-  const counts: Record<WorkflowReviewStage, number> = {
-    not_started: 0,
+): Record<CycleWorkflowStageCard, number> {
+  const counts: Record<CycleWorkflowStageCard, number> = {
     employee_review: 0,
     manager_review: 0,
     employee_acknowledgment: 0,
+    complete: 0,
   }
 
   for (const review of reviews) {
     if (review.cycleId !== cycle.id) continue
     const stage = getReviewWorkflowStage(cycle, review)
-    if (stage === 'complete') continue
+    if (stage === 'not_started') continue
+    if (stage === 'complete') {
+      counts.complete += 1
+      continue
+    }
     counts[stage] += 1
   }
 

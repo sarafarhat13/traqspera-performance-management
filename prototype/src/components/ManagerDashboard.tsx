@@ -241,6 +241,7 @@ export function ManagerDashboard() {
           title: filters.title,
           union: filters.union,
           reviewerId: filters.reviewerId,
+          rating: filters.rating,
         },
         managerReviewFilterOptions,
       ),
@@ -323,8 +324,10 @@ export function ManagerDashboard() {
         cellRenderer: (_value: unknown, row: unknown) => {
           const displayStatus = (row as { displayStatus?: ReturnType<typeof getReviewDisplayStatus> })
             .displayStatus
-          if (displayStatus) return createReviewDisplayStatusBadge(displayStatus)
-          return createReviewDisplayStatusBadge('pending')
+          if (displayStatus) {
+            return createReviewDisplayStatusBadge(displayStatus, { forTable: true })
+          }
+          return createReviewDisplayStatusBadge('pending', { forTable: true })
         },
       },
       { id: 'due', header: 'Due', accessor: 'dueDate', sortable: true },

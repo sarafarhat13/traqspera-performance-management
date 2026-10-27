@@ -59,25 +59,22 @@ export function EmployeeDashboard() {
       <div
         className={`flex flex-col gap-3 ${state.layoutMode === 'mobile' ? 'max-w-md mx-auto' : ''}`}
       >
-        {employeeReviews.length === 0 ? (
-          <ModusWcTypography hierarchy="p" size="md" label="No performance reviews are assigned to you yet." />
-        ) : (
-          <EmployeeMyReviewsPanel
-            reviews={employeeReviews}
-            onSelfEval={(reviewId) => {
-              selectReview(reviewId)
-              setView('self_eval')
-            }}
-            onAcknowledge={(reviewId) => {
-              selectReview(reviewId)
-              setView('acknowledgement')
-            }}
-            onViewDetails={(reviewId) => {
-              selectReview(reviewId)
-              setView('review_details')
-            }}
-          />
-        )}
+        <EmployeeMyReviewsPanel
+          reviews={employeeReviews}
+          emptyReviewsLabel="No performance reviews are assigned to you yet."
+          onSelfEval={(reviewId) => {
+            selectReview(reviewId)
+            setView('self_eval')
+          }}
+          onAcknowledge={(reviewId) => {
+            selectReview(reviewId)
+            setView('acknowledgement')
+          }}
+          onViewDetails={(reviewId) => {
+            selectReview(reviewId)
+            setView('review_details')
+          }}
+        />
       </div>
     </TraqsperaPageBody>
   )

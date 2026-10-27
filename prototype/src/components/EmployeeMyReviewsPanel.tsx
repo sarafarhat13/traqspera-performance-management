@@ -239,6 +239,48 @@ function partitionReviews(reviews: ReviewRow[]) {
   }
 }
 
+function DemoReviewsViewControls({
+  demoEmptyView,
+  onDemoEmptyViewChange,
+}: {
+  demoEmptyView: boolean
+  onDemoEmptyViewChange: (next: boolean) => void
+}) {
+  return (
+    <div
+      className="tq-employee-reviews-demo-bar flex flex-col gap-2 rounded-lg border border-[var(--modus-wc-color-base-200)] bg-[var(--modus-wc-color-base-100)] p-3"
+    >
+      {demoEmptyView ? (
+        <ModusWcAlert
+          variant="info"
+          alertTitle="Empty view (demo)"
+          alertDescription="Review cards are hidden. Use Show reviews to restore your list."
+        />
+      ) : null}
+      <div className="flex flex-wrap justify-center gap-2">
+        <ModusWcButton
+          variant={demoEmptyView ? 'outlined' : 'filled'}
+          color={demoEmptyView ? 'tertiary' : 'primary'}
+          size="sm"
+          aria-label="Show reviews with data"
+          onButtonClick={() => onDemoEmptyViewChange(false)}
+        >
+          Show reviews
+        </ModusWcButton>
+        <ModusWcButton
+          variant={demoEmptyView ? 'filled' : 'outlined'}
+          color={demoEmptyView ? 'primary' : 'tertiary'}
+          size="sm"
+          aria-label="Show empty To do and Completed lists for demo"
+          onButtonClick={() => onDemoEmptyViewChange(true)}
+        >
+          Empty view (demo)
+        </ModusWcButton>
+      </div>
+    </div>
+  )
+}
+
 export function EmployeeMyReviewsPanel({
   reviews,
   audience = 'self',
@@ -250,8 +292,12 @@ export function EmployeeMyReviewsPanel({
   onManagerReview,
 }: EmployeeMyReviewsPanelProps) {
   const [activeTabIndex, setActiveTabIndex] = useState(0)
+  const [demoEmptyView, setDemoEmptyView] = useState(false)
 
-  const { todo, completed } = useMemo(() => partitionReviews(reviews), [reviews])
+  const hasReviewData = reviews.length > 0
+  const displayReviews = demoEmptyView && hasReviewData ? [] : reviews
+
+  const { todo, completed } = useMemo(() => partitionReviews(displayReviews), [displayReviews])
 
   const hasSelfEvalDue = todo.some((row) =>
     row.cycle ? needsEmployeeSelfEval(row.cycle, row.review) : row.review.status === 'self_eval_pending',
@@ -266,13 +312,10 @@ export function EmployeeMyReviewsPanel({
     [todo.length, completed.length],
   )
 
-  if (reviews.length === 0) {
-    return (
-      <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
-        <ModusWcTypography hierarchy="p" size="md" label={emptyReviewsLabel} />
-      </ModusWcCard>
-    )
-  }
+  const todoEmptyLabel =
+    hasReviewData || !emptyReviewsLabel
+      ? 'No open reviews. Switch to Completed to see finished reviews.'
+      : emptyReviewsLabel
 
   return (
     <div className="flex flex-col gap-3">
@@ -307,7 +350,7 @@ export function EmployeeMyReviewsPanel({
         ) : null}
         <ReviewList
           rows={todo}
-          emptyLabel="No open reviews. Switch to Completed to see finished reviews."
+          emptyLabel={todoEmptyLabel}
           audience={audience}
           activePersonId={activePersonId}
           onSelfEval={onSelfEval}
@@ -329,6 +372,13 @@ export function EmployeeMyReviewsPanel({
           onManagerReview={onManagerReview}
         />
       </div>
+
+      {hasReviewData ? (
+        <DemoReviewsViewControls
+          demoEmptyView={demoEmptyView}
+          onDemoEmptyViewChange={setDemoEmptyView}
+        />
+      ) : null}
     </div>
   )
 }

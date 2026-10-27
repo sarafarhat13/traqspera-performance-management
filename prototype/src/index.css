@@ -806,6 +806,15 @@ modus-wc-card [slot='footer'].tq-review-acceptance-footer {
   width: 100%;
 }
 
+/* Employee reviews — demo empty / full toggle */
+.tq-employee-reviews-demo-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin-top: var(--modus-wc-spacing-xs, 0.5rem);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
+}
+
 /* Self-evaluation layout */
 .tq-self-eval-page--narrow .tq-self-eval-page__main {
   width: 100%;

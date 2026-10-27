@@ -13,6 +13,7 @@ import { ReviewScheduleLines } from './ReviewScheduleLines'
 import { StatusBadge } from './StatusBadge'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { isReviewManager } from '../utils/viewerContext'
+import { ReturnedToEmployeeNotice } from './ReturnReviewToEmployeeAction'
 import { needsEmployeeSelfEval, reviewOverallRatingLabel } from '../utils/workflow'
 
 type ReviewsAudience = 'self' | 'stakeholder'
@@ -88,6 +89,9 @@ function ReviewCard({
           label={template?.name ?? ''}
         />
         {cycle && <ReviewScheduleLines cycle={cycle} review={review} />}
+        {showEmployeeActions && review.returnedToEmployee ? (
+          <ReturnedToEmployeeNotice reviewId={review.id} />
+        ) : null}
         {overallRatingLabel && (
           <ModusWcTypography
             hierarchy="p"

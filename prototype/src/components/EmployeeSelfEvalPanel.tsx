@@ -10,6 +10,7 @@ import { readInputString } from '../utils/modusFormEvents'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { PageBackButton } from './PageBackButton'
 import { seedQuestionAnswerKeys } from '../utils/questionReview'
+import { ReturnedToEmployeeNotice } from './ReturnReviewToEmployeeAction'
 import { SelfEvaluationActions } from './SelfEvaluationFooter'
 import { SupportingDocumentsSection } from './SupportingDocumentsSection'
 import { selfEvalAllowsSupportingDocuments } from '../utils/supportingDocuments'
@@ -70,6 +71,8 @@ export function EmployeeSelfEvalPanel({ reviewId, onBack, onSubmitted }: Employe
           </div>
           <SelfEvaluationActions onSaveForLater={onBack} onSubmit={handleSubmit} />
         </div>
+
+        <ReturnedToEmployeeNotice reviewId={review.id} />
 
         <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
           <div className="flex flex-col gap-4">

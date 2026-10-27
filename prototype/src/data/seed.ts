@@ -866,6 +866,8 @@ type WalkthroughCopy = {
   acceptanceComment: string
   /** Active-cycle sample: employee self-eval due vs. ready for acceptance. */
   activeCycleSample?: 'self_eval_pending' | 'acknowledgement_pending'
+  /** When set with `self_eval_pending`, shows a returned review with manager/HR feedback. */
+  activeReturnedSelfEvalNote?: string
   /** When false, only completed + active-cycle samples are shown (clearer My Performance demo). */
   includeNotStartedSample?: boolean
   /** Extra 90-day check-in ready for employee acceptance (manager review complete). */
@@ -884,6 +886,18 @@ function createMyPerformanceWalkthroughReviews(copy: WalkthroughCopy): Performan
           employeeId: copy.employeeId,
           managerId: copy.managerId,
           status: 'self_eval_pending',
+          ...(copy.activeReturnedSelfEvalNote
+            ? {
+                selfEval: {
+                  answers: copy.pendingSelf,
+                },
+                returnedToEmployee: {
+                  returnedAt: '2025-11-12T16:00:00Z',
+                  returnedByPersonId: copy.managerId,
+                  note: copy.activeReturnedSelfEvalNote,
+                },
+              }
+            : {}),
         }
       : {
           id: `rev-walk-${token}-2025`,
@@ -996,6 +1010,8 @@ export const myPerformanceWalkthroughReviews: PerformanceReview[] = [
     employeeId: 'hr-1',
     managerId: 'mgr-2',
     activeCycleSample: 'self_eval_pending',
+    activeReturnedSelfEvalNote:
+      'Please add more detail on question 2 (goals not met) and question 4 (development focus). Include the timeline for the acknowledgment dashboard iteration and your HR analytics training plan so we can align before manager review.',
     includeNotStartedSample: false,
     includeAcknowledgementSample: true,
     acknowledgementManagerAnswers: {

@@ -11,6 +11,7 @@ import { isReviewEmployee } from '../utils/viewerContext'
 import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { seedQuestionAnswerKeys } from '../utils/questionReview'
+import { ReturnedToEmployeeNotice } from './ReturnReviewToEmployeeAction'
 import { SelfEvaluationActions } from './SelfEvaluationFooter'
 import { SupportingDocumentsSection } from './SupportingDocumentsSection'
 import { selfEvalAllowsSupportingDocuments } from '../utils/supportingDocuments'
@@ -82,6 +83,8 @@ export function SelfEvaluationForm() {
               <SelfEvaluationActions onSaveForLater={handleBack} onSubmit={handleSubmit} />
             }
           />
+
+          <ReturnedToEmployeeNotice reviewId={review.id} />
 
           <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
             <div className="flex flex-col gap-4">

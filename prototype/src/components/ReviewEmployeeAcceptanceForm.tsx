@@ -3,7 +3,6 @@ import {
   ModusWcButton,
   ModusWcCard,
   ModusWcDate,
-  ModusWcDivider,
   ModusWcIcon,
   ModusWcTextInput,
   ModusWcTextarea,
@@ -14,15 +13,12 @@ import type {
   ReviewAcceptanceSubmission,
   ReviewCycle,
   ReviewTemplate,
-  SupportingDocumentAttachment,
 } from '../types'
 import { usePerformance } from '../context/PerformanceContext'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { REVIEW_ACCEPTANCE_COMMENT_MAX } from '../utils/acknowledgement'
 import { readInputString } from '../utils/modusFormEvents'
 import { ReviewAcceptanceSummary } from './ReviewAcceptanceSummary'
-import { SupportingDocumentsSection } from './SupportingDocumentsSection'
-import { cycleAllowsSupportingDocuments } from '../utils/supportingDocuments'
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10)
@@ -63,10 +59,6 @@ export function ReviewEmployeeAcceptanceForm({
   const [comment, setComment] = useState('')
   const [signature, setSignature] = useState(employeeName)
   const [signedDate, setSignedDate] = useState(todayIsoDate)
-  const [supportingDocuments, setSupportingDocuments] = useState<SupportingDocumentAttachment[]>(
-    () => review.acknowledgement?.supportingDocuments ?? [],
-  )
-  const showSupportingDocuments = cycleAllowsSupportingDocuments(cycle)
 
   const commentLength = comment.length
 
@@ -81,7 +73,6 @@ export function ReviewEmployeeAcceptanceForm({
       comment,
       signature: signature.trim(),
       signedDate: signedDate.trim(),
-      supportingDocuments: showSupportingDocuments ? supportingDocuments : undefined,
     })
   }
 
@@ -140,57 +131,34 @@ export function ReviewEmployeeAcceptanceForm({
             value={signedDate}
             onInputChange={(e) => setSignedDate(readInputString(e as CustomEvent))}
           />
-          {showSupportingDocuments ? (
-            <>
-              <ModusWcDivider />
-              <SupportingDocumentsSection
-                documents={supportingDocuments}
-                onDocumentsChange={setSupportingDocuments}
-              />
-            </>
-          ) : null}
         </div>
         <div
           slot="footer"
           className={`tq-card-footer-actions tq-review-acceptance-footer${fullWidthButtons ? ' tq-review-acceptance-footer--stack' : ''}`}
         >
-          <div className="tq-review-acceptance-footer__actions">
+          <div className="tq-review-acceptance-footer__actions tq-review-acceptance-footer__commit-row">
             <ModusWcButton
               variant="outlined"
               color="tertiary"
               size="sm"
               fullWidth={fullWidthButtons}
               customClass="tq-review-acceptance-footer__btn"
-              disabled
-              aria-label="Download PDF (not available in prototype)"
+              onButtonClick={onCancel}
             >
-              <ModusWcIcon name="download" size="xs" decorative />
-              Download PDF
+              Cancel
             </ModusWcButton>
-            <div className="tq-review-acceptance-footer__commit-row">
-              <ModusWcButton
-                variant="outlined"
-                color="tertiary"
-                size="sm"
-                fullWidth={fullWidthButtons}
-                customClass="tq-review-acceptance-footer__btn"
-                onButtonClick={onCancel}
-              >
-                Cancel
-              </ModusWcButton>
-              <ModusWcButton
-                variant="filled"
-                color="primary"
-                size={primarySize}
-                fullWidth={fullWidthButtons}
-                customClass="tq-review-acceptance-footer__btn"
-                disabled={!canSubmit}
-                onButtonClick={handleSubmit}
-              >
-                <ModusWcIcon name="check_circle" size={iconSize} decorative />
-                Submit acceptance
-              </ModusWcButton>
-            </div>
+            <ModusWcButton
+              variant="filled"
+              color="primary"
+              size={primarySize}
+              fullWidth={fullWidthButtons}
+              customClass="tq-review-acceptance-footer__btn"
+              disabled={!canSubmit}
+              onButtonClick={handleSubmit}
+            >
+              <ModusWcIcon name="check_circle" size={iconSize} decorative />
+              Submit acceptance
+            </ModusWcButton>
           </div>
         </div>
       </ModusWcCard>

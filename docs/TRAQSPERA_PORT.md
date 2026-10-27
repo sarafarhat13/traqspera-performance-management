@@ -4,9 +4,21 @@ This document supports porting the **standalone Modus 2.x prototype** into `traq
 
 ## Prerequisites
 
-1. Re-authorize GitHub CLI for `Trimble-Construction` (SAML SSO).
+1. Re-authorize GitHub CLI for `Trimble-Construction` (SAML SSO). See [TRAQSPERA_MODUS_BASELINE.md](./TRAQSPERA_MODUS_BASELINE.md).
 2. Clone: `git clone -b TQ_UX https://github.com/Trimble-Construction/traqspera-web.git`
-3. Confirm Modus version in `package.json` (expected: **Modus 1.0** — `modus-react-components` / `modus-web-components` ~0.41).
+3. Confirm Modus version in `package.json` (expected: **Modus 1.0** on `TQ_UX` until you merge the Modus 2 upgrade — see [integration/traqspera-web/docs/MODUS2_UPGRADE.md](../integration/traqspera-web/docs/MODUS2_UPGRADE.md)).
+
+## Merge kit (this repository)
+
+Copy-ready Laravel + island bundle: [integration/traqspera-web/README.md](../integration/traqspera-web/README.md).
+
+Build island assets from the prototype:
+
+```bash
+cd prototype
+npm run export:performance-bootstrap
+npm run build:traqspera-island
+```
 
 ## Target module layout (Laravel + React island)
 

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="modus-modern-light" data-mode="light" class="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Performance Management island — demo</title>
+    <link rel="stylesheet" href="./css/performance-management.css" />
+  </head>
+  <body class="bg-[#f1f1f6]">
+    <div id="performance-management" class="min-h-screen"></div>
+    <script src="./js/performance-management.js" defer></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        window.TraqsperaPerformance.mount(document.getElementById('performance-management'), {
+          apiBaseUrl: '/api/performance-management',
+          dataSource: 'localStorage',
+          initialView: 'hr_dashboard',
+        })
+      })
+    </script>
+  </body>
+</html>

@@ -32,9 +32,12 @@ jobs:
         working-directory: prototype
         run: npm ci
 
-      - name: Build
+      - name: Build for GitHub Pages
         working-directory: prototype
-        run: npm run build
+        env:
+          GH_PAGES: 'true'
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: npm run build:gh-pages
 
       - name: Publish to gh-pages
         run: |

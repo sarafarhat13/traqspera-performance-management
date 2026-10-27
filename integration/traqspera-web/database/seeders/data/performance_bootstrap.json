@@ -1,0 +1,2984 @@
+{
+  "seedVersion": 28,
+  "activePersonId": "mgr-1",
+  "templates": [
+    {
+      "id": "tpl-annual",
+      "name": "Annual Performance Review",
+      "description": "Standard year-end review with accomplishments, goals, and development focus.",
+      "questions": [
+        {
+          "id": "q1",
+          "label": "What were your key accomplishments this period?",
+          "required": true,
+          "weight": 25,
+          "order": 1,
+          "type": "textarea"
+        },
+        {
+          "id": "q2",
+          "label": "Which goals did you not meet, and why?",
+          "required": true,
+          "weight": 25,
+          "order": 2,
+          "type": "textarea"
+        },
+        {
+          "id": "q3",
+          "label": "How did you collaborate across teams?",
+          "required": false,
+          "weight": 15,
+          "order": 3,
+          "type": "textarea"
+        },
+        {
+          "id": "q4",
+          "label": "What skills would you like to develop next?",
+          "required": true,
+          "weight": 35,
+          "order": 4,
+          "type": "textarea"
+        }
+      ],
+      "createdBy": "Hannah Reed",
+      "createdAt": "2024-02-10",
+      "lifecycleStatus": "published",
+      "isArchived": false,
+      "updatedAt": "2024-02-10"
+    },
+    {
+      "id": "tpl-new-hire",
+      "name": "New Hire Check-In",
+      "description": "Early onboarding conversation to support new employees in their first weeks.",
+      "questions": [
+        {
+          "id": "nh1",
+          "label": "How are you settling into your role and team?",
+          "required": true,
+          "weight": 25,
+          "order": 1,
+          "type": "textarea"
+        },
+        {
+          "id": "nh2",
+          "label": "What tools, training, or resources do you need right now?",
+          "required": true,
+          "weight": 25,
+          "order": 2,
+          "type": "textarea"
+        },
+        {
+          "id": "nh3",
+          "label": "What questions do you have about role expectations or company culture?",
+          "required": true,
+          "weight": 25,
+          "order": 3,
+          "type": "textarea"
+        },
+        {
+          "id": "nh4",
+          "label": "What would make your first month more successful?",
+          "required": true,
+          "weight": 25,
+          "order": 4,
+          "type": "textarea"
+        }
+      ],
+      "isPrebuilt": true,
+      "createdBy": "Traqspera",
+      "createdAt": "2023-06-01",
+      "lifecycleStatus": "draft",
+      "isArchived": false,
+      "updatedAt": "2023-06-01"
+    },
+    {
+      "id": "tpl-90-days",
+      "name": "90 Days at Work",
+      "description": "Structured check-in at the 90-day mark to review progress, goals, and support needs.",
+      "questions": [
+        {
+          "id": "90d1",
+          "label": "What are your key accomplishments in your first 90 days?",
+          "required": true,
+          "weight": 20,
+          "order": 1,
+          "type": "textarea"
+        },
+        {
+          "id": "90d2",
+          "label": "Which onboarding goals are on track, and which need adjustment?",
+          "required": true,
+          "weight": 20,
+          "order": 2,
+          "type": "textarea"
+        },
+        {
+          "id": "90d3",
+          "label": "What skills or knowledge would help you perform at the next level?",
+          "required": true,
+          "weight": 20,
+          "order": 3,
+          "type": "textarea"
+        },
+        {
+          "id": "90d4",
+          "label": "How effective is collaboration with your manager and teammates?",
+          "required": true,
+          "weight": 20,
+          "order": 4,
+          "type": "textarea"
+        },
+        {
+          "id": "90d5",
+          "label": "What support do you need for the next phase of your role?",
+          "required": true,
+          "weight": 20,
+          "order": 5,
+          "type": "textarea"
+        }
+      ],
+      "isPrebuilt": true,
+      "createdBy": "Traqspera",
+      "createdAt": "2023-06-01",
+      "lifecycleStatus": "published",
+      "isArchived": false,
+      "updatedAt": "2023-06-01"
+    }
+  ],
+  "reviewGroups": [
+    {
+      "id": "rgrp-mgr1-core",
+      "name": "Mike Chen — Core Team",
+      "description": "Direct reports used for field operations reviews",
+      "memberIds": [
+        "emp-1",
+        "emp-2",
+        "emp-3",
+        "emp-4",
+        "emp-5",
+        "emp-6",
+        "emp-7",
+        "emp-16",
+        "emp-17",
+        "emp-18"
+      ],
+      "defaultReviewerAssignment": {
+        "type": "crew_manager"
+      },
+      "createdBy": "HR Admin",
+      "createdAt": "2025-01-10"
+    },
+    {
+      "id": "rgrp-electrical-north",
+      "name": "Electrical — North Region",
+      "description": "Northern electrical crew cohort",
+      "memberIds": [
+        "emp-1",
+        "emp-2",
+        "emp-3",
+        "emp-8",
+        "emp-9"
+      ],
+      "defaultReviewerAssignment": {
+        "type": "supervisor"
+      },
+      "createdBy": "HR Admin",
+      "createdAt": "2025-02-01"
+    },
+    {
+      "id": "rgrp-project-beta",
+      "name": "Project Beta",
+      "description": "Cross-functional project team",
+      "memberIds": [
+        "emp-4",
+        "emp-5",
+        "emp-10",
+        "emp-11"
+      ],
+      "defaultReviewerAssignment": {
+        "type": "custom",
+        "customManagerId": "mgr-2"
+      },
+      "createdBy": "HR Admin",
+      "createdAt": "2025-02-15"
+    }
+  ],
+  "cycles": [
+    {
+      "id": "cycle-2024",
+      "name": "2024 Annual Review Cycle",
+      "description": "Annual performance reviews for all employees",
+      "createdBy": "HR Admin",
+      "templateId": "tpl-annual",
+      "startDate": "2024-01-15",
+      "dueDate": "2024-03-30",
+      "includesSelfEvaluation": true,
+      "allowSupportingDocuments": true,
+      "workflow": [
+        {
+          "id": "wf-employee",
+          "type": "employee",
+          "enabled": true,
+          "order": 0,
+          "deadline": "2024-02-15"
+        },
+        {
+          "id": "wf-manager",
+          "type": "manager",
+          "enabled": true,
+          "order": 1,
+          "deadline": "2024-03-01"
+        },
+        {
+          "id": "wf-rating",
+          "type": "rating_scale",
+          "enabled": true,
+          "order": 2,
+          "deadline": ""
+        },
+        {
+          "id": "wf-ack",
+          "type": "acknowledgement",
+          "enabled": true,
+          "order": 3,
+          "deadline": "2024-03-15"
+        }
+      ],
+      "ratingScale": {
+        "min": 1,
+        "max": 5,
+        "labels": [
+          "Unsatisfactory",
+          "Needs improvement",
+          "Meets expectations",
+          "Exceeds",
+          "Outstanding"
+        ]
+      },
+      "status": "active",
+      "employeeIds": [
+        "emp-1",
+        "emp-2",
+        "emp-3",
+        "emp-4",
+        "emp-5",
+        "emp-6",
+        "emp-7",
+        "emp-16",
+        "emp-17",
+        "emp-18",
+        "mgr-1",
+        "hr-1"
+      ]
+    },
+    {
+      "id": "cycle-final-pending",
+      "name": "2025 Finance Annual Review",
+      "description": "Finance team annual reviews — all participant work is complete; awaiting cycle completion to close.",
+      "createdBy": "Hannah Reed",
+      "templateId": "tpl-annual",
+      "startDate": "2025-01-15",
+      "dueDate": "2025-03-30",
+      "includesSelfEvaluation": true,
+      "allowSupportingDocuments": true,
+      "workflow": [
+        {
+          "id": "wf-employee",
+          "type": "employee",
+          "enabled": true,
+          "order": 0,
+          "deadline": "2025-02-15"
+        },
+        {
+          "id": "wf-manager",
+          "type": "manager",
+          "enabled": true,
+          "order": 1,
+          "deadline": "2025-03-01"
+        },
+        {
+          "id": "wf-rating",
+          "type": "rating_scale",
+          "enabled": true,
+          "order": 2,
+          "deadline": ""
+        },
+        {
+          "id": "wf-ack",
+          "type": "acknowledgement",
+          "enabled": true,
+          "order": 3,
+          "deadline": "2025-03-15"
+        }
+      ],
+      "ratingScale": {
+        "min": 1,
+        "max": 5,
+        "labels": [
+          "Unsatisfactory",
+          "Needs improvement",
+          "Meets expectations",
+          "Exceeds",
+          "Outstanding"
+        ]
+      },
+      "status": "active",
+      "employeeIds": [
+        "emp-8",
+        "emp-9",
+        "emp-10",
+        "emp-11"
+      ]
+    },
+    {
+      "id": "cycle-2025",
+      "name": "2025 Annual Review",
+      "description": "Year-end performance reviews with self-evaluation and manager feedback.",
+      "createdBy": "Hannah Reed",
+      "templateId": "tpl-annual",
+      "startDate": "2026-06-01",
+      "dueDate": "2026-12-15",
+      "includesSelfEvaluation": true,
+      "allowSupportingDocuments": true,
+      "workflow": [
+        {
+          "id": "wf-employee",
+          "type": "employee",
+          "enabled": true,
+          "order": 0,
+          "deadline": "2026-08-31"
+        },
+        {
+          "id": "wf-manager",
+          "type": "manager",
+          "enabled": true,
+          "order": 1,
+          "deadline": "2026-10-31"
+        },
+        {
+          "id": "wf-rating",
+          "type": "rating_scale",
+          "enabled": true,
+          "order": 2,
+          "deadline": ""
+        },
+        {
+          "id": "wf-ack",
+          "type": "acknowledgement",
+          "enabled": true,
+          "order": 3,
+          "deadline": "2026-12-10"
+        }
+      ],
+      "ratingScale": {
+        "min": 1,
+        "max": 5,
+        "labels": [
+          "Unsatisfactory",
+          "Needs improvement",
+          "Meets expectations",
+          "Exceeds",
+          "Outstanding"
+        ]
+      },
+      "status": "active",
+      "employeeIds": [
+        "emp-1",
+        "emp-2",
+        "emp-3",
+        "emp-4",
+        "emp-5",
+        "emp-6",
+        "emp-7",
+        "emp-8",
+        "emp-9",
+        "emp-10",
+        "emp-11",
+        "emp-12",
+        "emp-13",
+        "emp-14",
+        "emp-15",
+        "emp-16",
+        "emp-17",
+        "emp-18",
+        "emp-19",
+        "emp-20",
+        "emp-21",
+        "emp-22",
+        "emp-23",
+        "emp-24",
+        "emp-25",
+        "emp-26",
+        "emp-27",
+        "emp-28",
+        "emp-29",
+        "emp-30",
+        "emp-31",
+        "emp-32",
+        "emp-33",
+        "emp-34",
+        "emp-35",
+        "emp-36",
+        "emp-37",
+        "emp-38",
+        "emp-39",
+        "emp-40",
+        "emp-41",
+        "emp-42",
+        "emp-43",
+        "emp-44",
+        "emp-45",
+        "emp-46",
+        "emp-47",
+        "emp-48",
+        "emp-49",
+        "emp-50",
+        "mgr-1",
+        "hr-1"
+      ]
+    },
+    {
+      "id": "cycle-90-days",
+      "name": "90 Days at Work Check-in",
+      "description": "Manager-led 90-day progress review for recent hires.",
+      "createdBy": "HR Admin",
+      "templateId": "tpl-90-days",
+      "startDate": "2025-10-15",
+      "dueDate": "2025-11-30",
+      "includesSelfEvaluation": false,
+      "workflow": [
+        {
+          "id": "wf-employee",
+          "type": "employee",
+          "enabled": false,
+          "order": 0,
+          "deadline": ""
+        },
+        {
+          "id": "wf-manager",
+          "type": "manager",
+          "enabled": true,
+          "order": 1,
+          "deadline": "2025-11-15"
+        },
+        {
+          "id": "wf-rating",
+          "type": "rating_scale",
+          "enabled": true,
+          "order": 2,
+          "deadline": ""
+        },
+        {
+          "id": "wf-ack",
+          "type": "acknowledgement",
+          "enabled": true,
+          "order": 3,
+          "deadline": "2025-11-25"
+        }
+      ],
+      "ratingScale": {
+        "min": 1,
+        "max": 5,
+        "labels": [
+          "Unsatisfactory",
+          "Needs improvement",
+          "Meets expectations",
+          "Exceeds",
+          "Outstanding"
+        ]
+      },
+      "status": "active",
+      "employeeIds": [
+        "emp-1",
+        "emp-2",
+        "emp-3"
+      ]
+    },
+    {
+      "id": "cycle-2023",
+      "name": "2023 Annual Review",
+      "description": "Completed annual review cycle for the prior fiscal year.",
+      "createdBy": "HR Admin",
+      "templateId": "tpl-annual",
+      "startDate": "2023-10-01",
+      "dueDate": "2023-12-31",
+      "includesSelfEvaluation": true,
+      "workflow": [
+        {
+          "id": "wf-employee",
+          "type": "employee",
+          "enabled": true,
+          "order": 0,
+          "deadline": "2023-11-01"
+        },
+        {
+          "id": "wf-manager",
+          "type": "manager",
+          "enabled": true,
+          "order": 1,
+          "deadline": "2023-12-01"
+        },
+        {
+          "id": "wf-rating",
+          "type": "rating_scale",
+          "enabled": true,
+          "order": 2,
+          "deadline": ""
+        },
+        {
+          "id": "wf-ack",
+          "type": "acknowledgement",
+          "enabled": true,
+          "order": 3,
+          "deadline": "2023-12-15"
+        }
+      ],
+      "ratingScale": {
+        "min": 1,
+        "max": 5,
+        "labels": [
+          "Unsatisfactory",
+          "Needs improvement",
+          "Meets expectations",
+          "Exceeds",
+          "Outstanding"
+        ]
+      },
+      "status": "completed",
+      "employeeIds": [
+        "emp-4",
+        "emp-5",
+        "emp-6",
+        "mgr-1"
+      ]
+    },
+    {
+      "id": "cycle-2026-midyear-draft",
+      "name": "2026 Mid-Year Review",
+      "description": "Draft mid-year check-in for Project Beta — not yet launched.",
+      "createdBy": "Hannah Reed",
+      "templateId": "tpl-annual",
+      "startDate": "2026-07-01",
+      "dueDate": "2026-08-31",
+      "includesSelfEvaluation": true,
+      "workflow": [
+        {
+          "id": "wf-employee",
+          "type": "employee",
+          "enabled": true,
+          "order": 0,
+          "deadline": "2026-07-31"
+        },
+        {
+          "id": "wf-manager",
+          "type": "manager",
+          "enabled": true,
+          "order": 1,
+          "deadline": "2026-08-15"
+        },
+        {
+          "id": "wf-rating",
+          "type": "rating_scale",
+          "enabled": true,
+          "order": 2,
+          "deadline": ""
+        },
+        {
+          "id": "wf-ack",
+          "type": "acknowledgement",
+          "enabled": true,
+          "order": 3,
+          "deadline": "2026-08-28"
+        }
+      ],
+      "ratingScale": {
+        "min": 1,
+        "max": 5,
+        "labels": [
+          "Unsatisfactory",
+          "Needs improvement",
+          "Meets expectations",
+          "Exceeds",
+          "Outstanding"
+        ]
+      },
+      "status": "draft",
+      "employeeIds": [
+        "emp-4",
+        "emp-5",
+        "emp-10",
+        "emp-11"
+      ],
+      "attachedGroupIds": [
+        "rgrp-project-beta"
+      ],
+      "reviewerAssignments": {
+        "emp-4": {
+          "type": "custom",
+          "customManagerId": "mgr-2"
+        },
+        "emp-5": {
+          "type": "custom",
+          "customManagerId": "mgr-2"
+        },
+        "emp-10": {
+          "type": "custom",
+          "customManagerId": "mgr-2"
+        },
+        "emp-11": {
+          "type": "custom",
+          "customManagerId": "mgr-2"
+        }
+      }
+    }
+  ],
+  "reviews": [
+    {
+      "id": "rev-2024-1",
+      "cycleId": "cycle-2024",
+      "employeeId": "emp-1",
+      "managerId": "mgr-1",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered two major site rollouts on schedule.",
+          "q2": "Certification delayed due to travel.",
+          "q3": "Partnered with safety and finance weekly.",
+          "q4": "Interested in project management training."
+        },
+        "completedAt": "2024-02-15T10:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Strong delivery on rollout milestones.",
+          "q2": "Certification should remain a priority.",
+          "q3": "Excellent cross-team collaboration.",
+          "q4": "Approve PM training request.",
+          "__overall_rating": "4"
+        },
+        "completedAt": "2024-03-01T14:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2024-03-05T09:00:00Z",
+        "decision": "disagree",
+        "comment": "I disagree with the certification feedback; my manager and I documented a revised completion plan in our meeting.",
+        "signature": "Jane Alvarez",
+        "signedDate": "2024-03-05",
+        "hrEscalationRequired": true
+      }
+    },
+    {
+      "id": "rev-2024-2",
+      "cycleId": "cycle-2024",
+      "employeeId": "emp-2",
+      "managerId": "mgr-1",
+      "status": "manager_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Supported three concurrent projects.",
+          "q2": "Automation backlog item slipped one sprint.",
+          "q3": "Coordinated with operations and IT.",
+          "q4": "Want to grow data analysis skills."
+        },
+        "completedAt": "2024-02-20T11:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2024-3",
+      "cycleId": "cycle-2024",
+      "employeeId": "emp-3",
+      "managerId": "mgr-1",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Closed monthly close on time each quarter.",
+          "q2": "One reconciliation backlog item carried over.",
+          "q3": "Partnered with operations on cost reporting.",
+          "q4": "Pursuing CPA study hours."
+        },
+        "completedAt": "2024-02-11T10:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Reliable accounting support for the operations team.",
+          "q2": "Backlog item tracked with clear owners.",
+          "q3": "Strong cross-functional communication.",
+          "q4": "Encourage CPA progress.",
+          "__overall_rating": "3"
+        },
+        "completedAt": "2024-02-26T14:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2024-03-02T09:00:00Z",
+        "decision": "agree",
+        "comment": "Discussed ratings and development goals with Mike; aligned on CPA study plan.",
+        "signature": "Sarah Miller",
+        "signedDate": "2024-03-02"
+      }
+    },
+    {
+      "id": "rev-2024-4",
+      "cycleId": "cycle-2024",
+      "employeeId": "emp-4",
+      "managerId": "mgr-1",
+      "status": "acknowledgement_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Kept inbound and outbound logistics on schedule through peak season.",
+          "q2": "Vendor onboarding slipped by one week.",
+          "q3": "Partnered with warehouse and finance teams daily.",
+          "q4": "Interested in supply-chain certification."
+        },
+        "completedAt": "2024-02-12T10:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Reliable logistics execution with strong attention to detail.",
+          "q2": "Vendor onboarding delay is documented with a recovery plan.",
+          "q3": "Collaborates well across teams.",
+          "q4": "Support certification goals next cycle.",
+          "__overall_rating": "4"
+        },
+        "completedAt": "2024-02-28T16:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2024-5",
+      "cycleId": "cycle-2024",
+      "employeeId": "emp-5",
+      "managerId": "mgr-1",
+      "status": "manager_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Maintained crew schedules with fewer last-minute changes.",
+          "q2": "Overtime crept up during two holiday weekends.",
+          "q3": "Coordinated closely with field supervisors.",
+          "q4": "Want to improve workforce planning tools."
+        },
+        "completedAt": "2024-02-19T09:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2024-6",
+      "cycleId": "cycle-2024",
+      "employeeId": "emp-6",
+      "managerId": "mgr-1",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Maintained site safety metrics above target.",
+          "q2": "Staffing gaps on night shift persisted in Q4.",
+          "q3": "Coordinated with safety and HR on training.",
+          "q4": "Focused on supervisor certification."
+        },
+        "completedAt": "2024-02-09T11:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Strong site leadership and safety culture.",
+          "q2": "Night shift staffing plan approved for next quarter.",
+          "q3": "Effective partner to HR and safety teams.",
+          "q4": "Support certification timeline.",
+          "__overall_rating": "3"
+        },
+        "completedAt": "2024-02-25T15:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2024-03-06T10:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2024-7",
+      "cycleId": "cycle-2024",
+      "employeeId": "emp-7",
+      "managerId": "mgr-1",
+      "status": "manager_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Led monthly safety stand-downs and reduced near-miss reports.",
+          "q2": "Two audit findings remain open from Q3.",
+          "q3": "Worked with operations and HR on compliance training.",
+          "q4": "Focused on advanced safety leadership coursework."
+        },
+        "completedAt": "2024-02-21T11:30:00Z"
+      }
+    },
+    {
+      "id": "rev-2024-8",
+      "cycleId": "cycle-2024",
+      "employeeId": "emp-16",
+      "managerId": "mgr-1",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Exceeded quota on two enterprise accounts.",
+          "q2": "Pipeline hygiene needs improvement in CRM.",
+          "q3": "Partnered with marketing on regional campaigns.",
+          "q4": "Building executive presentation skills."
+        },
+        "completedAt": "2024-02-10T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Strong sales outcomes with consistent client follow-up.",
+          "q2": "CRM discipline should be a Q2 focus.",
+          "q3": "Effective collaborator with marketing.",
+          "q4": "Encourage continued presentation coaching.",
+          "__overall_rating": "4"
+        },
+        "completedAt": "2024-02-27T13:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2024-03-04T10:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2024-9",
+      "cycleId": "cycle-2024",
+      "employeeId": "emp-17",
+      "managerId": "mgr-1",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Supported four concurrent RFP responses on time.",
+          "q2": "Handoff delays occurred on one enterprise deal.",
+          "q3": "Aligned sales ops with account executives weekly.",
+          "q4": "Interested in sales operations analytics."
+        },
+        "completedAt": "2024-02-22T08:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Dependable sales ops partner during a heavy RFP season.",
+          "q2": "Handoff issue resolved with new checklist.",
+          "q3": "Strong alignment with account executives.",
+          "q4": "Analytics training approved.",
+          "__overall_rating": "5"
+        },
+        "completedAt": "2024-03-01T12:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2024-03-07T09:30:00Z"
+      }
+    },
+    {
+      "id": "rev-2024-10",
+      "cycleId": "cycle-2024",
+      "employeeId": "emp-18",
+      "managerId": "mgr-1",
+      "status": "acknowledgement_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Grew regional revenue 8% year over year.",
+          "q2": "Two key accounts renewed late in the quarter.",
+          "q3": "Coached two account executives through complex deals.",
+          "q4": "Prioritizing strategic account planning."
+        },
+        "completedAt": "2024-02-14T12:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Solid regional leadership with measurable growth.",
+          "q2": "Renewal timing created unnecessary end-of-quarter pressure.",
+          "q3": "Strong coach to the sales team.",
+          "q4": "Continue strategic planning focus.",
+          "__overall_rating": "3"
+        },
+        "completedAt": "2024-03-03T15:00:00Z"
+      }
+    },
+    {
+      "id": "rev-final-pending-1",
+      "cycleId": "cycle-final-pending",
+      "employeeId": "emp-8",
+      "managerId": "mgr-2",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Met quarterly close and reporting deadlines.",
+          "q2": "One automation backlog item carried to next quarter.",
+          "q3": "Partnered with operations and HR on budget planning.",
+          "q4": "Pursuing advanced Excel and FP&A coursework."
+        },
+        "completedAt": "2025-02-14T10:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Reliable contributor with strong attention to detail.",
+          "q2": "Backlog item is tracked with a clear owner.",
+          "q3": "Effective cross-functional communication.",
+          "q4": "Support continued professional development.",
+          "__overall_rating": "5"
+        },
+        "completedAt": "2025-02-28T14:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2025-03-10T09:00:00Z"
+      }
+    },
+    {
+      "id": "rev-final-pending-2",
+      "cycleId": "cycle-final-pending",
+      "employeeId": "emp-9",
+      "managerId": "mgr-2",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Met quarterly close and reporting deadlines.",
+          "q2": "One automation backlog item carried to next quarter.",
+          "q3": "Partnered with operations and HR on budget planning.",
+          "q4": "Pursuing advanced Excel and FP&A coursework."
+        },
+        "completedAt": "2025-02-14T10:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Reliable contributor with strong attention to detail.",
+          "q2": "Backlog item is tracked with a clear owner.",
+          "q3": "Effective cross-functional communication.",
+          "q4": "Support continued professional development.",
+          "__overall_rating": "3"
+        },
+        "completedAt": "2025-02-28T14:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2025-03-10T09:00:00Z"
+      }
+    },
+    {
+      "id": "rev-final-pending-3",
+      "cycleId": "cycle-final-pending",
+      "employeeId": "emp-10",
+      "managerId": "mgr-2",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Met quarterly close and reporting deadlines.",
+          "q2": "One automation backlog item carried to next quarter.",
+          "q3": "Partnered with operations and HR on budget planning.",
+          "q4": "Pursuing advanced Excel and FP&A coursework."
+        },
+        "completedAt": "2025-02-14T10:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Reliable contributor with strong attention to detail.",
+          "q2": "Backlog item is tracked with a clear owner.",
+          "q3": "Effective cross-functional communication.",
+          "q4": "Support continued professional development.",
+          "__overall_rating": "4"
+        },
+        "completedAt": "2025-02-28T14:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2025-03-10T09:00:00Z"
+      }
+    },
+    {
+      "id": "rev-final-pending-4",
+      "cycleId": "cycle-final-pending",
+      "employeeId": "emp-11",
+      "managerId": "mgr-2",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Met quarterly close and reporting deadlines.",
+          "q2": "One automation backlog item carried to next quarter.",
+          "q3": "Partnered with operations and HR on budget planning.",
+          "q4": "Pursuing advanced Excel and FP&A coursework."
+        },
+        "completedAt": "2025-02-14T10:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Reliable contributor with strong attention to detail.",
+          "q2": "Backlog item is tracked with a clear owner.",
+          "q3": "Effective cross-functional communication.",
+          "q4": "Support continued professional development.",
+          "__overall_rating": "5"
+        },
+        "completedAt": "2025-02-28T14:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2025-03-10T09:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-01",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-1",
+      "managerId": "mgr-1",
+      "status": "manager_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-02",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-2",
+      "managerId": "mgr-1",
+      "status": "manager_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-03",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-3",
+      "managerId": "mgr-1",
+      "status": "acknowledgement_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Closed monthly close on time each quarter and improved variance reporting for operations.",
+          "q2": "One reconciliation backlog item carried over; recovery plan shared with manager.",
+          "q3": "Partnered with operations and HR on cost-center reporting.",
+          "q4": "Pursuing CPA study hours and advanced Excel coursework."
+        },
+        "completedAt": "2025-10-18T10:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Reliable accounting support with strong attention to detail on close activities.",
+          "q2": "Backlog item is tracked; expect clearance early next quarter.",
+          "q3": "Effective cross-functional communication with operations.",
+          "q4": "Encourage continued CPA progress and training goals.",
+          "__overall_rating": "3"
+        },
+        "completedAt": "2025-11-08T14:30:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-04",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-4",
+      "managerId": "mgr-1",
+      "status": "acknowledgement_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "4"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-05",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-5",
+      "managerId": "mgr-1",
+      "status": "manager_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-06",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-6",
+      "managerId": "mgr-1",
+      "status": "not_started"
+    },
+    {
+      "id": "rev-2025-07",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-7",
+      "managerId": "mgr-1",
+      "status": "manager_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-08",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-8",
+      "managerId": "mgr-2",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "5"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2025-11-18T10:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-09",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-9",
+      "managerId": "mgr-2",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "3"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2025-11-18T10:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-10",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-10",
+      "managerId": "mgr-2",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "4"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2025-11-18T10:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-11",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-11",
+      "managerId": "mgr-2",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "5"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2025-11-18T10:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-12",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-12",
+      "managerId": "mgr-3",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "3"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2025-11-18T10:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-13",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-13",
+      "managerId": "mgr-3",
+      "status": "not_started"
+    },
+    {
+      "id": "rev-2025-14",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-14",
+      "managerId": "mgr-3",
+      "status": "not_started"
+    },
+    {
+      "id": "rev-2025-15",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-15",
+      "managerId": "mgr-3",
+      "status": "not_started"
+    },
+    {
+      "id": "rev-2025-16",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-16",
+      "managerId": "mgr-1",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "4"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2025-11-18T10:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-17",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-17",
+      "managerId": "mgr-1",
+      "status": "acknowledgement_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "5"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-18",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-18",
+      "managerId": "mgr-1",
+      "status": "acknowledgement_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "3"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-19",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-19",
+      "managerId": "mgr-2",
+      "status": "not_started"
+    },
+    {
+      "id": "rev-2025-20",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-20",
+      "managerId": "mgr-2",
+      "status": "not_started"
+    },
+    {
+      "id": "rev-2025-21",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-21",
+      "managerId": "mgr-3",
+      "status": "self_eval_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-22",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-22",
+      "managerId": "mgr-3",
+      "status": "self_eval_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-23",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-23",
+      "managerId": "mgr-3",
+      "status": "self_eval_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-24",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-24",
+      "managerId": "mgr-1",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "3"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2025-11-18T10:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-25",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-25",
+      "managerId": "mgr-2",
+      "status": "not_started"
+    },
+    {
+      "id": "rev-2025-26",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-26",
+      "managerId": "mgr-2",
+      "status": "self_eval_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-27",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-27",
+      "managerId": "mgr-2",
+      "status": "self_eval_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-28",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-28",
+      "managerId": "mgr-2",
+      "status": "self_eval_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-29",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-29",
+      "managerId": "mgr-3",
+      "status": "self_eval_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-30",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-30",
+      "managerId": "mgr-3",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "3"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2025-11-18T10:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-31",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-31",
+      "managerId": "mgr-3",
+      "status": "not_started"
+    },
+    {
+      "id": "rev-2025-32",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-32",
+      "managerId": "mgr-3",
+      "status": "manager_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-33",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-33",
+      "managerId": "mgr-1",
+      "status": "manager_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-34",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-34",
+      "managerId": "mgr-1",
+      "status": "manager_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-35",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-35",
+      "managerId": "mgr-2",
+      "status": "manager_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-36",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-36",
+      "managerId": "mgr-2",
+      "status": "manager_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-37",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-37",
+      "managerId": "mgr-1",
+      "status": "manager_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-38",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-38",
+      "managerId": "mgr-1",
+      "status": "manager_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-39",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-39",
+      "managerId": "mgr-1",
+      "status": "manager_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-40",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-40",
+      "managerId": "mgr-1",
+      "status": "manager_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-41",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-41",
+      "managerId": "mgr-2",
+      "status": "manager_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-42",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-42",
+      "managerId": "mgr-2",
+      "status": "acknowledgement_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "3"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-43",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-43",
+      "managerId": "mgr-2",
+      "status": "acknowledgement_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "4"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-44",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-44",
+      "managerId": "mgr-2",
+      "status": "acknowledgement_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "5"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-45",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-45",
+      "managerId": "mgr-3",
+      "status": "acknowledgement_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "3"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-46",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-46",
+      "managerId": "mgr-3",
+      "status": "acknowledgement_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "4"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-47",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-47",
+      "managerId": "mgr-3",
+      "status": "acknowledgement_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "5"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-48",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-48",
+      "managerId": "mgr-3",
+      "status": "acknowledgement_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "3"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-49",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-49",
+      "managerId": "mgr-1",
+      "status": "acknowledgement_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "4"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2025-50",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-50",
+      "managerId": "mgr-1",
+      "status": "acknowledgement_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Delivered strong results against annual goals and team priorities.",
+          "q2": "One cross-functional initiative slipped due to resource constraints.",
+          "q3": "Collaborated regularly with peer teams and stakeholders.",
+          "q4": "Focused on leadership and technical skills for the next year."
+        },
+        "completedAt": "2025-10-20T14:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Consistently met expectations with reliable follow-through.",
+          "q2": "Should prioritize the delayed initiative in the next quarter.",
+          "q3": "Effective partner across departments.",
+          "q4": "Support development goals discussed in the review.",
+          "__overall_rating": "5"
+        },
+        "completedAt": "2025-11-05T16:00:00Z"
+      }
+    },
+    {
+      "id": "rev-walk-emp3-2024",
+      "cycleId": "cycle-2024",
+      "employeeId": "emp-3",
+      "managerId": "mgr-1",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Closed monthly close on time each quarter.",
+          "q2": "One reconciliation backlog item carried over.",
+          "q3": "Partnered with operations on cost reporting.",
+          "q4": "Pursuing CPA study hours."
+        },
+        "completedAt": "2024-02-11T10:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Reliable accounting support for the operations team.",
+          "q2": "Backlog item tracked with clear owners.",
+          "q3": "Strong cross-functional communication.",
+          "q4": "Encourage CPA progress.",
+          "__overall_rating": "3"
+        },
+        "completedAt": "2024-02-26T14:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2024-03-02T09:00:00Z",
+        "decision": "agree",
+        "comment": "Discussed ratings and development goals with Mike; aligned on CPA study plan.",
+        "signature": "Sarah Miller",
+        "signedDate": "2024-03-02"
+      }
+    },
+    {
+      "id": "rev-walk-emp3-2025",
+      "cycleId": "cycle-2025",
+      "employeeId": "emp-3",
+      "managerId": "mgr-1",
+      "status": "acknowledgement_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Closed monthly close on time each quarter and improved variance reporting for operations.",
+          "q2": "One reconciliation backlog item carried over; recovery plan shared with manager.",
+          "q3": "Partnered with operations and HR on cost-center reporting.",
+          "q4": "Pursuing CPA study hours and advanced Excel coursework."
+        },
+        "completedAt": "2025-10-18T10:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Reliable accounting support with strong attention to detail on close activities.",
+          "q2": "Backlog item is tracked; expect clearance early next quarter.",
+          "q3": "Effective cross-functional communication with operations.",
+          "q4": "Encourage continued CPA progress and training goals.",
+          "__overall_rating": "3"
+        },
+        "completedAt": "2025-11-08T14:30:00Z"
+      }
+    },
+    {
+      "id": "rev-walk-emp3-90day",
+      "cycleId": "cycle-90-days",
+      "employeeId": "emp-3",
+      "managerId": "mgr-1",
+      "status": "not_started"
+    },
+    {
+      "id": "rev-walk-hr1-2024",
+      "cycleId": "cycle-2024",
+      "employeeId": "hr-1",
+      "managerId": "mgr-2",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Supported three annual review cycles and policy updates on schedule.",
+          "q2": "One compliance training rollout slipped one week due to scheduling.",
+          "q3": "Partnered with finance and operations on performance program communications.",
+          "q4": "Building expertise in HR analytics and employee experience tools."
+        },
+        "completedAt": "2024-02-11T10:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Strong HR program delivery with reliable follow-through.",
+          "q2": "Training delay was communicated early with a clear recovery plan.",
+          "q3": "Effective cross-functional partner on performance initiatives.",
+          "q4": "Support continued development in analytics and change management.",
+          "__overall_rating": "4"
+        },
+        "completedAt": "2024-02-26T14:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2024-03-02T09:00:00Z",
+        "decision": "agree",
+        "comment": "Reviewed 2024 goals with Lisa; aligned on analytics training and Q1 compliance priorities.",
+        "signature": "Hannah Reed",
+        "signedDate": "2024-03-02"
+      }
+    },
+    {
+      "id": "rev-walk-hr1-2025",
+      "cycleId": "cycle-2025",
+      "employeeId": "hr-1",
+      "managerId": "mgr-2",
+      "status": "self_eval_pending"
+    },
+    {
+      "id": "rev-walk-hr1-90day-ack",
+      "cycleId": "cycle-90-days",
+      "employeeId": "hr-1",
+      "managerId": "mgr-2",
+      "status": "acknowledgement_pending",
+      "managerReview": {
+        "answers": {
+          "90d1": "Delivered timely policy updates and supported two division rollouts in the first quarter.",
+          "90d2": "Compliance training goals met; HRIS acceptance reporting on track.",
+          "90d3": "Growing strength in analytics; recommend continued dashboard and enablement work.",
+          "90d4": "Works well with finance leadership and cross-functional stakeholders.",
+          "90d5": "Budget for analytics coursework and protected time for manager toolkit work.",
+          "__overall_rating": "4"
+        },
+        "completedAt": "2025-10-22T14:00:00Z"
+      }
+    },
+    {
+      "id": "rev-2026-midyear-draft-4",
+      "cycleId": "cycle-2026-midyear-draft",
+      "employeeId": "emp-4",
+      "managerId": "mgr-2",
+      "reviewerType": "custom",
+      "customReviewerName": "Lisa Wong",
+      "status": "not_started"
+    },
+    {
+      "id": "rev-2026-midyear-draft-5",
+      "cycleId": "cycle-2026-midyear-draft",
+      "employeeId": "emp-5",
+      "managerId": "mgr-2",
+      "reviewerType": "custom",
+      "customReviewerName": "Lisa Wong",
+      "status": "not_started"
+    },
+    {
+      "id": "rev-2026-midyear-draft-10",
+      "cycleId": "cycle-2026-midyear-draft",
+      "employeeId": "emp-10",
+      "managerId": "mgr-2",
+      "reviewerType": "custom",
+      "customReviewerName": "Lisa Wong",
+      "status": "not_started"
+    },
+    {
+      "id": "rev-2026-midyear-draft-11",
+      "cycleId": "cycle-2026-midyear-draft",
+      "employeeId": "emp-11",
+      "managerId": "mgr-2",
+      "reviewerType": "custom",
+      "customReviewerName": "Lisa Wong",
+      "status": "not_started"
+    },
+    {
+      "id": "rev-4",
+      "cycleId": "cycle-90-days",
+      "employeeId": "emp-1",
+      "managerId": "mgr-1",
+      "status": "completed",
+      "managerReview": {
+        "answers": {
+          "g1": "Met rollout milestone ahead of schedule.",
+          "g2": "On track; needs one more vendor sign-off.",
+          "g3": "Completed safety audit remediation.",
+          "g4": "Deferred — capacity redirected to rollout.",
+          "g5": "Not applicable this quarter.",
+          "__overall_rating": "4"
+        },
+        "completedAt": "2025-09-15T11:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2025-09-16T09:00:00Z"
+      }
+    },
+    {
+      "id": "rev-5",
+      "cycleId": "cycle-90-days",
+      "employeeId": "emp-2",
+      "managerId": "mgr-1",
+      "status": "manager_pending"
+    },
+    {
+      "id": "rev-mgr1-2025-self",
+      "cycleId": "cycle-2025",
+      "employeeId": "mgr-1",
+      "managerId": "sup-1",
+      "reviewerType": "supervisor",
+      "status": "self_eval_pending"
+    },
+    {
+      "id": "rev-mgr1-2024-ack",
+      "cycleId": "cycle-2024",
+      "employeeId": "mgr-1",
+      "managerId": "sup-1",
+      "reviewerType": "supervisor",
+      "status": "acknowledgement_pending",
+      "selfEval": {
+        "answers": {
+          "q1": "Led operations through two major site expansions and improved on-time delivery by 12%.",
+          "q2": "Delayed rollout of the new scheduling tool due to vendor timeline shifts.",
+          "q3": "Partnered weekly with finance, HR, and field supervisors on staffing plans.",
+          "q4": "Want to strengthen executive communication and strategic planning skills."
+        },
+        "completedAt": "2024-02-18T09:30:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Strong leadership on expansion projects with measurable operational gains.",
+          "q2": "Scheduling tool delay was communicated early; recovery plan is in place.",
+          "q3": "Highly effective cross-functional collaboration.",
+          "q4": "Support leadership development goals for the next cycle.",
+          "__overall_rating": "4"
+        },
+        "completedAt": "2024-03-02T15:00:00Z"
+      }
+    },
+    {
+      "id": "rev-mgr1-2023-done",
+      "cycleId": "cycle-2023",
+      "employeeId": "mgr-1",
+      "managerId": "sup-1",
+      "reviewerType": "supervisor",
+      "status": "completed",
+      "selfEval": {
+        "answers": {
+          "q1": "Stabilized crew scheduling after the regional reorganization.",
+          "q2": "Missed Q3 training completion target for two direct reports.",
+          "q3": "Worked closely with safety and logistics on compliance initiatives.",
+          "q4": "Focused on coaching skills and workforce planning."
+        },
+        "completedAt": "2023-11-05T10:00:00Z"
+      },
+      "managerReview": {
+        "answers": {
+          "q1": "Delivered steady operational performance through a difficult transition.",
+          "q2": "Training gaps are being addressed with a revised plan.",
+          "q3": "Reliable partner to peer managers and corporate stakeholders.",
+          "q4": "Continue building the leadership bench on the operations team.",
+          "__overall_rating": "4"
+        },
+        "completedAt": "2023-12-03T14:00:00Z"
+      },
+      "acknowledgement": {
+        "acknowledged": true,
+        "completedAt": "2023-12-08T11:00:00Z"
+      }
+    }
+  ],
+  "people": [
+    {
+      "id": "hr-1",
+      "name": "Hannah Reed",
+      "role": "hr_admin",
+      "department": "Human Resources",
+      "costCenter": "CC-300",
+      "title": "HR Specialist",
+      "union": "Non-union"
+    },
+    {
+      "id": "mgr-1",
+      "name": "Mike Chen",
+      "role": "manager",
+      "department": "Operations",
+      "costCenter": "CC-100",
+      "title": "Operations Manager",
+      "managerId": "sup-1",
+      "union": "Non-union"
+    },
+    {
+      "id": "mgr-2",
+      "name": "Lisa Wong",
+      "role": "manager",
+      "department": "Finance",
+      "costCenter": "CC-200",
+      "title": "Finance Director",
+      "union": "Non-union"
+    },
+    {
+      "id": "mgr-3",
+      "name": "James Rivera",
+      "role": "manager",
+      "department": "Information Technology",
+      "costCenter": "CC-400",
+      "title": "IT Director",
+      "union": "Non-union"
+    },
+    {
+      "id": "sup-1",
+      "name": "Greg Thompson",
+      "role": "manager",
+      "department": "Operations",
+      "costCenter": "CC-100",
+      "title": "Field Operations Supervisor",
+      "union": "Non-union"
+    },
+    {
+      "id": "emp-1",
+      "name": "Jane Alvarez",
+      "role": "employee",
+      "department": "Operations",
+      "costCenter": "CC-100",
+      "title": "Field Coordinator",
+      "managerId": "mgr-1",
+      "union": "CUPE",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-2",
+      "name": "David Park",
+      "role": "employee",
+      "department": "Operations",
+      "costCenter": "CC-100",
+      "title": "Project Analyst",
+      "managerId": "mgr-1",
+      "union": "Non-union",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-4",
+      "name": "Carlos Mendez",
+      "role": "employee",
+      "department": "Operations",
+      "costCenter": "CC-100",
+      "title": "Logistics Specialist",
+      "managerId": "mgr-1",
+      "union": "CUPE",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-5",
+      "name": "Emily Tran",
+      "role": "employee",
+      "department": "Operations",
+      "costCenter": "CC-150",
+      "title": "Scheduling Coordinator",
+      "managerId": "mgr-1",
+      "union": "Non-union",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-6",
+      "name": "Robert Kim",
+      "role": "employee",
+      "department": "Operations",
+      "costCenter": "CC-150",
+      "title": "Site Supervisor",
+      "managerId": "mgr-1",
+      "union": "CUPE",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-7",
+      "name": "Aisha Johnson",
+      "role": "employee",
+      "department": "Operations",
+      "costCenter": "CC-100",
+      "title": "Safety Officer",
+      "managerId": "mgr-1",
+      "union": "CUPE",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-3",
+      "name": "Sarah Miller",
+      "role": "employee",
+      "department": "Finance",
+      "costCenter": "CC-200",
+      "title": "Staff Accountant",
+      "managerId": "mgr-1",
+      "union": "Non-union",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-8",
+      "name": "Thomas Wright",
+      "role": "employee",
+      "department": "Finance",
+      "costCenter": "CC-200",
+      "title": "Financial Analyst",
+      "managerId": "mgr-2",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-9",
+      "name": "Nina Patel",
+      "role": "employee",
+      "department": "Finance",
+      "costCenter": "CC-200",
+      "title": "Accounts Payable Clerk",
+      "managerId": "mgr-2",
+      "union": "CSU",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-10",
+      "name": "Marcus Lee",
+      "role": "employee",
+      "department": "Finance",
+      "costCenter": "CC-250",
+      "title": "Budget Analyst",
+      "managerId": "mgr-2",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-11",
+      "name": "Olivia Brooks",
+      "role": "employee",
+      "department": "Finance",
+      "costCenter": "CC-250",
+      "title": "Payroll Specialist",
+      "managerId": "mgr-2",
+      "union": "CSU",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-12",
+      "name": "Kevin O'Brien",
+      "role": "employee",
+      "department": "Information Technology",
+      "costCenter": "CC-400",
+      "title": "Software Engineer",
+      "managerId": "mgr-3",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-13",
+      "name": "Priya Sharma",
+      "role": "employee",
+      "department": "Information Technology",
+      "costCenter": "CC-400",
+      "title": "Systems Administrator",
+      "managerId": "mgr-3",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-14",
+      "name": "Daniel Foster",
+      "role": "employee",
+      "department": "Information Technology",
+      "costCenter": "CC-450",
+      "title": "Business Analyst",
+      "managerId": "mgr-3",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-15",
+      "name": "Rachel Green",
+      "role": "employee",
+      "department": "Information Technology",
+      "costCenter": "CC-400",
+      "title": "Help Desk Technician",
+      "managerId": "mgr-3",
+      "union": "IBEW",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-16",
+      "name": "Jason Coleman",
+      "role": "employee",
+      "department": "Sales",
+      "costCenter": "CC-500",
+      "title": "Account Executive",
+      "managerId": "mgr-1",
+      "union": "Non-union",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-17",
+      "name": "Megan Sullivan",
+      "role": "employee",
+      "department": "Sales",
+      "costCenter": "CC-500",
+      "title": "Sales Coordinator",
+      "managerId": "mgr-1",
+      "union": "Non-union",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-18",
+      "name": "Andre Williams",
+      "role": "employee",
+      "department": "Sales",
+      "costCenter": "CC-550",
+      "title": "Regional Sales Manager",
+      "managerId": "mgr-1",
+      "union": "Non-union",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-19",
+      "name": "Grace Huang",
+      "role": "employee",
+      "department": "Human Resources",
+      "costCenter": "CC-300",
+      "title": "Benefits Coordinator",
+      "managerId": "mgr-2",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-20",
+      "name": "Ethan Moore",
+      "role": "employee",
+      "department": "Human Resources",
+      "costCenter": "CC-300",
+      "title": "Recruiting Specialist",
+      "managerId": "mgr-2",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-21",
+      "name": "Alex Anderson",
+      "role": "employee",
+      "department": "Information Technology",
+      "costCenter": "CC-450",
+      "title": "Software Engineer",
+      "managerId": "mgr-3",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-22",
+      "name": "Jordan Baker",
+      "role": "employee",
+      "department": "Information Technology",
+      "costCenter": "CC-450",
+      "title": "Software Engineer",
+      "managerId": "mgr-3",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-23",
+      "name": "Taylor Campbell",
+      "role": "employee",
+      "department": "Information Technology",
+      "costCenter": "CC-450",
+      "title": "Software Engineer",
+      "managerId": "mgr-3",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-24",
+      "name": "Morgan Diaz",
+      "role": "employee",
+      "department": "Operations",
+      "costCenter": "CC-150",
+      "title": "Scheduling Coordinator",
+      "managerId": "mgr-1",
+      "union": "Non-union",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-25",
+      "name": "Casey Edwards",
+      "role": "employee",
+      "department": "Finance",
+      "costCenter": "CC-200",
+      "title": "Staff Accountant",
+      "managerId": "mgr-2",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-26",
+      "name": "Riley Fisher",
+      "role": "employee",
+      "department": "Finance",
+      "costCenter": "CC-250",
+      "title": "Financial Analyst",
+      "managerId": "mgr-2",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-27",
+      "name": "Quinn Garcia",
+      "role": "employee",
+      "department": "Finance",
+      "costCenter": "CC-200",
+      "title": "Accounts Payable Clerk",
+      "managerId": "mgr-2",
+      "union": "CSU",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-28",
+      "name": "Avery Hayes",
+      "role": "employee",
+      "department": "Finance",
+      "costCenter": "CC-250",
+      "title": "Budget Analyst",
+      "managerId": "mgr-2",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-29",
+      "name": "Cameron Ingram",
+      "role": "employee",
+      "department": "Information Technology",
+      "costCenter": "CC-400",
+      "title": "Software Engineer",
+      "managerId": "mgr-3",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-30",
+      "name": "Drew Jensen",
+      "role": "employee",
+      "department": "Information Technology",
+      "costCenter": "CC-450",
+      "title": "Systems Administrator",
+      "managerId": "mgr-3",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-31",
+      "name": "Hayden Keller",
+      "role": "employee",
+      "department": "Information Technology",
+      "costCenter": "CC-400",
+      "title": "Business Analyst",
+      "managerId": "mgr-3",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-32",
+      "name": "Jamie Lopez",
+      "role": "employee",
+      "department": "Information Technology",
+      "costCenter": "CC-400",
+      "title": "Help Desk Technician",
+      "managerId": "mgr-3",
+      "union": "IBEW",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-33",
+      "name": "Kendall Mitchell",
+      "role": "employee",
+      "department": "Sales",
+      "costCenter": "CC-500",
+      "title": "Account Executive",
+      "managerId": "mgr-1",
+      "union": "Non-union",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-34",
+      "name": "Logan Nguyen",
+      "role": "employee",
+      "department": "Sales",
+      "costCenter": "CC-550",
+      "title": "Sales Coordinator",
+      "managerId": "mgr-1",
+      "union": "Non-union",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-35",
+      "name": "Parker Owens",
+      "role": "employee",
+      "department": "Human Resources",
+      "costCenter": "CC-300",
+      "title": "Benefits Coordinator",
+      "managerId": "mgr-2",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-36",
+      "name": "Reese Price",
+      "role": "employee",
+      "department": "Human Resources",
+      "costCenter": "CC-300",
+      "title": "Recruiting Specialist",
+      "managerId": "mgr-2",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-37",
+      "name": "Sage Reed",
+      "role": "employee",
+      "department": "Operations",
+      "costCenter": "CC-100",
+      "title": "Field Coordinator",
+      "managerId": "mgr-1",
+      "union": "CUPE",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-38",
+      "name": "Skyler Stewart",
+      "role": "employee",
+      "department": "Operations",
+      "costCenter": "CC-150",
+      "title": "Logistics Specialist",
+      "managerId": "mgr-1",
+      "union": "CUPE",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-39",
+      "name": "Terry Turner",
+      "role": "employee",
+      "department": "Operations",
+      "costCenter": "CC-100",
+      "title": "Project Analyst",
+      "managerId": "mgr-1",
+      "union": "Non-union",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-40",
+      "name": "Blake Vasquez",
+      "role": "employee",
+      "department": "Operations",
+      "costCenter": "CC-150",
+      "title": "Scheduling Coordinator",
+      "managerId": "mgr-1",
+      "union": "Non-union",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-41",
+      "name": "Dana Walker",
+      "role": "employee",
+      "department": "Finance",
+      "costCenter": "CC-200",
+      "title": "Staff Accountant",
+      "managerId": "mgr-2",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-42",
+      "name": "Ellis Young",
+      "role": "employee",
+      "department": "Finance",
+      "costCenter": "CC-250",
+      "title": "Financial Analyst",
+      "managerId": "mgr-2",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-43",
+      "name": "Finley Zimmerman",
+      "role": "employee",
+      "department": "Finance",
+      "costCenter": "CC-200",
+      "title": "Accounts Payable Clerk",
+      "managerId": "mgr-2",
+      "union": "CSU",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-44",
+      "name": "Harper Bennett",
+      "role": "employee",
+      "department": "Finance",
+      "costCenter": "CC-250",
+      "title": "Budget Analyst",
+      "managerId": "mgr-2",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-45",
+      "name": "Jesse Cooper",
+      "role": "employee",
+      "department": "Information Technology",
+      "costCenter": "CC-400",
+      "title": "Software Engineer",
+      "managerId": "mgr-3",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-46",
+      "name": "Kai Dixon",
+      "role": "employee",
+      "department": "Information Technology",
+      "costCenter": "CC-450",
+      "title": "Systems Administrator",
+      "managerId": "mgr-3",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-47",
+      "name": "Lane Evans",
+      "role": "employee",
+      "department": "Information Technology",
+      "costCenter": "CC-400",
+      "title": "Business Analyst",
+      "managerId": "mgr-3",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-48",
+      "name": "Micah Foster",
+      "role": "employee",
+      "department": "Information Technology",
+      "costCenter": "CC-400",
+      "title": "Help Desk Technician",
+      "managerId": "mgr-3",
+      "union": "IBEW",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-49",
+      "name": "Noel Gray",
+      "role": "employee",
+      "department": "Sales",
+      "costCenter": "CC-500",
+      "title": "Account Executive",
+      "managerId": "mgr-1",
+      "union": "Non-union",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-50",
+      "name": "Remy Hughes",
+      "role": "employee",
+      "department": "Sales",
+      "costCenter": "CC-550",
+      "title": "Sales Coordinator",
+      "managerId": "mgr-1",
+      "union": "Non-union",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-51",
+      "name": "Priya Sharma",
+      "role": "employee",
+      "department": "Operations",
+      "costCenter": "CC-100",
+      "title": "Quality Inspector",
+      "managerId": "mgr-1",
+      "union": "Non-union",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-52",
+      "name": "Marcus Bell",
+      "role": "employee",
+      "department": "Finance",
+      "costCenter": "CC-200",
+      "title": "Payroll Analyst",
+      "managerId": "mgr-2",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-53",
+      "name": "Elena Vasquez",
+      "role": "employee",
+      "department": "Information Technology",
+      "costCenter": "CC-400",
+      "title": "Data Analyst",
+      "managerId": "mgr-3",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-54",
+      "name": "Tyler O'Neill",
+      "role": "employee",
+      "department": "Sales",
+      "costCenter": "CC-500",
+      "title": "Inside Sales Representative",
+      "managerId": "mgr-1",
+      "union": "Non-union",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-55",
+      "name": "Hannah Kim",
+      "role": "employee",
+      "department": "Human Resources",
+      "costCenter": "CC-300",
+      "title": "HR Coordinator",
+      "managerId": "mgr-2",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-56",
+      "name": "Noah Patterson",
+      "role": "employee",
+      "department": "Operations",
+      "costCenter": "CC-150",
+      "title": "Warehouse Associate",
+      "managerId": "mgr-1",
+      "union": "Non-union",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-57",
+      "name": "Sofia Delgado",
+      "role": "employee",
+      "department": "Finance",
+      "costCenter": "CC-250",
+      "title": "Staff Accountant",
+      "managerId": "mgr-2",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-58",
+      "name": "Liam Okonkwo",
+      "role": "employee",
+      "department": "Information Technology",
+      "costCenter": "CC-450",
+      "title": "Network Technician",
+      "managerId": "mgr-3",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-59",
+      "name": "Chloe Nguyen",
+      "role": "employee",
+      "department": "Sales",
+      "costCenter": "CC-550",
+      "title": "Business Development Rep",
+      "managerId": "mgr-1",
+      "union": "Non-union",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-60",
+      "name": "Omar Haddad",
+      "role": "employee",
+      "department": "Human Resources",
+      "costCenter": "CC-300",
+      "title": "HR Generalist",
+      "managerId": "mgr-2",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-61",
+      "name": "Isabella Rossi",
+      "role": "employee",
+      "department": "Operations",
+      "costCenter": "CC-100",
+      "title": "Dispatcher",
+      "managerId": "mgr-1",
+      "union": "Non-union",
+      "supervisorId": "sup-1"
+    },
+    {
+      "id": "emp-62",
+      "name": "Devon Clarke",
+      "role": "employee",
+      "department": "Finance",
+      "costCenter": "CC-200",
+      "title": "Accounts Receivable Clerk",
+      "managerId": "mgr-2",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    },
+    {
+      "id": "emp-63",
+      "name": "Yuki Tanaka",
+      "role": "employee",
+      "department": "Information Technology",
+      "costCenter": "CC-400",
+      "title": "QA Analyst",
+      "managerId": "mgr-3",
+      "union": "Non-union",
+      "supervisorId": "mgr-1"
+    }
+  ]
+}

@@ -472,7 +472,7 @@ export function PerformanceProvider({
     if (dataSource === 'api') {
       if (!apiBaseUrl) return
       const timer = window.setTimeout(() => {
-        void savePerformanceState(apiBaseUrl, payload).catch((err) => {
+        void savePerformanceState(apiBaseUrl, payload).catch((err: unknown) => {
           console.error(err)
         })
       }, 400)

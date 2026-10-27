@@ -9,7 +9,6 @@ import {
 import { usePerformance } from '../context/PerformanceContext'
 import type { EmployeeDetailsTab, PerformanceReview, ReviewCycle, ReviewTemplate } from '../types'
 import { formatReviewPeriod, isLaunchedReviewCycle } from '../utils/status'
-import { isReviewManager } from '../utils/viewerContext'
 import { CurrentStageDueLine } from './CurrentStageDueLine'
 import { StatusBadge } from './StatusBadge'
 import { PerformanceReviewDetailContent } from './PerformanceReviewDetailContent'
@@ -300,6 +299,12 @@ export function EmployeeDetails({ myPerformanceVisit = 0 }: { myPerformanceVisit
     ) : (
       <EmployeeMyReviewsPanel
         reviews={employeeReviews}
+        audience="self"
+        emptyReviewsLabel={
+          isOwnEmployeeView
+            ? 'No performance reviews are assigned to you yet.'
+            : 'No performance reviews for this employee yet.'
+        }
         onSelfEval={(reviewId) => {
           selectReview(reviewId)
           setPerformanceMode('self_eval')
@@ -476,76 +481,25 @@ export function EmployeeDetails({ myPerformanceVisit = 0 }: { myPerformanceVisit
             }}
           />
         ) : (
-          <div className="flex flex-col gap-3">
-            {employeeReviews.length === 0 ? (
-              <SectionCard title="Performance Reviews">
-                <p className="text-[13px] text-[#6a6e79]">
-                  No performance reviews are assigned to this employee yet.
-                </p>
-              </SectionCard>
-            ) : (
-              employeeReviews.map(({ review, cycle, template }) => {
-                const highlighted = review.id === state.selectedReviewId
-                return (
-                  <section
-                    key={review.id}
-                    className={`rounded-[4px] border bg-white p-4 shadow-sm ${
-                      highlighted ? 'border-[#0d3560] ring-2 ring-[#0d3560]/20' : 'border-[#e0e1e9]'
-                    }`}
-                  >
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="text-[14px] font-bold text-[#252a2e]">{cycle?.name ?? 'Review cycle'}</h3>
-                      <StatusBadge status={review.status} cycle={cycle} review={review} />
-                    </div>
-                    <p className="text-[13px] text-[#252a2e]">{template?.name ?? '—'}</p>
-                    {cycle && (
-                      <div className="mt-1 flex flex-col gap-0.5">
-                        <p className="text-[13px] text-[#6a6e79]">
-                          {formatReviewPeriod(cycle.startDate, cycle.dueDate)}
-                        </p>
-                        <CurrentStageDueLine
-                          cycle={cycle}
-                          review={review}
-                          activePersonId={state.activePersonId}
-                          size="sm"
-                        />
-                      </div>
-                    )}
-                    {cycle && (
-                      <div className="mt-1">
-                        <ReviewOverallRatingInline cycle={cycle} review={review} />
-                      </div>
-                    )}
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {isReviewManager(state.activePersonId, review) &&
-                        review.status === 'manager_pending' && (
-                        <ModusWcButton
-                          variant="filled"
-                          color="primary"
-                          size="sm"
-                          onButtonClick={() => {
-                            selectReview(review.id)
-                            setView('manager_review')
-                          }}
-                        >
-                          <ModusWcIcon name="pencil" size="xs" decorative />
-                          Complete review
-                        </ModusWcButton>
-                      )}
-                      <ModusWcButton
-                        variant="outlined"
-                        color="tertiary"
-                        size="sm"
-                        onButtonClick={() => openReviewDetail(review.id)}
-                      >
-                        View review details
-                      </ModusWcButton>
-                    </div>
-                  </section>
-                )
-              })
-            )}
-          </div>
+          <EmployeeMyReviewsPanel
+            reviews={employeeReviews}
+            audience="stakeholder"
+            activePersonId={state.activePersonId}
+            emptyReviewsLabel="No performance reviews are assigned to this employee yet."
+            onSelfEval={(reviewId) => {
+              selectReview(reviewId)
+              setPerformanceMode('self_eval')
+            }}
+            onAcknowledge={(reviewId) => {
+              selectReview(reviewId)
+              setPerformanceMode('acknowledgement')
+            }}
+            onViewDetails={openReviewDetail}
+            onManagerReview={(reviewId) => {
+              selectReview(reviewId)
+              setView('manager_review')
+            }}
+          />
         )}
       </div>
 

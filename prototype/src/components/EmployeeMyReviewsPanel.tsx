@@ -1,16 +1,21 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   ModusWcAlert,
   ModusWcButton,
   ModusWcCard,
   ModusWcIcon,
+  ModusWcTabs,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
+import type { ITab } from '@trimble-oss/moduswebcomponents'
 import type { PerformanceReview, ReviewCycle, ReviewTemplate } from '../types'
 import { ReviewScheduleLines } from './ReviewScheduleLines'
 import { StatusBadge } from './StatusBadge'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
+import { isReviewManager } from '../utils/viewerContext'
 import { needsEmployeeSelfEval, reviewOverallRatingLabel } from '../utils/workflow'
+
+type ReviewsAudience = 'self' | 'stakeholder'
 
 type ReviewRow = {
   review: PerformanceReview
@@ -20,26 +25,43 @@ type ReviewRow = {
 
 type EmployeeMyReviewsPanelProps = {
   reviews: ReviewRow[]
+  audience?: ReviewsAudience
+  activePersonId?: string
+  emptyReviewsLabel?: string
   onSelfEval: (reviewId: string) => void
   onAcknowledge: (reviewId: string) => void
   onViewDetails: (reviewId: string) => void
+  onManagerReview?: (reviewId: string) => void
 }
 
 function ReviewCard({
   row,
+  audience,
+  activePersonId,
   onSelfEval,
   onAcknowledge,
   onViewDetails,
+  onManagerReview,
 }: {
   row: ReviewRow
+  audience: ReviewsAudience
+  activePersonId?: string
   onSelfEval: (reviewId: string) => void
   onAcknowledge: (reviewId: string) => void
   onViewDetails: (reviewId: string) => void
+  onManagerReview?: (reviewId: string) => void
 }) {
   const { review, cycle, template } = row
   const needsSelfEval = cycle ? needsEmployeeSelfEval(cycle, review) : review.status === 'self_eval_pending'
   const needsAcknowledgement = review.status === 'acknowledgement_pending'
   const overallRatingLabel = cycle ? reviewOverallRatingLabel(cycle, review) : null
+  const showEmployeeActions = audience === 'self'
+  const showManagerReview =
+    audience === 'stakeholder' &&
+    activePersonId &&
+    onManagerReview &&
+    isReviewManager(activePersonId, review) &&
+    review.status === 'manager_pending'
 
   return (
     <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
@@ -75,7 +97,7 @@ function ReviewCard({
           />
         )}
         <div className="mt-1 flex flex-wrap gap-2">
-          {needsSelfEval && (
+          {showEmployeeActions && needsSelfEval && (
             <ModusWcButton
               variant="filled"
               color="primary"
@@ -86,7 +108,7 @@ function ReviewCard({
               Complete self-evaluation
             </ModusWcButton>
           )}
-          {needsAcknowledgement && (
+          {showEmployeeActions && needsAcknowledgement && (
             <ModusWcButton
               variant="filled"
               color="primary"
@@ -97,6 +119,17 @@ function ReviewCard({
               Accept review
             </ModusWcButton>
           )}
+          {showManagerReview ? (
+            <ModusWcButton
+              variant="filled"
+              color="primary"
+              size="sm"
+              onButtonClick={() => onManagerReview?.(review.id)}
+            >
+              <ModusWcIcon name="pencil" size="xs" decorative />
+              Complete review
+            </ModusWcButton>
+          ) : null}
           <ModusWcButton
             variant="outlined"
             color="tertiary"
@@ -111,60 +144,48 @@ function ReviewCard({
   )
 }
 
-function ReviewSection({
-  title,
-  description,
+function ReviewList({
   rows,
   emptyLabel,
+  audience,
+  activePersonId,
   onSelfEval,
   onAcknowledge,
   onViewDetails,
+  onManagerReview,
 }: {
-  title: string
-  description?: string
   rows: ReviewRow[]
   emptyLabel: string
+  audience: ReviewsAudience
+  activePersonId?: string
   onSelfEval: (reviewId: string) => void
   onAcknowledge: (reviewId: string) => void
   onViewDetails: (reviewId: string) => void
+  onManagerReview?: (reviewId: string) => void
 }) {
+  if (rows.length === 0) {
+    return (
+      <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
+        <ModusWcTypography hierarchy="p" size="sm" label={emptyLabel} />
+      </ModusWcCard>
+    )
+  }
+
   return (
-    <section className="flex flex-col gap-2" aria-labelledby={`${title.replace(/\s+/g, '-')}-heading`}>
-      <div>
-        <ModusWcTypography
-          id={`${title.replace(/\s+/g, '-')}-heading`}
-          hierarchy="h4"
-          size="md"
-          weight="semibold"
-          label={title}
+    <div className="flex flex-col gap-3">
+      {rows.map((row) => (
+        <ReviewCard
+          key={row.review.id}
+          row={row}
+          audience={audience}
+          activePersonId={activePersonId}
+          onSelfEval={onSelfEval}
+          onAcknowledge={onAcknowledge}
+          onViewDetails={onViewDetails}
+          onManagerReview={onManagerReview}
         />
-        {description ? (
-          <ModusWcTypography
-            hierarchy="p"
-            size="sm"
-            customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-            label={description}
-          />
-        ) : null}
-      </div>
-      {rows.length === 0 ? (
-        <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
-          <ModusWcTypography hierarchy="p" size="sm" label={emptyLabel} />
-        </ModusWcCard>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {rows.map((row) => (
-            <ReviewCard
-              key={row.review.id}
-              row={row}
-              onSelfEval={onSelfEval}
-              onAcknowledge={onAcknowledge}
-              onViewDetails={onViewDetails}
-            />
-          ))}
-        </div>
-      )}
-    </section>
+      ))}
+    </div>
   )
 }
 
@@ -176,137 +197,134 @@ function sortRowsByDueDate(rows: ReviewRow[]): ReviewRow[] {
   })
 }
 
+function todoSortPriority(row: ReviewRow): number {
+  const needsSelfEval = row.cycle
+    ? needsEmployeeSelfEval(row.cycle, row.review)
+    : row.review.status === 'self_eval_pending'
+  if (needsSelfEval) return 0
+  if (row.review.status === 'acknowledgement_pending') return 1
+  if (row.review.status === 'not_started') return 2
+  return 3
+}
+
+function sortTodoRows(rows: ReviewRow[]): ReviewRow[] {
+  return [...rows].sort((a, b) => {
+    const priority = todoSortPriority(a) - todoSortPriority(b)
+    if (priority !== 0) return priority
+    const aDue = a.cycle?.dueDate ?? ''
+    const bDue = b.cycle?.dueDate ?? ''
+    return bDue.localeCompare(aDue)
+  })
+}
+
+function partitionReviews(reviews: ReviewRow[]) {
+  const todo: ReviewRow[] = []
+  const completed: ReviewRow[] = []
+
+  for (const row of reviews) {
+    if (row.review.status === 'completed') {
+      completed.push(row)
+    } else {
+      todo.push(row)
+    }
+  }
+
+  return {
+    todo: sortTodoRows(todo),
+    completed: sortRowsByDueDate(completed),
+  }
+}
+
 export function EmployeeMyReviewsPanel({
   reviews,
+  audience = 'self',
+  activePersonId,
+  emptyReviewsLabel = 'No performance reviews are assigned yet.',
   onSelfEval,
   onAcknowledge,
   onViewDetails,
+  onManagerReview,
 }: EmployeeMyReviewsPanelProps) {
-  const { awaitingAcknowledgment, notStarted, completed, inProgress, selfEvalDue } = useMemo(() => {
-    const awaitingAcknowledgmentRows: ReviewRow[] = []
-    const notStartedRows: ReviewRow[] = []
-    const completedRows: ReviewRow[] = []
-    const inProgressRows: ReviewRow[] = []
-    const selfEvalDueRows: ReviewRow[] = []
+  const [activeTabIndex, setActiveTabIndex] = useState(0)
 
-    for (const row of reviews) {
-      const needsSelfEval = row.cycle
-        ? needsEmployeeSelfEval(row.cycle, row.review)
-        : row.review.status === 'self_eval_pending'
+  const { todo, completed } = useMemo(() => partitionReviews(reviews), [reviews])
 
-      if (needsSelfEval) {
-        selfEvalDueRows.push(row)
-        continue
-      }
+  const hasSelfEvalDue = todo.some((row) =>
+    row.cycle ? needsEmployeeSelfEval(row.cycle, row.review) : row.review.status === 'self_eval_pending',
+  )
+  const hasAcknowledgementDue = todo.some((row) => row.review.status === 'acknowledgement_pending')
 
-      switch (row.review.status) {
-        case 'completed':
-          completedRows.push(row)
-          break
-        case 'acknowledgement_pending':
-          awaitingAcknowledgmentRows.push(row)
-          break
-        case 'not_started':
-          notStartedRows.push(row)
-          break
-        default:
-          inProgressRows.push(row)
-      }
-    }
-
-    return {
-      awaitingAcknowledgment: sortRowsByDueDate(awaitingAcknowledgmentRows),
-      notStarted: sortRowsByDueDate(notStartedRows),
-      completed: sortRowsByDueDate(completedRows),
-      inProgress: sortRowsByDueDate(inProgressRows),
-      selfEvalDue: sortRowsByDueDate(selfEvalDueRows),
-    }
-  }, [reviews])
+  const tabs: ITab[] = useMemo(
+    () => [
+      { label: todo.length > 0 ? `To do (${todo.length})` : 'To do' },
+      { label: completed.length > 0 ? `Completed (${completed.length})` : 'Completed' },
+    ],
+    [todo.length, completed.length],
+  )
 
   if (reviews.length === 0) {
     return (
       <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
-        <ModusWcTypography hierarchy="p" size="md" label="No performance reviews are assigned to you yet." />
+        <ModusWcTypography hierarchy="p" size="md" label={emptyReviewsLabel} />
       </ModusWcCard>
     )
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      {selfEvalDue.length > 0 && (
-        <ModusWcAlert
-          variant="warning"
-          alertTitle="Self-evaluation due"
-          alertDescription="Complete your self-evaluation so your manager can continue the review."
+    <div className="flex flex-col gap-3">
+      <div className="tq-employee-reviews-tabs min-w-0">
+        <ModusWcTabs
+          tabs={tabs}
+          activeTabIndex={activeTabIndex}
+          tabStyle="boxed"
+          size="sm"
+          customClass="tq-employee-reviews-tabs__strip"
+          aria-label="Performance reviews"
+          onTabChange={(e: CustomEvent<{ previousTab: number; newTab: number }>) =>
+            setActiveTabIndex(e.detail.newTab)
+          }
         />
-      )}
+      </div>
 
-      {selfEvalDue.length > 0 && (
-        <ReviewSection
-          title="Complete your review"
-          description="Answer the self-evaluation questions for your active review cycle."
-          rows={selfEvalDue}
-          emptyLabel=""
-          onSelfEval={onSelfEval}
-          onAcknowledge={onAcknowledge}
-          onViewDetails={onViewDetails}
-        />
-      )}
-
-      {awaitingAcknowledgment.length > 0 && (
-        <>
+      <div hidden={activeTabIndex !== 0} aria-hidden={activeTabIndex !== 0} className="flex flex-col gap-3">
+        {audience === 'self' && hasSelfEvalDue ? (
+          <ModusWcAlert
+            variant="warning"
+            alertTitle="Self-evaluation due"
+            alertDescription="Complete your self-evaluation so your manager can continue the review."
+          />
+        ) : null}
+        {audience === 'self' && hasAcknowledgementDue ? (
           <ModusWcAlert
             variant="info"
             alertTitle="Review acceptance"
             alertDescription="These reviews are ready for your acceptance. Read the summary, choose agree or disagree, and sign."
           />
-          <ReviewSection
-            title="Awaiting acknowledgment"
-            description="Manager feedback is complete — record your acceptance to finish the review."
-            rows={awaitingAcknowledgment}
-            emptyLabel=""
-            onSelfEval={onSelfEval}
-            onAcknowledge={onAcknowledge}
-            onViewDetails={onViewDetails}
-          />
-        </>
-      )}
-
-      {notStarted.length > 0 && (
-        <ReviewSection
-          title="Not started"
-          description="Reviews that have not been started yet."
-          rows={notStarted}
-          emptyLabel=""
+        ) : null}
+        <ReviewList
+          rows={todo}
+          emptyLabel="No open reviews. Switch to Completed to see finished reviews."
+          audience={audience}
+          activePersonId={activePersonId}
           onSelfEval={onSelfEval}
           onAcknowledge={onAcknowledge}
           onViewDetails={onViewDetails}
+          onManagerReview={onManagerReview}
         />
-      )}
+      </div>
 
-      {inProgress.length > 0 && (
-        <ReviewSection
-          title="In progress"
-          description="Self-evaluation or manager review is still underway."
-          rows={inProgress}
-          emptyLabel=""
-          onSelfEval={onSelfEval}
-          onAcknowledge={onAcknowledge}
-          onViewDetails={onViewDetails}
-        />
-      )}
-
-      {completed.length > 0 && (
-        <ReviewSection
-          title="Completed"
-          description="Finished reviews, including signed acceptances."
+      <div hidden={activeTabIndex !== 1} aria-hidden={activeTabIndex !== 1} className="flex flex-col gap-3">
+        <ReviewList
           rows={completed}
-          emptyLabel=""
+          emptyLabel="No completed reviews yet."
+          audience={audience}
+          activePersonId={activePersonId}
           onSelfEval={onSelfEval}
           onAcknowledge={onAcknowledge}
           onViewDetails={onViewDetails}
+          onManagerReview={onManagerReview}
         />
-      )}
+      </div>
     </div>
   )
 }

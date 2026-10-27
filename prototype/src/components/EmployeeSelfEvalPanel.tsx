@@ -10,7 +10,7 @@ import { readInputString } from '../utils/modusFormEvents'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { PageBackButton } from './PageBackButton'
 import { seedQuestionAnswerKeys } from '../utils/questionReview'
-import { SelfEvaluationFooter } from './SelfEvaluationFooter'
+import { SelfEvaluationActions } from './SelfEvaluationFooter'
 import { SupportingDocumentsSection } from './SupportingDocumentsSection'
 import { selfEvalAllowsSupportingDocuments } from '../utils/supportingDocuments'
 
@@ -55,17 +55,20 @@ export function EmployeeSelfEvalPanel({ reviewId, onBack, onSubmitted }: Employe
       className={`tq-self-eval-page${state.layoutMode === 'mobile' ? ' tq-self-eval-page--inset' : ''}`}
     >
       <div className="tq-self-eval-page__main flex flex-col gap-3">
-        <div className="flex min-w-0 items-start gap-3">
-          <PageBackButton onBack={onBack} ariaLabel="Back to my reviews" />
-          <div className="min-w-0">
-            <ModusWcTypography hierarchy="h4" size="md" weight="semibold" label="Self-Evaluation" />
-            <ModusWcTypography
-              hierarchy="p"
-              size="sm"
-              customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-              label={template.description}
-            />
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <PageBackButton onBack={onBack} ariaLabel="Back to my reviews" />
+            <div className="min-w-0">
+              <ModusWcTypography hierarchy="h4" size="md" weight="semibold" label="Self-Evaluation" />
+              <ModusWcTypography
+                hierarchy="p"
+                size="sm"
+                customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                label={template.description}
+              />
+            </div>
           </div>
+          <SelfEvaluationActions onSaveForLater={onBack} onSubmit={handleSubmit} />
         </div>
 
         <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
@@ -100,8 +103,6 @@ export function EmployeeSelfEvalPanel({ reviewId, onBack, onSubmitted }: Employe
           </ModusWcCard>
         ) : null}
       </div>
-
-      <SelfEvaluationFooter onSaveForLater={onBack} onSubmit={handleSubmit} />
     </div>
   )
 }

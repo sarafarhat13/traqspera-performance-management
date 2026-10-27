@@ -11,7 +11,7 @@ import { isReviewEmployee } from '../utils/viewerContext'
 import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { seedQuestionAnswerKeys } from '../utils/questionReview'
-import { SelfEvaluationFooter } from './SelfEvaluationFooter'
+import { SelfEvaluationActions } from './SelfEvaluationFooter'
 import { SupportingDocumentsSection } from './SupportingDocumentsSection'
 import { selfEvalAllowsSupportingDocuments } from '../utils/supportingDocuments'
 
@@ -71,13 +71,16 @@ export function SelfEvaluationForm() {
 
   return (
     <TraqsperaPageBody>
-      <div className={`tq-self-eval-page tq-self-eval-page--viewport${isMobile ? ' tq-self-eval-page--narrow' : ''}`}>
+      <div className={`tq-self-eval-page${isMobile ? ' tq-self-eval-page--narrow' : ''}`}>
         <div className="tq-self-eval-page__main flex flex-col gap-3">
           <TraqsperaPageHeader
             title="Self-evaluation"
             subtitle={template.description}
             onBack={handleBack}
             backAriaLabel="Back"
+            actions={
+              <SelfEvaluationActions onSaveForLater={handleBack} onSubmit={handleSubmit} />
+            }
           />
 
           <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
@@ -112,8 +115,6 @@ export function SelfEvaluationForm() {
             </ModusWcCard>
           ) : null}
         </div>
-
-        <SelfEvaluationFooter onSaveForLater={handleBack} onSubmit={handleSubmit} />
       </div>
     </TraqsperaPageBody>
   )

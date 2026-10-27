@@ -24,6 +24,24 @@ export function statusForEmployeeRework(cycle: ReviewCycle): ReviewStatus | null
   return 'self_eval_pending'
 }
 
+/** Status when HR/manager sends a submitted review back to the manager evaluation step. */
+export function statusForManagerRework(
+  cycle: ReviewCycle,
+  review: PerformanceReview,
+): ReviewStatus {
+  if (cycleUsesParallelKickoff(cycle) && review.selfEval?.completedAt) {
+    return 'parallel_review_pending'
+  }
+  return 'manager_pending'
+}
+
+export type ReviewReturnTarget = 'employee' | 'manager'
+
+/** After manager submit, return can reopen manager review or employee self-evaluation. */
+export function canChooseReviewReturnTarget(review: PerformanceReview): boolean {
+  return Boolean(review.managerReview?.completedAt)
+}
+
 export function canReturnReviewToEmployee(
   review: PerformanceReview,
   cycle: ReviewCycle | undefined,

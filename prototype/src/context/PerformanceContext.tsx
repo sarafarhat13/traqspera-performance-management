@@ -52,6 +52,8 @@ import {
 import {
   canReturnReviewToEmployee,
   statusForEmployeeRework,
+  statusForManagerRework,
+  type ReviewReturnTarget,
 } from '../utils/reviewPushBack'
 import { resolveManagerDashboardPersonId } from '../utils/managerDashboardContext'
 import {
@@ -399,7 +401,7 @@ interface PerformanceContextValue {
     supportingDocuments?: SupportingDocumentAttachment[],
   ) => void
   submitReviewAcceptance: (reviewId: string, submission: ReviewAcceptanceSubmission) => void
-  returnReviewToEmployee: (reviewId: string, note?: string) => boolean
+  returnReviewToEmployee: (reviewId: string, note?: string, target?: ReviewReturnTarget) => boolean
   updateReviewManager: (reviewId: string, managerId: string) => void
   getPerson: (id: string) => AppState['people'][0] | undefined
   getTemplate: (id: string) => ReviewTemplate | undefined
@@ -1041,42 +1043,70 @@ export function PerformanceProvider({
     [],
   )
 
-  const returnReviewToEmployee = useCallback((reviewId: string, note?: string) => {
-    let applied = false
-    setState((s) => {
-      const review = s.reviews.find((r) => r.id === reviewId)
-      if (!review) return s
-      const cycle = s.cycles.find((c) => c.id === review.cycleId)
-      const viewer = s.people.find((p) => p.id === s.activePersonId)
-      if (!canReturnReviewToEmployee(review, cycle, viewer, s.people)) return s
-      const nextStatus = cycle ? statusForEmployeeRework(cycle) : null
-      if (!nextStatus) return s
+  const returnReviewToEmployee = useCallback(
+    (reviewId: string, note?: string, target: ReviewReturnTarget = 'employee') => {
+      let applied = false
+      setState((s) => {
+        const review = s.reviews.find((r) => r.id === reviewId)
+        if (!review) return s
+        const cycle = s.cycles.find((c) => c.id === review.cycleId)
+        const viewer = s.people.find((p) => p.id === s.activePersonId)
+        if (!canReturnReviewToEmployee(review, cycle, viewer, s.people)) return s
+        if (!cycle) return s
 
-      const trimmedNote = note?.trim()
-      applied = true
-      return {
-        ...s,
-        reviews: s.reviews.map((r) => {
-          if (r.id !== reviewId) return r
-          const selfEval = r.selfEval
-            ? { ...r.selfEval, completedAt: undefined }
-            : r.selfEval
+        const trimmedNote = note?.trim()
+        const returnedMeta = {
+          returnedAt: new Date().toISOString(),
+          returnedByPersonId: s.activePersonId,
+          ...(trimmedNote ? { note: trimmedNote } : {}),
+        }
+
+        if (target === 'manager') {
+          if (!review.managerReview?.completedAt) return s
+          applied = true
           return {
-            ...r,
-            status: nextStatus,
-            selfEval,
-            acknowledgement: undefined,
-            returnedToEmployee: {
-              returnedAt: new Date().toISOString(),
-              returnedByPersonId: s.activePersonId,
-              ...(trimmedNote ? { note: trimmedNote } : {}),
-            },
+            ...s,
+            reviews: s.reviews.map((r) => {
+              if (r.id !== reviewId) return r
+              const managerReview = r.managerReview
+                ? { ...r.managerReview, completedAt: undefined }
+                : r.managerReview
+              return {
+                ...r,
+                status: statusForManagerRework(cycle, r),
+                managerReview,
+                acknowledgement: undefined,
+                returnedToEmployee: undefined,
+              }
+            }),
           }
-        }),
-      }
-    })
-    return applied
-  }, [])
+        }
+
+        const nextStatus = statusForEmployeeRework(cycle)
+        if (!nextStatus) return s
+
+        applied = true
+        return {
+          ...s,
+          reviews: s.reviews.map((r) => {
+            if (r.id !== reviewId) return r
+            const selfEval = r.selfEval
+              ? { ...r.selfEval, completedAt: undefined }
+              : r.selfEval
+            return {
+              ...r,
+              status: nextStatus,
+              selfEval,
+              acknowledgement: undefined,
+              returnedToEmployee: returnedMeta,
+            }
+          }),
+        }
+      })
+      return applied
+    },
+    [],
+  )
 
   const updateReviewManager = useCallback((reviewId: string, managerId: string) => {
     setState((s) => ({

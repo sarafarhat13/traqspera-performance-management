@@ -4,12 +4,17 @@ import {
   ModusWcButton,
   ModusWcIcon,
   ModusWcModal,
+  ModusWcRadio,
   ModusWcTextarea,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
 import { usePerformance } from '../context/PerformanceContext'
 import { readInputString } from '../utils/modusFormEvents'
-import { canReturnReviewToEmployee } from '../utils/reviewPushBack'
+import {
+  canChooseReviewReturnTarget,
+  canReturnReviewToEmployee,
+  type ReviewReturnTarget,
+} from '../utils/reviewPushBack'
 import { formatDate } from '../utils/status'
 
 function returnReviewModalId(reviewId: string): string {
@@ -41,36 +46,56 @@ export function ReturnReviewToEmployeeAction({
   const employee = review ? getPerson(review.employeeId) : undefined
 
   const [note, setNote] = useState('')
+  const [returnTarget, setReturnTarget] = useState<ReviewReturnTarget>('employee')
   const [submitError, setSubmitError] = useState('')
 
   const canReturn = review && canReturnReviewToEmployee(review, cycle, viewer, state.people)
+  const chooseReturnTarget = review ? canChooseReviewReturnTarget(review) : false
 
   const handleOpen = useCallback(() => {
     setNote('')
+    setReturnTarget('employee')
     setSubmitError('')
     openReturnModal(reviewId)
   }, [reviewId])
 
   const handleConfirm = useCallback(() => {
-    const ok = returnReviewToEmployee(reviewId, note)
+    const ok = returnReviewToEmployee(reviewId, note, chooseReturnTarget ? returnTarget : 'employee')
     if (!ok) {
-      setSubmitError('Unable to return this review. Confirm the cycle is active and self-evaluation is enabled.')
+      setSubmitError(
+        returnTarget === 'manager'
+          ? 'Unable to return this review to the manager. Confirm the cycle is still active.'
+          : 'Unable to return this review. Confirm the cycle is active and self-evaluation is enabled.',
+      )
       return
     }
     closeReturnModal(reviewId)
     onReturned?.()
-  }, [note, onReturned, returnReviewToEmployee, reviewId])
+  }, [chooseReturnTarget, note, onReturned, returnReviewToEmployee, returnTarget, reviewId])
 
   const managerPhase =
     review?.status === 'manager_pending' || review?.status === 'parallel_review_pending'
   const managerSubmitted = Boolean(review?.managerReview?.completedAt)
-  const modalDescription = managerPhase
-    ? `Send ${employee?.name ?? 'this employee'}'s review back to self-evaluation so they can complete or update missing sections. ${
-        managerSubmitted
-          ? 'Submitted manager feedback stays on file.'
-          : 'Any in-progress manager review draft is kept.'
-      }`
-    : `Send ${employee?.name ?? 'this employee'}'s review back to self-evaluation so they can complete or update missing sections. Manager feedback stays on file; employee acknowledgment is cleared.`
+
+  const modalDescription =
+    chooseReturnTarget && returnTarget === 'manager'
+      ? `Reopen manager evaluation for ${employee?.name ?? 'this employee'}. Their submitted manager review becomes editable again; employee acknowledgment is cleared.`
+      : chooseReturnTarget && returnTarget === 'employee'
+        ? `Send ${employee?.name ?? 'this employee'}'s review back to self-evaluation. Submitted manager feedback stays on file; employee acknowledgment is cleared.`
+        : managerPhase
+          ? `Send ${employee?.name ?? 'this employee'}'s review back to self-evaluation so they can complete or update missing sections. ${
+              managerSubmitted
+                ? 'Submitted manager feedback stays on file.'
+                : 'Any in-progress manager review draft is kept.'
+            }`
+          : `Send ${employee?.name ?? 'this employee'}'s review back to self-evaluation so they can complete or update missing sections. Manager feedback stays on file; employee acknowledgment is cleared.`
+
+  const confirmLabel =
+    chooseReturnTarget && returnTarget === 'manager'
+      ? 'Return to manager'
+      : chooseReturnTarget
+        ? 'Return to employee'
+        : 'Return to pending'
 
   if (!canReturn || !review || !employee) return null
 
@@ -88,11 +113,41 @@ export function ReturnReviewToEmployeeAction({
         showClose
         aria-label="Return review to employee"
       >
-        <span slot="header">Return review to employee</span>
+        <span slot="header">
+          {chooseReturnTarget ? 'Return review for updates' : 'Return review to employee'}
+        </span>
         <div slot="content" className="flex flex-col gap-3">
+          {chooseReturnTarget ? (
+            <div className="flex flex-col gap-2">
+              <ModusWcTypography
+                hierarchy="p"
+                size="sm"
+                weight="semibold"
+                label="Send back to"
+              />
+              <div className="flex flex-col gap-2">
+                <ModusWcRadio
+                  name={`return-review-target-${reviewId}`}
+                  size="sm"
+                  label="Employee self-evaluation"
+                  value={returnTarget === 'employee'}
+                  onInputChange={() => setReturnTarget('employee')}
+                />
+                <ModusWcRadio
+                  name={`return-review-target-${reviewId}`}
+                  size="sm"
+                  label="Manager evaluation"
+                  value={returnTarget === 'manager'}
+                  onInputChange={() => setReturnTarget('manager')}
+                />
+              </div>
+            </div>
+          ) : null}
           <ModusWcTypography hierarchy="p" size="md" label={modalDescription} />
           <ModusWcTextarea
-            label="Message to employee (optional)"
+            label={
+              returnTarget === 'manager' ? 'Message to manager (optional)' : 'Message to employee (optional)'
+            }
             size="sm"
             value={note}
             onInputChange={(e) => setNote(readInputString(e as CustomEvent))}
@@ -113,7 +168,7 @@ export function ReturnReviewToEmployeeAction({
           </ModusWcButton>
           <ModusWcButton variant="filled" color="primary" size="sm" onButtonClick={handleConfirm}>
             <ModusWcIcon name="refresh" size="xs" decorative />
-            Return to pending
+            {confirmLabel}
           </ModusWcButton>
         </div>
       </ModusWcModal>

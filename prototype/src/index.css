@@ -1800,6 +1800,16 @@ modus-wc-card [slot='footer'].tq-review-acceptance-footer {
   width: 100%;
 }
 
+.tq-dashboard-filter-bar--compact .tq-dashboard-filter-bar__chips {
+  align-self: flex-end;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tq-dashboard-filter-bar--compact .tq-dashboard-filter-bar__view {
+  align-self: flex-end;
+}
+
 .tq-dashboard-filter-bar__grow {
   flex: 1 1 auto;
   min-width: 0.5rem;

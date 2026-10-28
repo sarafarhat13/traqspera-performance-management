@@ -9,6 +9,7 @@ import { usePerformance } from '../context/PerformanceContext'
 import { computeCycleStats } from '../utils/cycleStats'
 import {
   countActiveDashboardFilters,
+  computeDashboardPackageCounts,
   createDefaultDashboardFilters,
   filterDashboardCycles,
   cycleReviewersSummary,
@@ -60,6 +61,16 @@ export function HRAdminDashboard() {
     const demo = list.find((cycle) => cycle.id === DEMO_LISA_FINAL_APPROVAL_CYCLE_ID)
     if (!demo) return list
     return [demo, ...list.filter((cycle) => cycle.id !== DEMO_LISA_FINAL_APPROVAL_CYCLE_ID)]
+  }, [state.cycles, state.reviews, state.people, filters])
+
+  const packageStatusCounts = useMemo(() => {
+    const { status: _status, ...filtersWithoutStatus } = filters
+    return computeDashboardPackageCounts(
+      state.cycles,
+      state.reviews,
+      state.people,
+      filtersWithoutStatus,
+    )
   }, [state.cycles, state.reviews, state.people, filters])
 
   const activeFilterCount = useMemo(() => countActiveDashboardFilters(filters), [filters])
@@ -167,11 +178,13 @@ export function HRAdminDashboard() {
 
           <PerformanceDashboardFilterBar
             filters={filters}
+            counts={packageStatusCounts}
             reviewerOptions={reviewerOptions}
             activeFilterCount={activeFilterCount}
             filterFieldsKey={filterFieldsKey}
             viewMode={viewMode}
-            showStatusChips={false}
+            showStatusChips={true}
+            statusFilterMode="package"
             showFilterPanel={false}
             showReviewerInBar={true}
             searchAriaLabel="Search by cycle name or reviewer"
@@ -186,7 +199,7 @@ export function HRAdminDashboard() {
                 hierarchy="p"
                 size="sm"
                 customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                label="No review cycles match the current filters. Try adjusting search or reviewer."
+                label="No review cycles match the current filters. Try adjusting search, reviewer, or status."
               />
               {activeFilterCount > 0 && (
                 <div className="mt-3">

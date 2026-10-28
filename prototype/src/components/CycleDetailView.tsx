@@ -37,15 +37,19 @@ import {
   titleOptionsFromPeople,
   unionOptionsFromPeople,
   type DashboardFilters,
+  type DashboardReviewStatusFilter,
 } from '../utils/dashboardFilters'
 import {
   cycleIncludesRatingScale,
+  getReviewCycleStageChipStatus,
+  type CycleStageChipStatus,
   getReviewDisplayStatus,
   getReviewWorkflowStage,
   reviewOverallRatingLabel,
   stepDeadlineOrCycleEnd,
   WORKFLOW_STEP_META,
   workflowFromLegacy,
+  type CycleWorkflowStageCard,
 } from '../utils/workflow'
 import type { WorkflowStepType } from '../types'
 import type { ReviewDisplayStatus } from '../utils/status'
@@ -58,6 +62,16 @@ import { ReviewCycleCompleteModal } from './ReviewCycleCompleteModal'
 import { TemplateEmployeePreview } from './TemplateEmployeePreview'
 import { useModusDialog } from '../utils/useModusDialog'
 import type { Person } from '../types'
+
+function stageChipMatchesStatusFilter(
+  chipStatus: CycleStageChipStatus,
+  filter: DashboardReviewStatusFilter,
+): boolean {
+  if (filter === 'all') return true
+  if (filter === 'completed') return chipStatus === 'complete'
+  if (filter === 'pending' || filter === 'overdue') return chipStatus === filter
+  return true
+}
 
 const CYCLE_EDIT_MODAL_ID = 'cycle-edit-modal'
 const CYCLE_DETAIL_TEMPLATE_PREVIEW_MODAL_ID = 'cycle-detail-template-preview'
@@ -178,11 +192,33 @@ export function CycleDetailView() {
       .filter((review) => review.cycleId === cycle.id)
       .filter((review) => {
         const employee = getPerson(review.employeeId)
-        return reviewMatchesDashboardFilters(review, cycle, employee, filters, undefined, {
+        return reviewMatchesDashboardFilters(review, cycle, employee, { ...filters, status: 'all' }, undefined, {
           getPerson,
         })
       })
   }, [cycle, state.reviews, filters, getPerson])
+
+  const showStageStatusChips =
+    workflowStageFilter !== 'all' && workflowStageFilter !== 'complete'
+
+  const reviewStatusCounts = useMemo(() => {
+    if (!cycle || !showStageStatusChips) return undefined
+    const stage = workflowStageFilter as Exclude<CycleWorkflowStageCard, 'complete'>
+    const counts = { all: 0, pending: 0, overdue: 0, completed: 0, draft: 0 }
+    for (const review of cycleReviewsMatchingPanelFilters) {
+      const chipStatus = getReviewCycleStageChipStatus(cycle, review, stage)
+      if (!chipStatus) continue
+      counts.all += 1
+      if (chipStatus === 'complete') counts.completed += 1
+      else counts[chipStatus] += 1
+    }
+    return counts
+  }, [cycle, cycleReviewsMatchingPanelFilters, showStageStatusChips, workflowStageFilter])
+
+  const handleWorkflowStageChange = useCallback((stage: CycleWorkflowStageFilter) => {
+    setWorkflowStageFilter(stage)
+    setFilters((current) => ({ ...current, status: 'all' }))
+  }, [])
 
   const activeFilterCount = useMemo(() => {
     let count = countActiveDashboardFilters(filters)
@@ -324,9 +360,22 @@ export function CycleDetailView() {
     if (!cycle) return []
     return cycleReviewsMatchingPanelFilters
       .filter((review) => {
-        if (workflowStageFilter === 'all') return true
-        const stage = getReviewWorkflowStage(cycle, review)
-        return stage === workflowStageFilter
+        if (workflowStageFilter !== 'all') {
+          const stage = getReviewWorkflowStage(cycle, review)
+          if (stage !== workflowStageFilter) return false
+        }
+
+        if (showStageStatusChips && filters.status !== 'all') {
+          const chipStatus = getReviewCycleStageChipStatus(
+            cycle,
+            review,
+            workflowStageFilter as Exclude<CycleWorkflowStageCard, 'complete'>,
+          )
+          if (!chipStatus) return false
+          if (!stageChipMatchesStatusFilter(chipStatus, filters.status as DashboardReviewStatusFilter)) return false
+        }
+
+        return true
       })
       .map((review) => {
         const employee = getPerson(review.employeeId)
@@ -342,7 +391,7 @@ export function CycleDetailView() {
           overallRating: reviewOverallRatingLabel(cycle, review) ?? '—',
         }
       })
-  }, [cycle, cycleReviewsMatchingPanelFilters, getPerson, workflowStageFilter])
+  }, [cycle, cycleReviewsMatchingPanelFilters, filters.status, getPerson, showStageStatusChips, workflowStageFilter])
 
   const employeeTableColumns = useMemo(
     () => [
@@ -660,7 +709,7 @@ export function CycleDetailView() {
           cycle={cycle}
           reviews={cycleReviewsMatchingPanelFilters}
           activeStage={workflowStageFilter}
-          onStageChange={setWorkflowStageFilter}
+          onStageChange={handleWorkflowStageChange}
         />
 
         {cycleAttachedGroups.length > 0 ? (
@@ -719,6 +768,7 @@ export function CycleDetailView() {
           <div className="flex flex-col gap-3">
             <PerformanceDashboardFilterBar
               filters={filters}
+              counts={reviewStatusCounts}
               departmentOptions={departmentOptions}
               costCenterOptions={costCenterOptions}
               titleOptions={titleOptions}
@@ -728,7 +778,8 @@ export function CycleDetailView() {
               activeFilterCount={activeFilterCount}
               filterFieldsKey={filterFieldsKey}
               showViewToggle={false}
-              showStatusChips={false}
+              showStatusChips={showStageStatusChips}
+              statusFilterMode="cycleDetail"
               searchAriaLabel="Search by employee name, department, cost center, title, or reviewer"
               filterPanelId="cycle-detail-filter-panel"
               onFiltersChange={updateFilters}
@@ -740,7 +791,7 @@ export function CycleDetailView() {
                   hierarchy="p"
                   size="sm"
                   customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                  label="No employees match the current filters. Try adjusting search, department, rating, or workflow stage."
+                  label="No employees match the current filters. Try adjusting search, status, department, rating, or workflow stage."
                 />
                 {activeFilterCount > 0 && (
                   <ModusWcButton variant="outlined" color="tertiary" size="sm" onButtonClick={clearFilters}>

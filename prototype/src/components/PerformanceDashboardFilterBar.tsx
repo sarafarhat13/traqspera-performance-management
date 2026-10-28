@@ -53,6 +53,17 @@ const MANAGER_TEAM_STATUS_FILTERS: {
   { id: 'overdue', label: 'Overdue', countClass: 'tq-dashboard-filter-chip__count--danger' },
 ]
 
+const CYCLE_DETAIL_STATUS_FILTERS: {
+  id: DashboardReviewStatusFilter
+  label: string
+  countClass: string
+}[] = [
+  { id: 'all', label: 'All', countClass: 'tq-dashboard-filter-chip__count--primary' },
+  { id: 'pending', label: 'Pending', countClass: 'tq-dashboard-filter-chip__count--warning' },
+  { id: 'overdue', label: 'Overdue', countClass: 'tq-dashboard-filter-chip__count--danger' },
+  { id: 'completed', label: 'Complete', countClass: 'tq-dashboard-filter-chip__count--success' },
+]
+
 type PerformanceDashboardFilterBarProps = {
   filters: DashboardFilters
   counts?: DashboardPackageCounts | DashboardReviewCounts
@@ -69,7 +80,7 @@ type PerformanceDashboardFilterBarProps = {
   showStatusChips?: boolean
   showFilterPanel?: boolean
   showReviewerInBar?: boolean
-  statusFilterMode?: 'package' | 'review' | 'managerTeam'
+  statusFilterMode?: 'package' | 'review' | 'managerTeam' | 'cycleDetail'
   searchAriaLabel?: string
   filterPanelId?: string
   onFiltersChange: (patch: Partial<DashboardFilters>) => void
@@ -107,7 +118,9 @@ export function PerformanceDashboardFilterBar({
       ? PACKAGE_STATUS_FILTERS
       : statusFilterMode === 'managerTeam'
         ? MANAGER_TEAM_STATUS_FILTERS
-        : REVIEW_STATUS_FILTERS
+        : statusFilterMode === 'cycleDetail'
+          ? CYCLE_DETAIL_STATUS_FILTERS
+          : REVIEW_STATUS_FILTERS
 
   const searchInputId = `dashboard-search-${filterFieldsKey}`
   const compactBar = showReviewerInBar

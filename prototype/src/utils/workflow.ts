@@ -697,6 +697,39 @@ export function computeCycleWorkflowStageCounts(
   return counts
 }
 
+/** Pending / overdue / complete within a selected cycle workflow stage KPI card. */
+export type CycleStageChipStatus = 'pending' | 'overdue' | 'complete'
+
+export function getReviewCycleStageChipStatus(
+  cycle: ReviewCycle,
+  review: PerformanceReview,
+  stage: Exclude<CycleWorkflowStageCard, 'complete'>,
+  now = new Date(),
+): CycleStageChipStatus | null {
+  const workflowStage = getReviewWorkflowStage(cycle, review)
+  if (workflowStage !== stage) return null
+
+  if (stage === 'employee_review') {
+    const progress = getEmployeeReviewParticipantProgress(cycle, review, now)
+    if (progress === 'overdue') return 'overdue'
+    if (progress === 'submitted') return 'complete'
+    return 'pending'
+  }
+
+  if (stage === 'manager_review') {
+    const progress = getManagerReviewParticipantProgress(cycle, review, now)
+    if (progress === 'overdue') return 'overdue'
+    if (progress === 'submitted') return 'complete'
+    return 'pending'
+  }
+
+  if (isReviewAcknowledgementComplete(review.acknowledgement)) return 'complete'
+  const step = getEnabledStepOfType(cycle, 'acknowledgement')
+  const deadline = stepDeadlineOrCycleEnd(cycle, step)
+  if (isDeadlinePast(deadline, now)) return 'overdue'
+  return 'pending'
+}
+
 export function workflowStepDisplayLabel(
   type: WorkflowStepType,
   ratingScaleMax = 5,

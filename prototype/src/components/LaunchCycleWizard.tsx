@@ -118,6 +118,17 @@ export function LaunchCycleWizard() {
   const [selectedTemplateId, setSelectedTemplateId] = useState(
     () => wizardSelectableTemplates[0]?.id ?? '',
   )
+  const [templateSearchQuery, setTemplateSearchQuery] = useState('')
+
+  const filteredWizardTemplates = useMemo(() => {
+    const query = templateSearchQuery.trim().toLowerCase()
+    if (!query) return wizardSelectableTemplates
+    return wizardSelectableTemplates.filter((template) => {
+      const name = template.name.toLowerCase()
+      const description = (template.description ?? '').toLowerCase()
+      return name.includes(query) || description.includes(query)
+    })
+  }, [wizardSelectableTemplates, templateSearchQuery])
 
   useEffect(() => {
     if (selectedTemplateId && wizardSelectableTemplates.some((t) => t.id === selectedTemplateId)) {
@@ -1050,12 +1061,30 @@ export function LaunchCycleWizard() {
                 </ModusWcButton>
               </div>
 
+              <ModusWcTextInput
+                size="sm"
+                label="Search templates"
+                includeSearch
+                placeholder="Search by template name or description"
+                aria-label="Search templates by name or description"
+                value={templateSearchQuery}
+                onInputChange={(e) => setTemplateSearchQuery(readInputString(e as CustomEvent))}
+              />
+
               <div
                 className="tq-template-picker-list"
                 role="radiogroup"
                 aria-label="Review template"
               >
-                {wizardSelectableTemplates.map((template) => {
+                {filteredWizardTemplates.length === 0 ? (
+                  <ModusWcTypography
+                    hierarchy="p"
+                    size="sm"
+                    customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                    label="No templates match your search. Try a different name or description."
+                  />
+                ) : null}
+                {filteredWizardTemplates.map((template) => {
                   const selected = selectedTemplateId === template.id
                   return (
                     <div

@@ -92,6 +92,104 @@ export function getEnabledWorkflowSteps(workflow: WorkflowStep[]): WorkflowStep[
   return [...workflow].filter((s) => s.enabled).sort((a, b) => a.order - b.order)
 }
 
+const WORKFLOW_DUE_DATE_STEP_TYPES: WorkflowStepType[] = ['employee', 'manager', 'acknowledgement']
+
+/** Enabled flow steps that expose a due date in the launch wizard (excludes rating_scale). */
+export function getWorkflowDueDateSteps(workflow: WorkflowStep[]): WorkflowStep[] {
+  return getEnabledWorkflowSteps(workflow).filter((s) =>
+    WORKFLOW_DUE_DATE_STEP_TYPES.includes(s.type),
+  )
+}
+
+export function compareIsoDateStrings(a: string, b: string): number {
+  const left = a.trim()
+  const right = b.trim()
+  if (!left || !right) return 0
+  return left.localeCompare(right)
+}
+
+/** Earliest allowed due date for a step based on prior steps in the configured flow. */
+export function getMinDeadlineForWorkflowStep(
+  workflow: WorkflowStep[],
+  stepId: string,
+  kickoffMode: WorkflowKickoffMode,
+): string | undefined {
+  const dueSteps = getWorkflowDueDateSteps(workflow)
+  const index = dueSteps.findIndex((s) => s.id === stepId)
+  if (index <= 0) return undefined
+
+  const step = dueSteps[index]
+  if (kickoffMode === 'parallel') {
+    if (step.type !== 'acknowledgement') return undefined
+    let latest = ''
+    for (const prior of dueSteps) {
+      if (prior.type !== 'employee' && prior.type !== 'manager') continue
+      const d = prior.deadline?.trim()
+      if (d && (!latest || compareIsoDateStrings(d, latest) > 0)) latest = d
+    }
+    return latest || undefined
+  }
+
+  const previous = dueSteps[index - 1]
+  const prevDeadline = previous?.deadline?.trim()
+  return prevDeadline || undefined
+}
+
+function clampDeadlineToMin(deadline: string, min?: string): string {
+  const value = deadline.trim()
+  if (!value || !min?.trim()) return deadline
+  if (compareIsoDateStrings(value, min) < 0) return min
+  return value
+}
+
+/** After a due date edit or reorder, enforce non-decreasing deadlines through the flow. */
+export function cascadeWorkflowDeadlines(
+  workflow: WorkflowStep[],
+  kickoffMode: WorkflowKickoffMode,
+): WorkflowStep[] {
+  const dueSteps = getWorkflowDueDateSteps(workflow)
+  let next = workflow
+  for (let i = 1; i < dueSteps.length; i++) {
+    const step = dueSteps[i]
+    const min = getMinDeadlineForWorkflowStep(next, step.id, kickoffMode)
+    if (!min) continue
+    const current = next.find((s) => s.id === step.id)?.deadline?.trim() ?? ''
+    if (current && compareIsoDateStrings(current, min) < 0) {
+      next = next.map((s) => (s.id === step.id ? { ...s, deadline: min } : s))
+    }
+  }
+  return next
+}
+
+export function applyWorkflowDeadlineChange(
+  workflow: WorkflowStep[],
+  stepId: string,
+  newDeadline: string,
+  kickoffMode: WorkflowKickoffMode,
+): WorkflowStep[] {
+  const min = getMinDeadlineForWorkflowStep(workflow, stepId, kickoffMode)
+  const deadline = clampDeadlineToMin(newDeadline, min)
+  const withUpdate = workflow.map((step) =>
+    step.id === stepId ? { ...step, deadline } : step,
+  )
+  return cascadeWorkflowDeadlines(withUpdate, kickoffMode)
+}
+
+export function isWorkflowDeadlinesOrderValid(
+  workflow: WorkflowStep[],
+  kickoffMode: WorkflowKickoffMode,
+): boolean {
+  const dueSteps = getWorkflowDueDateSteps(workflow)
+  for (let i = 1; i < dueSteps.length; i++) {
+    const step = dueSteps[i]
+    const min = getMinDeadlineForWorkflowStep(workflow, step.id, kickoffMode)
+    const current = step.deadline?.trim()
+    if (!current || !min) continue
+    if (compareIsoDateStrings(current, min) < 0) return false
+  }
+  return true
+}
+
 export type WorkflowFlowSummaryItem = {
   key: string
   label: string

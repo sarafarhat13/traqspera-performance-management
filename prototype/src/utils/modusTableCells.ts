@@ -207,9 +207,8 @@ export function createReviewerAssignmentCell(
   onCustomManagerChange: (managerId: string) => void,
   ariaLabel: string,
   supervisorOptions?: {
-    effectiveSupervisorId: string
     supervisorMissing: boolean
-    onSupervisorChange: (supervisorId: string) => void
+    supervisorLabel: string
   },
 ) {
   const wrapper = document.createElement('div')
@@ -243,77 +242,55 @@ export function createReviewerAssignmentCell(
   wrapper.appendChild(select)
 
   if (assignment.type === 'custom') {
-    const selectedManager = managerOptions.find((option) => option.value === assignment.customManagerId)
-    const autocomplete = document.createElement('modus-wc-autocomplete') as HTMLElement & {
-      items: Array<{
-        label: string
-        value: string
-        visibleInMenu: boolean
-        selected?: boolean
-      }>
-      value: string
-    }
-    autocomplete.setAttribute('size', 'sm')
-    autocomplete.setAttribute('aria-label', `${ariaLabel} — search managers`)
-    autocomplete.setAttribute('placeholder', 'Search managers')
-    autocomplete.value = selectedManager?.label ?? ''
-    autocomplete.items = managerOptions.map((option) => ({
-      label: option.label,
-      value: option.value,
-      visibleInMenu: true,
-      selected: option.value === assignment.customManagerId,
-    }))
-
-    autocomplete.addEventListener('itemSelect', (event) => {
-      event.stopPropagation()
-      const item = (event as CustomEvent<{ value?: string }>).detail
-      const nextManagerId = item?.value
-      if (typeof nextManagerId === 'string' && nextManagerId && nextManagerId !== assignment.customManagerId) {
-        onCustomManagerChange(nextManagerId)
-      }
-    })
-    autocomplete.addEventListener('inputChange', (event) => event.stopPropagation())
-
-    wrapper.appendChild(autocomplete)
-  }
-
-  if (assignment.type === 'supervisor' && supervisorOptions) {
-    const { effectiveSupervisorId, supervisorMissing, onSupervisorChange } = supervisorOptions
-
-    const select = document.createElement('modus-wc-select') as HTMLElement & {
+    const managerSelect = document.createElement('modus-wc-select') as HTMLElement & {
       options: { label: string; value: string }[]
       value: string
       feedback?: { level: 'error' | 'info' | 'success' | 'warning'; message?: string }
     }
-    select.setAttribute('size', 'sm')
-    select.setAttribute('aria-label', `${ariaLabel} — supervisor`)
-    if (supervisorMissing) {
-      select.setAttribute('input-aria-invalid', 'true')
-      select.feedback = { level: 'error', message: 'Missing supervisor' }
+    managerSelect.setAttribute('size', 'sm')
+    managerSelect.setAttribute('aria-label', `${ariaLabel} — custom manager`)
+    const missingManager = !(assignment.customManagerId?.trim() ?? '')
+    if (missingManager) {
+      managerSelect.setAttribute('input-aria-invalid', 'true')
+      managerSelect.feedback = { level: 'error', message: 'Select a manager' }
     }
-    select.options = [
-      {
-        label: supervisorMissing ? 'Missing supervisor' : 'Select supervisor…',
-        value: '',
-      },
+    managerSelect.options = [
+      { label: 'Select manager…', value: '' },
       ...managerOptions,
     ]
-    select.value = effectiveSupervisorId || ''
+    managerSelect.value = assignment.customManagerId ?? ''
 
-    select.addEventListener('inputChange', (event) => {
+    managerSelect.addEventListener('inputChange', (event) => {
       event.stopPropagation()
       const customEvent = event as CustomEvent<InputEvent>
-      const nextSupervisorId = (customEvent.detail?.target as HTMLSelectElement | null)?.value
+      const nextManagerId = (customEvent.detail?.target as HTMLSelectElement | null)?.value
       if (
-        typeof nextSupervisorId === 'string' &&
-        nextSupervisorId &&
-        nextSupervisorId !== effectiveSupervisorId
+        typeof nextManagerId === 'string' &&
+        nextManagerId &&
+        nextManagerId !== assignment.customManagerId
       ) {
-        onSupervisorChange(nextSupervisorId)
+        onCustomManagerChange(nextManagerId)
       }
     })
 
-    wrapper.appendChild(select)
+    wrapper.appendChild(managerSelect)
+  }
+
+  if (assignment.type === 'supervisor' && supervisorOptions) {
+    const { supervisorMissing, supervisorLabel } = supervisorOptions
+
+    const label = document.createElement('modus-wc-typography') as HTMLElement & {
+      label?: string
+    }
+    label.setAttribute('size', 'sm')
+    label.setAttribute(
+      'custom-class',
+      supervisorMissing
+        ? 'text-[var(--modus-wc-color-error)]'
+        : 'text-[var(--modus-wc-color-base-content-low-contrast)]',
+    )
+    label.setAttribute('label', supervisorMissing ? 'Supervisor not on file' : supervisorLabel)
+    wrapper.appendChild(label)
   }
 
   return wrapper

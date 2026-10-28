@@ -8,21 +8,25 @@ import {
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
 import type { RatingScaleConfig, WorkflowKickoffMode, WorkflowStep, WorkflowStepType } from '../types'
+import { formatDate } from '../utils/status'
 import { RatingScaleConfigModal } from './RatingScaleConfigModal'
 import { formatRatingScaleSummary } from '../utils/ratingScale'
 import { readInputChecked, readInputString } from '../utils/modusFormEvents'
 import {
   type CoreWorkflowStepType,
   type ReorderableWorkflowStepType,
+  applyWorkflowDeadlineChange,
+  cascadeWorkflowDeadlines,
+  compareIsoDateStrings,
   getAcknowledgementWorkflowStep,
   getEnabledWorkflowSteps,
+  getMinDeadlineForWorkflowStep,
   getRatingScaleWorkflowStep,
   getReorderableWorkflowSteps,
   getWorkflowFlowSummaryItems,
   canUseParallelKickoff,
   moveCoreWorkflowStepToIndex,
   RATING_SCALE_STEP_META,
-  resetCoreWorkflowOrder,
   WORKFLOW_STEP_LABELS,
   WORKFLOW_STEP_META,
 } from '../utils/workflow'
@@ -59,6 +63,7 @@ export function WorkflowStepConfig({
 
   const parallelKickoffAvailable = canUseParallelKickoff(workflow)
   const sequentialKickoff = workflowKickoffMode === 'sequential' || !parallelKickoffAvailable
+  const effectiveKickoffMode: WorkflowKickoffMode = sequentialKickoff ? 'sequential' : 'parallel'
   const flowSummaryItems = getWorkflowFlowSummaryItems(
     workflow,
     sequentialKickoff ? 'sequential' : 'parallel',
@@ -78,6 +83,28 @@ export function WorkflowStepConfig({
 
   const updateStep = (id: string, patch: Partial<WorkflowStep>) => {
     onWorkflowChange(workflow.map((step) => (step.id === id ? { ...step, ...patch } : step)))
+  }
+
+  const setStepDeadline = (stepId: string, rawDeadline: string) => {
+    onWorkflowChange(
+      applyWorkflowDeadlineChange(workflow, stepId, rawDeadline, effectiveKickoffMode),
+    )
+  }
+
+  const workflowDateFieldProps = (stepId: string, deadline: string, fieldEnabled: boolean) => {
+    if (!fieldEnabled) return { min: undefined, feedback: undefined as undefined }
+    const min = getMinDeadlineForWorkflowStep(workflow, stepId, effectiveKickoffMode)
+    const invalid =
+      Boolean(min && deadline.trim() && compareIsoDateStrings(deadline, min) < 0)
+    return {
+      min,
+      feedback: invalid
+        ? {
+            level: 'error' as const,
+            message: `Must be on or after ${formatDate(min!)} (previous step due date).`,
+          }
+        : undefined,
+    }
   }
 
   const managerStep = workflow.find((step) => step.type === 'manager')
@@ -146,9 +173,22 @@ export function WorkflowStepConfig({
       handleDragEnd()
       return
     }
-    onWorkflowChange(moveCoreWorkflowStepToIndex(workflow, sourceId, targetIndex))
+    onWorkflowChange(
+      cascadeWorkflowDeadlines(
+        moveCoreWorkflowStepToIndex(workflow, sourceId, targetIndex),
+        effectiveKickoffMode,
+      ),
+    )
     handleDragEnd()
   }
+
+  const acknowledgementDueProps = acknowledgementStep
+    ? workflowDateFieldProps(
+        acknowledgementStep.id,
+        acknowledgementStep.deadline,
+        managerEvaluationEnabled,
+      )
+    : { min: undefined, feedback: undefined as undefined }
 
   return (
     <div className="tq-workflow-config flex flex-col gap-4">
@@ -163,15 +203,6 @@ export function WorkflowStepConfig({
             label="Configure review components, set due dates, and arrange the step order"
           />
         </div>
-        <ModusWcButton
-          variant="outlined"
-          color="tertiary"
-          size="sm"
-          onButtonClick={() => onWorkflowChange(resetCoreWorkflowOrder(workflow))}
-        >
-          <ModusWcIcon name="refresh" size="xs" decorative />
-          Reset Order
-        </ModusWcButton>
       </div>
 
       <fieldset className="tq-workflow-config__kickoff flex flex-col gap-2 border-0 p-0 m-0">
@@ -236,6 +267,7 @@ export function WorkflowStepConfig({
           const stepType = step.type as ReorderableWorkflowStepType
           const meta = WORKFLOW_STEP_META[stepType]
           const isDraggable = step.enabled && sequentialKickoff
+          const dueDateProps = workflowDateFieldProps(step.id, step.deadline, step.enabled)
           const onToggleStep =
             stepType === 'manager'
               ? (enabled: boolean) => updateManagerStep(step.id, { enabled })
@@ -313,9 +345,12 @@ export function WorkflowStepConfig({
                 <ModusWcDate
                   label={meta.dueDateLabel}
                   size="sm"
+                  disabled={!step.enabled}
                   value={step.deadline}
+                  min={dueDateProps.min}
+                  feedback={dueDateProps.feedback}
                   onInputChange={(e) =>
-                    updateStep(step.id, { deadline: readInputString(e as CustomEvent) })
+                    setStepDeadline(step.id, readInputString(e as CustomEvent))
                   }
                 />
               </div>
@@ -404,7 +439,7 @@ export function WorkflowStepConfig({
           )
         })}
 
-        {acknowledgementStep && (
+        {acknowledgementStep ? (
           <div
             className={[
               'tq-workflow-step tq-workflow-step--acknowledgement tq-workflow-step--no-handle',
@@ -458,15 +493,15 @@ export function WorkflowStepConfig({
                 size="sm"
                 disabled={!managerEvaluationEnabled}
                 value={acknowledgementStep.deadline}
+                min={acknowledgementDueProps.min}
+                feedback={acknowledgementDueProps.feedback}
                 onInputChange={(e) =>
-                  updateStep(acknowledgementStep.id, {
-                    deadline: readInputString(e as CustomEvent),
-                  })
+                  setStepDeadline(acknowledgementStep.id, readInputString(e as CustomEvent))
                 }
               />
             </div>
           </div>
-        )}
+        ) : null}
       </div>
 
       {ratingStep ? (

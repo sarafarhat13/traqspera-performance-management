@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react'
 import {
   ModusWcAlert,
   ModusWcAutocomplete,
   ModusWcButton,
   ModusWcCard,
+  ModusWcChip,
   ModusWcIcon,
   ModusWcModal,
   ModusWcSelect,
   ModusWcStepper,
-  ModusWcTabs,
   ModusWcTextInput,
   ModusWcTextarea,
   ModusWcTypography,
@@ -17,6 +17,7 @@ import { createEmptyTemplate, DEFAULT_RATING_SCALE } from '../data/seed'
 import { usePerformance } from '../context/PerformanceContext'
 import type {
   EmployeeReviewerAssignment,
+  Person,
   RatingScaleConfig,
   ReviewerRoleType,
   ReviewTemplate,
@@ -35,6 +36,8 @@ import { isRatingScaleConfigValid, normalizeRatingScale } from '../utils/ratingS
 import {
   createDefaultWorkflowSteps,
   getEnabledWorkflowSteps,
+  isWorkflowDeadlinesOrderValid,
+  canUseParallelKickoff,
   workflowIncludesManagerRatingScale,
 } from '../utils/workflow'
 import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
@@ -57,26 +60,12 @@ import {
 } from '../utils/reviewer'
 import { WorkflowStepConfig } from './WorkflowStepConfig'
 import { LaunchCycleReviewSummary } from './LaunchCycleReviewSummary'
-import { LaunchCycleGroupPicker } from './LaunchCycleGroupPicker'
-import { ParticipantConflictPanel } from './ParticipantConflictPanel'
-import {
-  ReviewGroupFormModal,
-  formValuesFromGroup,
-  type ReviewGroupFormValues,
-} from './ReviewGroupFormModal'
-import type { ReviewEmployeeGroup } from '../types'
-import {
-  applyDefaultAssignmentsFromProvenance,
-  buildProvenanceFromState,
-  computeParticipantIdsFromProvenance,
-  detectConflicts,
-} from '../utils/participantSelection'
 import { formatEmployeeNameWithCode } from '../utils/employeeCode'
 import { isTemplateVisibleInCycleWizard } from '../utils/templateLifecycle'
 import { useModusDialog } from '../utils/useModusDialog'
 
-const FILTER_ALL = '__all__'
 const TEMPLATE_PREVIEW_MODAL_ID = 'launch-wizard-template-preview'
+const PARTICIPANT_SUMMARY_DETAIL_MODAL_ID = 'launch-wizard-participant-summary-detail'
 
 const WIZARD_STEPS = [
   'Cycle Details',
@@ -86,12 +75,332 @@ const WIZARD_STEPS = [
   'Review & Launch',
 ] as const
 
-const LAUNCH_GROUP_FORM_MODAL_ID = 'launch-wizard-review-group-form'
-
 const LAUNCH_WIZARD_CARD = `${TRAQ_CARD_CLASS} tq-launch-wizard__card`
+
+function matchesMultiFilter(selected: string[], value: string): boolean {
+  return selected.length === 0 || selected.includes(value)
+}
+
+type ParticipantFieldMultiFilterProps = {
+  label: string
+  emptyHint: string
+  values: string[]
+  selected: string[]
+  onSelectedChange: (next: string[]) => void
+}
+
+function ParticipantFieldMultiFilter({
+  label,
+  emptyHint,
+  values,
+  selected,
+  onSelectedChange,
+}: ParticipantFieldMultiFilterProps) {
+  const autocompleteRef = useRef<ComponentRef<typeof ModusWcAutocomplete>>(null)
+
+  const menuItems = useMemo(
+    () =>
+      values
+        .filter((value) => !selected.includes(value))
+        .map((value) => ({
+          label: value,
+          value,
+          visibleInMenu: true,
+        })),
+    [values, selected],
+  )
+
+  const addValue = useCallback(
+    (value: string) => {
+      if (!value || selected.includes(value)) return
+      onSelectedChange([...selected, value])
+    },
+    [onSelectedChange, selected],
+  )
+
+  return (
+    <ModusWcAutocomplete
+      ref={autocompleteRef}
+      label={label}
+      size="sm"
+      includeSearch
+      showMenuOnFocus
+      placeholder={emptyHint}
+      items={menuItems}
+      onItemSelect={(e) => {
+        const value = (e as CustomEvent<{ value?: string }>).detail?.value ?? ''
+        addValue(value)
+        void autocompleteRef.current?.clearInput?.()
+        void autocompleteRef.current?.closeMenu?.()
+      }}
+    />
+  )
+}
 
 function defaultCycleEndFallback(): string {
   return new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
+}
+
+type CycleParticipantSummary = {
+  inCycleCount: number
+  assignedCount: number
+  unassignedCount: number
+  unassigned: { id: string; displayName: string; reason: string }[]
+  unassignedEmployeeCount: number
+  unassignedEmployees: { id: string; name: string; supervisorLabel: string }[]
+  participants: {
+    id: string
+    name: string
+    supervisorLabel: string
+    assignmentValid: boolean
+    attentionReason?: string
+  }[]
+}
+
+type SummaryModalView = 'selected' | 'assigned' | 'attention' | 'unassigned' | null
+
+function supervisorLabelForEmployee(
+  person: { supervisorId?: string },
+  getPerson: (id: string) => Person | undefined,
+): string {
+  const supervisorId = person.supervisorId?.trim()
+  const supervisorPerson = supervisorId ? getPerson(supervisorId) : undefined
+  return supervisorPerson
+    ? formatEmployeeNameWithCode(supervisorPerson.name, supervisorPerson.id)
+    : 'Not on file'
+}
+
+const PARTICIPANT_SUMMARY_MODAL_COLUMNS = [
+  { id: 'name', header: 'Employee', accessor: 'name', sortable: true },
+  { id: 'supervisorLabel', header: 'Supervisor', accessor: 'supervisorLabel', sortable: true },
+]
+
+const SUMMARY_STAT_CARD_BUTTON_CLASS =
+  'min-w-0 w-full rounded-lg text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--modus-wc-color-primary)] enabled:cursor-pointer enabled:hover:ring-2 enabled:hover:ring-[var(--modus-wc-color-primary)] disabled:cursor-default disabled:opacity-70'
+
+function CycleParticipantSummaryPanel({ summary }: { summary: CycleParticipantSummary }) {
+  const [modalView, setModalView] = useState<SummaryModalView>(null)
+  const closeListModal = useCallback(() => setModalView(null), [])
+  const { requestClose: requestCloseListModal } = useModusDialog(
+    PARTICIPANT_SUMMARY_DETAIL_MODAL_ID,
+    modalView !== null,
+    closeListModal,
+  )
+
+  const modalParticipants = useMemo(() => {
+    switch (modalView) {
+      case 'selected':
+        return summary.participants
+      case 'assigned':
+        return summary.participants.filter((participant) => participant.assignmentValid)
+      case 'attention':
+        return summary.participants.filter((participant) => !participant.assignmentValid)
+      case 'unassigned':
+        return summary.unassignedEmployees
+      default:
+        return []
+    }
+  }, [modalView, summary.participants])
+
+  const modalTitle =
+    modalView === 'selected'
+      ? 'Selected for cycle'
+      : modalView === 'assigned'
+        ? 'Reviewers assigned'
+        : modalView === 'attention'
+          ? 'Needs attention'
+          : modalView === 'unassigned'
+            ? 'Unassigned employees'
+            : 'Employees'
+
+  const modalTableData = useMemo(
+    () =>
+      modalParticipants.map((participant) => ({
+        id: participant.id,
+        name: participant.name,
+        supervisorLabel: participant.supervisorLabel,
+      })),
+    [modalParticipants],
+  )
+
+  return (
+    <>
+      <div className="flex flex-col gap-3">
+        <ModusWcTypography hierarchy="h4" size="sm" weight="semibold" label="Selection summary" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <button
+            type="button"
+            className={SUMMARY_STAT_CARD_BUTTON_CLASS}
+            disabled={summary.inCycleCount === 0}
+            aria-label={`View ${summary.inCycleCount} employees selected for cycle`}
+            onClick={() => setModalView('selected')}
+          >
+            <ModusWcCard bordered={false} padding="compact" customClass="min-w-0 bg-[var(--modus-wc-color-base-100)]">
+              <ModusWcTypography
+                size="xs"
+                customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                label="Selected for cycle"
+              />
+              <ModusWcTypography hierarchy="h4" size="lg" weight="semibold" label={String(summary.inCycleCount)} />
+              <ModusWcTypography
+                size="xs"
+                customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                label={summary.inCycleCount === 0 ? 'None selected' : 'View employees'}
+              />
+            </ModusWcCard>
+          </button>
+          <button
+            type="button"
+            className={SUMMARY_STAT_CARD_BUTTON_CLASS}
+            disabled={summary.assignedCount === 0}
+            aria-label={`View ${summary.assignedCount} employees with reviewers assigned`}
+            onClick={() => setModalView('assigned')}
+          >
+            <ModusWcCard bordered={false} padding="compact" customClass="min-w-0 bg-[var(--modus-wc-color-base-100)]">
+              <ModusWcTypography
+                size="xs"
+                customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                label="Reviewers assigned"
+              />
+              <ModusWcTypography hierarchy="h4" size="lg" weight="semibold" label={String(summary.assignedCount)} />
+              <ModusWcTypography
+                size="xs"
+                customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                label={summary.assignedCount === 0 ? 'None yet' : 'View employees'}
+              />
+            </ModusWcCard>
+          </button>
+          <button
+            type="button"
+            className={SUMMARY_STAT_CARD_BUTTON_CLASS}
+            disabled={summary.unassignedCount === 0}
+            aria-label={`View ${summary.unassignedCount} employees needing attention`}
+            onClick={() => setModalView('attention')}
+          >
+            <ModusWcCard bordered={false} padding="compact" customClass="min-w-0 bg-[var(--modus-wc-color-base-100)]">
+              <ModusWcTypography
+                size="xs"
+                customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                label="Needs attention"
+              />
+              <ModusWcTypography
+                hierarchy="h4"
+                size="lg"
+                weight="semibold"
+                customClass={
+                  summary.unassignedCount > 0
+                    ? 'text-[var(--modus-wc-color-warning)]'
+                    : undefined
+                }
+                label={String(summary.unassignedCount)}
+              />
+              <ModusWcTypography
+                size="xs"
+                customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                label={summary.unassignedCount === 0 ? 'All set' : 'View employees'}
+              />
+            </ModusWcCard>
+          </button>
+          <button
+            type="button"
+            className={SUMMARY_STAT_CARD_BUTTON_CLASS}
+            disabled={summary.unassignedEmployeeCount === 0}
+            aria-label={`View ${summary.unassignedEmployeeCount} unassigned employees`}
+            onClick={() => setModalView('unassigned')}
+          >
+            <ModusWcCard bordered={false} padding="compact" customClass="min-w-0 bg-[var(--modus-wc-color-base-100)]">
+              <ModusWcTypography
+                size="xs"
+                customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                label="Unassigned employees"
+              />
+              <ModusWcTypography
+                hierarchy="h4"
+                size="lg"
+                weight="semibold"
+                label={String(summary.unassignedEmployeeCount)}
+              />
+              <ModusWcTypography
+                size="xs"
+                customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                label={
+                  summary.unassignedEmployeeCount === 0
+                    ? 'Everyone selected'
+                    : 'View employees'
+                }
+              />
+            </ModusWcCard>
+          </button>
+        </div>
+        {summary.inCycleCount === 0 ? (
+          <ModusWcTypography
+            hierarchy="p"
+            size="sm"
+            customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+            label="No one selected yet. Use the employee table below to add people and set reviewers."
+          />
+        ) : null}
+        {summary.inCycleCount > 0 && summary.unassignedCount > 0 ? (
+          <ModusWcAlert
+            variant="warning"
+            alertTitle={
+              summary.unassignedCount === 1
+                ? '1 participant needs a reviewer'
+                : `${summary.unassignedCount} participants need a reviewer`
+            }
+            alertDescription="Update reviewer settings in the employee table below, or open Needs attention to see who is affected."
+          />
+        ) : null}
+        {summary.inCycleCount > 0 && summary.unassignedCount === 0 ? (
+          <ModusWcAlert
+            variant="success"
+            alertTitle="Ready to continue"
+            alertDescription="Every selected employee has a reviewer assignment."
+          />
+        ) : null}
+      </div>
+
+      <ModusWcModal
+        modalId={PARTICIPANT_SUMMARY_DETAIL_MODAL_ID}
+        backdrop="default"
+        position="center"
+        showClose={true}
+        customClass="tq-launch-wizard-participant-list-dialog"
+        aria-label={modalTitle}
+      >
+        <span slot="header">{modalTitle}</span>
+        <div slot="content" className="flex min-w-0 flex-col gap-3 overflow-x-auto">
+          {modalTableData.length === 0 ? (
+            <ModusWcTypography
+              size="sm"
+              customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+              label="No employees in this list."
+            />
+          ) : (
+            <PerformanceDataTable
+              caption={modalTitle}
+              columns={PARTICIPANT_SUMMARY_MODAL_COLUMNS}
+              data={modalTableData}
+              density="compact"
+              hover={false}
+              sortable={true}
+              customClass="w-full"
+            />
+          )}
+        </div>
+        <div slot="footer" className="flex w-full justify-end">
+          <ModusWcButton
+            variant="outlined"
+            color="tertiary"
+            size="sm"
+            onButtonClick={requestCloseListModal}
+          >
+            Close
+          </ModusWcButton>
+        </div>
+      </ModusWcModal>
+    </>
+  )
 }
 
 export function LaunchCycleWizard() {
@@ -101,10 +410,8 @@ export function LaunchCycleWizard() {
     launchCycle,
     saveCycleDraft,
     saveTemplate,
-    saveReviewGroup,
     getTemplate,
     getPerson,
-    getReviewGroup,
   } = usePerformance()
 
   const [stepIndex, setStepIndex] = useState(0)
@@ -144,20 +451,15 @@ export function LaunchCycleWizard() {
   )
   const [allowSupportingDocuments, setAllowSupportingDocuments] = useState(false)
   const [individualEmployeeIds, setIndividualEmployeeIds] = useState<string[]>([])
-  const [attachedGroupIds, setAttachedGroupIds] = useState<string[]>([])
-  const [participantsTabIndex, setParticipantsTabIndex] = useState(0)
-  const [launchGroupFormOpen, setLaunchGroupFormOpen] = useState(false)
-  const [draftLaunchGroup, setDraftLaunchGroup] = useState<ReviewEmployeeGroup | null>(null)
   const [reviewerAssignments, setReviewerAssignments] = useState<
     Record<string, EmployeeReviewerAssignment>
   >({})
   const [bulkReviewerType, setBulkReviewerType] = useState<ReviewerRoleType>('supervisor')
   const [bulkCustomManagerId, setBulkCustomManagerId] = useState('')
-  const [bulkSupervisorId, setBulkSupervisorId] = useState('')
   const [reviewerTableKey, setReviewerTableKey] = useState(0)
-  const [filterDepartment, setFilterDepartment] = useState(FILTER_ALL)
-  const [filterCostCenter, setFilterCostCenter] = useState(FILTER_ALL)
-  const [filterTitle, setFilterTitle] = useState(FILTER_ALL)
+  const [filterDepartments, setFilterDepartments] = useState<string[]>([])
+  const [filterCostCenters, setFilterCostCenters] = useState<string[]>([])
+  const [filterTitles, setFilterTitles] = useState<string[]>([])
   const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null)
 
   const employeePool = useMemo(
@@ -165,109 +467,39 @@ export function LaunchCycleWizard() {
     [state.people],
   )
 
-  const departmentOptions = useMemo(() => {
+  const departmentValues = useMemo(() => {
     const values = [...new Set(employeePool.map((p) => p.department))].sort()
-    return [
-      { label: 'All departments', value: FILTER_ALL },
-      ...values.map((v) => ({ label: v, value: v })),
-    ]
+    return values
   }, [employeePool])
 
-  const costCenterOptions = useMemo(() => {
+  const costCenterValues = useMemo(() => {
     const values = [...new Set(employeePool.map((p) => p.costCenter))].sort()
-    return [
-      { label: 'All cost centers', value: FILTER_ALL },
-      ...values.map((v) => ({ label: v, value: v })),
-    ]
+    return values
   }, [employeePool])
 
-  const titleOptions = useMemo(() => {
+  const titleValues = useMemo(() => {
     const values = [...new Set(employeePool.map((p) => p.title))].sort()
-    return [
-      { label: 'All titles', value: FILTER_ALL },
-      ...values.map((v) => ({ label: v, value: v })),
-    ]
+    return values
   }, [employeePool])
 
   const filteredEmployees = useMemo(() => {
     return employeePool.filter((p) => {
-      if (filterDepartment !== FILTER_ALL && p.department !== filterDepartment) return false
-      if (filterCostCenter !== FILTER_ALL && p.costCenter !== filterCostCenter) return false
-      if (filterTitle !== FILTER_ALL && p.title !== filterTitle) return false
+      if (!matchesMultiFilter(filterDepartments, p.department)) return false
+      if (!matchesMultiFilter(filterCostCenters, p.costCenter)) return false
+      if (!matchesMultiFilter(filterTitles, p.title)) return false
       return true
     })
-  }, [employeePool, filterDepartment, filterCostCenter, filterTitle])
-
-  const getGroup = useCallback(
-    (id: string) => getReviewGroup(id) ?? state.reviewGroups.find((g) => g.id === id),
-    [getReviewGroup, state.reviewGroups],
-  )
-
-  const provenance = useMemo(
-    () =>
-      buildProvenanceFromState({
-        individualEmployeeIds: new Set(individualEmployeeIds),
-        individualAssignments: reviewerAssignments,
-        attachedGroupIds,
-        getGroup,
-      }),
-    [individualEmployeeIds, reviewerAssignments, attachedGroupIds, getGroup],
-  )
+  }, [employeePool, filterDepartments, filterCostCenters, filterTitles])
 
   const derivedParticipantIds = useMemo(
-    () => computeParticipantIdsFromProvenance(provenance),
-    [provenance],
-  )
-
-  const conflicts = useMemo(
-    () => detectConflicts(provenance, reviewerAssignments),
-    [provenance, reviewerAssignments],
+    () => individualEmployeeIds,
+    [individualEmployeeIds],
   )
 
   const getEffectiveAssignment = useCallback(
-    (employeeId: string): EmployeeReviewerAssignment => {
-      if (reviewerAssignments[employeeId]) {
-        return reviewerAssignments[employeeId]
-      }
-      const sources = provenance[employeeId]
-      if (sources?.length) {
-        return sources[0].assignment
-      }
-      return defaultReviewerAssignment()
-    },
-    [provenance, reviewerAssignments],
-  )
-
-  const missingSupervisorParticipants = useMemo(
-    () =>
-      derivedParticipantIds
-        .map((id) => {
-          const person = getPerson(id)
-          const assignment = getEffectiveAssignment(id)
-          if (!isSupervisorAssignmentMissing(person, assignment)) return null
-          return person
-        })
-        .filter((person): person is NonNullable<typeof person> => Boolean(person)),
-    [derivedParticipantIds, getEffectiveAssignment, getPerson],
-  )
-
-  const missingSupervisorCount = missingSupervisorParticipants.length
-
-  const syncReviewerDefaults = useCallback(
-    (
-      nextAttachedGroupIds: string[],
-      nextIndividualEmployeeIds: string[],
-      prev: Record<string, EmployeeReviewerAssignment>,
-    ) => {
-      const nextProvenance = buildProvenanceFromState({
-        individualEmployeeIds: new Set(nextIndividualEmployeeIds),
-        individualAssignments: prev,
-        attachedGroupIds: nextAttachedGroupIds,
-        getGroup,
-      })
-      return applyDefaultAssignmentsFromProvenance(nextProvenance, prev)
-    },
-    [getGroup],
+    (employeeId: string): EmployeeReviewerAssignment =>
+      reviewerAssignments[employeeId] ?? defaultReviewerAssignment(),
+    [reviewerAssignments],
   )
 
   const selectedEmployees = useMemo(
@@ -284,11 +516,6 @@ export function LaunchCycleWizard() {
         derivedParticipantIds.map((id) => [id, getEffectiveAssignment(id)]),
       ),
     [derivedParticipantIds, getEffectiveAssignment],
-  )
-
-  const participantTabs = useMemo(
-    () => [{ label: 'Select individuals' }, { label: 'Review groups' }],
-    [],
   )
 
   const buildCycleInput = (): Omit<ReviewCycle, 'id' | 'status'> | null => {
@@ -323,7 +550,6 @@ export function LaunchCycleWizard() {
       ratingScale: normalizeRatingScale(ratingScale),
       allowSupportingDocuments,
       employeeIds: derivedParticipantIds,
-      attachedGroupIds: attachedGroupIds.length > 0 ? attachedGroupIds : undefined,
     }
   }
 
@@ -367,8 +593,6 @@ export function LaunchCycleWizard() {
     })
   }, [stepIndex])
 
-  const employeePoolIds = useMemo(() => employeePool.map((person) => person.id), [employeePool])
-
   const filteredEmployeeIds = useMemo(
     () => filteredEmployees.map((person) => person.id),
     [filteredEmployees],
@@ -380,14 +604,11 @@ export function LaunchCycleWizard() {
         return { type: 'custom', customManagerId: bulkCustomManagerId }
       }
       if (type === 'supervisor') {
-        const person = getPerson(employeeId)
-        const fromRecord = person?.supervisorId?.trim()
-        const supervisorId = bulkSupervisorId || fromRecord || ''
-        return { type: 'supervisor', supervisorId }
+        return { type: 'supervisor' }
       }
       return { type }
     },
-    [bulkCustomManagerId, bulkSupervisorId, getPerson],
+    [bulkCustomManagerId],
   )
 
   const assignmentForBulk = useCallback(
@@ -412,28 +633,8 @@ export function LaunchCycleWizard() {
   const bulkCustomManagerLabel =
     managerOptions.find((option) => option.value === bulkCustomManagerId)?.label ?? ''
 
-  const applyReviewerAssignmentsForIds = (
-    ids: string[],
-    mergeWithExisting = false,
-  ) => {
-    setReviewerAssignments((prev) => {
-      if (mergeWithExisting) {
-        const next = { ...prev }
-        ids.forEach((id) => {
-          if (!next[id]) next[id] = assignmentForBulk(id)
-        })
-        return next
-      }
-      const next: Record<string, EmployeeReviewerAssignment> = {}
-      ids.forEach((id) => {
-        next[id] = prev[id] ?? assignmentForBulk(id)
-      })
-      return next
-    })
-  }
-
   const applyReviewerToFilteredEmployees = useCallback(
-    (type: ReviewerRoleType, options?: { customManagerId?: string; supervisorId?: string }) => {
+    (type: ReviewerRoleType, options?: { customManagerId?: string }) => {
       if (filteredEmployeeIds.length === 0) return
       setReviewerAssignments((prev) => {
         const next = { ...prev }
@@ -446,11 +647,7 @@ export function LaunchCycleWizard() {
             return
           }
           if (type === 'supervisor') {
-            const person = getPerson(id)
-            const fromRecord = person?.supervisorId?.trim()
-            const supervisorId =
-              options?.supervisorId ?? (bulkSupervisorId || fromRecord || '')
-            next[id] = { type: 'supervisor', supervisorId }
+            next[id] = { type: 'supervisor' }
             return
           }
           next[id] = { type }
@@ -459,7 +656,7 @@ export function LaunchCycleWizard() {
       })
       setReviewerTableKey((key) => key + 1)
     },
-    [bulkCustomManagerId, bulkSupervisorId, filteredEmployeeIds, getPerson],
+    [bulkCustomManagerId, filteredEmployeeIds],
   )
 
   const handleEmployeeRowSelectionChange = useCallback(
@@ -483,70 +680,6 @@ export function LaunchCycleWizard() {
     [assignmentForBulk],
   )
 
-  const mergeEmployeeSelection = (idsToAdd: string[]) => {
-    setIndividualEmployeeIds((prev) => [...new Set([...prev, ...idsToAdd])])
-    applyReviewerAssignmentsForIds(idsToAdd, true)
-  }
-
-  const handleAttachedGroupIdsChange = useCallback(
-    (nextAttached: string[]) => {
-      setAttachedGroupIds(nextAttached)
-      setReviewerAssignments((prev) =>
-        syncReviewerDefaults(nextAttached, individualEmployeeIds, prev),
-      )
-    },
-    [individualEmployeeIds, syncReviewerDefaults],
-  )
-
-  const selectAllReviewGroups = () => {
-    const nextAttached = state.reviewGroups.map((group) => group.id)
-    setAttachedGroupIds(nextAttached)
-    setReviewerAssignments((prev) =>
-      syncReviewerDefaults(nextAttached, individualEmployeeIds, prev),
-    )
-  }
-
-  const clearAttachedGroups = () => {
-    setAttachedGroupIds([])
-    setReviewerAssignments((prev) => syncReviewerDefaults([], individualEmployeeIds, prev))
-  }
-
-  const handleLaunchGroupFormSubmit = (values: ReviewGroupFormValues) => {
-    if (!draftLaunchGroup) return
-    const group: ReviewEmployeeGroup = {
-      ...draftLaunchGroup,
-      name: values.name,
-      description: values.description || undefined,
-      memberIds: values.memberIds,
-      defaultReviewerAssignment: values.defaultReviewerAssignment,
-    }
-    saveReviewGroup(group)
-    const nextAttached = attachedGroupIds.includes(group.id)
-      ? attachedGroupIds
-      : [...attachedGroupIds, group.id]
-    setAttachedGroupIds(nextAttached)
-    setReviewerAssignments((prev) => {
-      const lookupGroup = (id: string) => (id === group.id ? group : getGroup(id))
-      const nextProvenance = buildProvenanceFromState({
-        individualEmployeeIds: new Set(individualEmployeeIds),
-        individualAssignments: prev,
-        attachedGroupIds: nextAttached,
-        getGroup: lookupGroup,
-      })
-      return applyDefaultAssignmentsFromProvenance(nextProvenance, prev)
-    })
-    setLaunchGroupFormOpen(false)
-    setDraftLaunchGroup(null)
-    setParticipantsTabIndex(1)
-  }
-
-  const resolveConflict = (employeeId: string, assignment: EmployeeReviewerAssignment) => {
-    setReviewerAssignments((prev) => ({
-      ...prev,
-      [employeeId]: assignment,
-    }))
-  }
-
   const ensureIndividualParticipant = useCallback((employeeId: string) => {
     setIndividualEmployeeIds((prev) =>
       prev.includes(employeeId) ? prev : [...prev, employeeId],
@@ -555,24 +688,20 @@ export function LaunchCycleWizard() {
 
   const setReviewerType = (employeeId: string, type: ReviewerRoleType) => {
     ensureIndividualParticipant(employeeId)
-    const person = getPerson(employeeId)
-    setReviewerAssignments((prev) => {
-      const previous = prev[employeeId] ?? getEffectiveAssignment(employeeId)
-      return {
-        ...prev,
-        [employeeId]: {
-          type,
-          customManagerId:
-            type === 'custom'
-              ? previous.customManagerId || bulkCustomManagerId || ''
-              : undefined,
-          supervisorId:
-            type === 'supervisor'
-              ? previous.supervisorId || person?.supervisorId || ''
-              : undefined,
-        },
-      }
-    })
+    const previous = reviewerAssignments[employeeId] ?? getEffectiveAssignment(employeeId)
+    setReviewerAssignments((prev) => ({
+      ...prev,
+      [employeeId]:
+        type === 'custom'
+          ? {
+              type: 'custom',
+              customManagerId: previous.customManagerId || bulkCustomManagerId || '',
+            }
+          : type === 'supervisor'
+            ? { type: 'supervisor' }
+            : { type },
+    }))
+    setReviewerTableKey((key) => key + 1)
   }
 
   const setReviewerCustomManager = (employeeId: string, customManagerId: string) => {
@@ -584,17 +713,7 @@ export function LaunchCycleWizard() {
         customManagerId,
       },
     }))
-  }
-
-  const setReviewerSupervisor = (employeeId: string, supervisorId: string) => {
-    ensureIndividualParticipant(employeeId)
-    setReviewerAssignments((prev) => ({
-      ...prev,
-      [employeeId]: {
-        type: 'supervisor',
-        supervisorId,
-      },
-    }))
+    setReviewerTableKey((key) => key + 1)
   }
 
   const applyBulkReviewer = (type: ReviewerRoleType) => {
@@ -606,21 +725,6 @@ export function LaunchCycleWizard() {
     setBulkCustomManagerId(managerId)
     setBulkReviewerType('custom')
     applyReviewerToFilteredEmployees('custom', { customManagerId: managerId })
-  }
-
-  const applyBulkSupervisor = (supervisorId: string) => {
-    setBulkSupervisorId(supervisorId)
-    setBulkReviewerType('supervisor')
-    applyReviewerToFilteredEmployees('supervisor', { supervisorId })
-  }
-
-  const selectAllFiltered = () => mergeEmployeeSelection(filteredEmployeeIds)
-
-  const selectAllInPool = () => mergeEmployeeSelection(employeePoolIds)
-
-  const clearSelection = () => {
-    setIndividualEmployeeIds([])
-    setReviewerAssignments((prev) => syncReviewerDefaults(attachedGroupIds, [], prev))
   }
 
   const employeeTableData = useMemo(
@@ -662,51 +766,71 @@ export function LaunchCycleWizard() {
     ],
   )
 
-  const missingSupervisorInShownTable = useMemo(
-    () => employeeTableData.filter((row) => row.supervisorMissing),
-    [employeeTableData],
-  )
+  const cycleParticipantSummary = useMemo((): CycleParticipantSummary => {
+    const unassigned: CycleParticipantSummary['unassigned'] = []
+    const participants: CycleParticipantSummary['participants'] = []
+    const selectedIds = new Set(derivedParticipantIds)
+    const unassignedEmployees: CycleParticipantSummary['unassignedEmployees'] = []
 
-  const missingSupervisorInShownTableCount = missingSupervisorInShownTable.length
+    for (const person of employeePool) {
+      if (selectedIds.has(person.id)) continue
+      unassignedEmployees.push({
+        id: person.id,
+        name: formatEmployeeNameWithCode(person.name, person.id),
+        supervisorLabel: supervisorLabelForEmployee(person, getPerson),
+      })
+    }
+    unassignedEmployees.sort((a, b) => a.name.localeCompare(b.name))
 
-  const missingSupervisorTableAlertDescription = useMemo(() => {
-    if (missingSupervisorInShownTableCount === 0) return ''
-    const names = missingSupervisorInShownTable.map((row) => row.name).join(', ')
-    const countLabel =
-      missingSupervisorInShownTableCount === 1
-        ? '1 employee has a missing supervisor'
-        : `${missingSupervisorInShownTableCount} employees have missing supervisors`
-    return `${countLabel} (${names}). Choose a supervisor from the reviewer column below.`
-  }, [missingSupervisorInShownTable, missingSupervisorInShownTableCount])
+    for (const id of derivedParticipantIds) {
+      const person = getPerson(id)
+      if (!person) continue
+      const assignment = getEffectiveAssignment(id)
+      const assignmentValid = isReviewerAssignmentValid(assignment, person)
+      const name = formatEmployeeNameWithCode(person.name, person.id)
+      const supervisorLabel = supervisorLabelForEmployee(person, getPerson)
 
-  const participantAssignmentTableData = useMemo(
-    () =>
-      derivedParticipantIds
-        .map((id) => getPerson(id))
-        .filter((person): person is NonNullable<typeof person> => Boolean(person))
-        .map((person) => {
-          const assignment = getEffectiveAssignment(person.id)
-          const effectiveSupervisorId = resolveEffectiveSupervisorId(person, assignment) ?? ''
-          const name = formatEmployeeNameWithCode(person.name, person.id)
-          return {
-            id: person.id,
-            name,
-            title: person.title,
-            department: person.department,
-            reviewerType: assignment.type,
-            reviewerCustomManagerId: assignment.customManagerId ?? '',
-            reviewerSupervisorId: effectiveSupervisorId,
-            supervisorMissing: isSupervisorAssignmentMissing(person, assignment),
-          }
-        })
-        .sort((a, b) => {
-          if (a.supervisorMissing !== b.supervisorMissing) {
-            return a.supervisorMissing ? -1 : 1
-          }
-          return a.name.localeCompare(b.name)
-        }),
-    [derivedParticipantIds, getEffectiveAssignment, getPerson],
-  )
+      let reason: string | undefined
+      if (!assignmentValid) {
+        reason = 'Reviewer not assigned'
+        if (
+          assignment.type === 'supervisor' &&
+          isSupervisorAssignmentMissing(person, assignment)
+        ) {
+          reason = 'Supervisor not on file'
+        } else if (assignment.type === 'custom' && !assignment.customManagerId?.trim()) {
+          reason = 'Custom manager not selected'
+        }
+        unassigned.push({ id, displayName: name, reason })
+      }
+
+      participants.push({
+        id,
+        name,
+        supervisorLabel,
+        assignmentValid,
+        attentionReason: reason,
+      })
+    }
+
+    participants.sort((a, b) => {
+      if (a.assignmentValid !== b.assignmentValid) {
+        return a.assignmentValid ? 1 : -1
+      }
+      return a.name.localeCompare(b.name)
+    })
+
+    const inCycleCount = derivedParticipantIds.length
+    return {
+      inCycleCount,
+      assignedCount: inCycleCount - unassigned.length,
+      unassignedCount: unassigned.length,
+      unassigned,
+      unassignedEmployeeCount: unassignedEmployees.length,
+      unassignedEmployees,
+      participants,
+    }
+  }, [derivedParticipantIds, employeePool, getEffectiveAssignment, getPerson])
 
   const renderReviewerAssignmentCell = useCallback(
     (record: {
@@ -724,6 +848,9 @@ export function LaunchCycleWizard() {
         supervisorId: record.reviewerSupervisorId || undefined,
       }
       const effectiveSupervisorId = resolveEffectiveSupervisorId(person, assignment) ?? ''
+      const supervisorName = effectiveSupervisorId
+        ? getPerson(effectiveSupervisorId)?.name ?? '—'
+        : ''
       return createReviewerAssignmentCell(
         assignment,
         managerOptions,
@@ -732,10 +859,10 @@ export function LaunchCycleWizard() {
         `Reviewer for ${record.name}`,
         assignment.type === 'supervisor'
           ? {
-              effectiveSupervisorId,
               supervisorMissing: record.supervisorMissing,
-              onSupervisorChange: (supervisorId) =>
-                setReviewerSupervisor(record.id, supervisorId),
+              supervisorLabel: supervisorName
+                ? `Supervisor — ${supervisorName}`
+                : 'Supervisor — not on file',
             }
           : undefined,
       )
@@ -777,96 +904,21 @@ export function LaunchCycleWizard() {
     [renderReviewerAssignmentCell],
   )
 
-  const participantAssignmentTableColumns = useMemo(
-    () => [
-      { id: 'name', header: 'Employee', accessor: 'name', sortable: true },
-      { id: 'title', header: 'Title', accessor: 'title', sortable: true },
-      { id: 'department', header: 'Department', accessor: 'department', sortable: true },
-      {
-        id: 'reviewer',
-        header: 'Reviewer',
-        accessor: 'reviewerType',
-        sortable: false,
-        className: 'tq-table-reviewer-cell',
-        cellRenderer: (_value: unknown, row: unknown) => {
-          const record = row as {
-            id: string
-            name: string
-            reviewerType: string
-            reviewerCustomManagerId: string
-            reviewerSupervisorId: string
-            supervisorMissing: boolean
-          }
-          return renderReviewerAssignmentCell(record)
-        },
-      },
-    ],
-    [renderReviewerAssignmentCell],
-  )
-
-  const groupPickerItems = useMemo(
-    () =>
-      state.reviewGroups.map((group) => {
-        const sampleMember = group.memberIds[0] ? getPerson(group.memberIds[0]) : undefined
-        const previewPerson =
-          sampleMember ?? state.people.find((person) => person.role === 'employee')
-        const reviewerPreview = previewPerson
-          ? reviewerPreviewLabel(
-              previewPerson,
-              group.defaultReviewerAssignment,
-              getPerson,
-            )
-          : '—'
-        return {
-          id: group.id,
-          name: group.name,
-          description: group.description,
-          membersLabel:
-            group.memberIds.length === 1
-              ? '1 employee'
-              : `${group.memberIds.length} employees`,
-          reviewerPreview,
-        }
-      }),
-    [state.reviewGroups, state.people, getPerson],
-  )
-
-  const attachedGroups = useMemo(
-    () =>
-      attachedGroupIds
-        .map((id) => getGroup(id))
-        .filter((group): group is ReviewEmployeeGroup => Boolean(group)),
-    [attachedGroupIds, getGroup],
-  )
-
   const participantStatusLabel = useMemo(() => {
     const employeePart =
       derivedParticipantIds.length === 1
-        ? '1 employee'
-        : `${derivedParticipantIds.length} employees`
-    const groupPart =
-      attachedGroupIds.length === 1
-        ? '1 group attached'
-        : `${attachedGroupIds.length} groups attached`
-    const conflictPart =
-      conflicts.length === 0
-        ? 'No reviewer conflicts'
-        : conflicts.length === 1
-          ? '1 conflict to resolve'
-          : `${conflicts.length} conflicts to resolve`
-    const supervisorPart =
-      missingSupervisorCount === 0
-        ? 'All supervisors assigned'
-        : missingSupervisorCount === 1
-          ? '1 missing supervisor'
-          : `${missingSupervisorCount} missing supervisors`
-    return `${employeePart} · ${groupPart} · ${conflictPart} · ${supervisorPart}`
-  }, [
-    derivedParticipantIds.length,
-    attachedGroupIds.length,
-    conflicts.length,
-    missingSupervisorCount,
-  ])
+        ? '1 employee selected'
+        : `${derivedParticipantIds.length} employees selected`
+    const reviewerPart =
+      cycleParticipantSummary.unassignedCount === 0
+        ? derivedParticipantIds.length === 0
+          ? 'No reviewer assignments yet'
+          : 'All reviewers assigned'
+        : cycleParticipantSummary.unassignedCount === 1
+          ? '1 needs reviewer'
+          : `${cycleParticipantSummary.unassignedCount} need reviewer`
+    return `${employeePart} · ${reviewerPart}`
+  }, [derivedParticipantIds.length, cycleParticipantSummary.unassignedCount])
 
   const isTemplateValid = () => {
     if (templateMode === 'select') return Boolean(selectedTemplateId)
@@ -895,14 +947,17 @@ export function LaunchCycleWizard() {
       case 2: {
         if (getEnabledWorkflowSteps(workflow).length === 0) return false
         if (workflowIncludesManagerRatingScale(workflow)) {
-          return isRatingScaleConfigValid(ratingScale)
+          if (!isRatingScaleConfigValid(ratingScale)) return false
         }
-        return true
+        const kickoffMode: WorkflowKickoffMode =
+          workflowKickoffMode === 'parallel' && canUseParallelKickoff(workflow)
+            ? 'parallel'
+            : 'sequential'
+        return isWorkflowDeadlinesOrderValid(workflow, kickoffMode)
       }
       case 3:
         return (
           derivedParticipantIds.length > 0 &&
-          conflicts.length === 0 &&
           derivedParticipantIds.every((id) =>
             isReviewerAssignmentValid(getEffectiveAssignment(id), getPerson(id)),
           )
@@ -1196,160 +1251,128 @@ export function LaunchCycleWizard() {
               <ModusWcTypography hierarchy="p" size="sm" weight="semibold" label={participantStatusLabel} />
             </div>
             <div className="flex flex-col gap-3">
-              {conflicts.length > 0 ? (
+              <div className="flex flex-col gap-3">
                 <ModusWcTypography
-                  hierarchy="p"
-                  size="sm"
-                  customClass="text-[var(--modus-wc-color-warning)]"
-                  label="Some employees have different reviewers from different sources. Resolve conflicts before continuing."
+                  hierarchy="h4"
+                  size="md"
+                  weight="semibold"
+                  label="Select employees"
                 />
-              ) : null}
-
-              <ParticipantConflictPanel
-                conflicts={conflicts}
-                getPerson={getPerson}
-                getGroup={getGroup}
-                onResolve={resolveConflict}
-              />
-
-              <div className="tq-review-detail-tabs">
-                <ModusWcTabs
-                  tabs={participantTabs}
-                  activeTabIndex={participantsTabIndex}
-                  tabStyle="bordered"
-                  size="sm"
-                  customClass="tq-review-detail-tabs__strip"
-                  aria-label="Participant selection mode"
-                  onTabChange={(e: CustomEvent<{ previousTab: number; newTab: number }>) =>
-                    setParticipantsTabIndex(e.detail.newTab)
-                  }
-                />
-              </div>
-
-              <div
-                className="flex flex-col gap-3"
-                hidden={participantsTabIndex !== 0}
-                aria-hidden={participantsTabIndex !== 0}
-              >
-                  <div className="flex shrink-0 flex-wrap justify-end gap-2">
-                    <ModusWcButton
-                      variant="outlined"
-                      color="tertiary"
-                      size="xs"
-                      onButtonClick={selectAllFiltered}
-                    >
-                      Select all shown
-                    </ModusWcButton>
-                    <ModusWcButton
-                      variant="outlined"
-                      color="tertiary"
-                      size="xs"
-                      onButtonClick={selectAllInPool}
-                    >
-                      Select all employees
-                    </ModusWcButton>
-                    <ModusWcButton
-                      variant="borderless"
-                      color="tertiary"
-                      size="xs"
-                      onButtonClick={clearSelection}
-                    >
-                      Clear
-                    </ModusWcButton>
-                  </div>
-                  <div
-                    className={`grid grid-cols-1 gap-3 md:grid-cols-2 ${
-                      bulkReviewerType === 'custom' || bulkReviewerType === 'supervisor'
-                        ? 'xl:grid-cols-5'
-                        : 'lg:grid-cols-4'
-                    }`}
-                  >
-                    <ModusWcSelect
-                      label="Department"
-                      size="sm"
-                      value={filterDepartment}
-                      options={departmentOptions}
-                      onInputChange={(e) => setFilterDepartment(readInputString(e as CustomEvent))}
-                    />
-                    <ModusWcSelect
-                      label="Cost center"
-                      size="sm"
-                      value={filterCostCenter}
-                      options={costCenterOptions}
-                      onInputChange={(e) => setFilterCostCenter(readInputString(e as CustomEvent))}
-                    />
-                    <ModusWcSelect
-                      label="Title"
-                      size="sm"
-                      value={filterTitle}
-                      options={titleOptions}
-                      onInputChange={(e) => setFilterTitle(readInputString(e as CustomEvent))}
-                    />
-                    <ModusWcSelect
-                      label="Reviewer for all shown"
-                      size="sm"
-                      value={bulkReviewerType}
-                      options={REVIEWER_TYPE_OPTIONS}
-                      onInputChange={(e) =>
-                        applyBulkReviewer(readInputString(e as CustomEvent) as ReviewerRoleType)
-                      }
-                    />
+                  <div className="flex flex-col gap-3">
                     <div
-                      hidden={bulkReviewerType !== 'supervisor'}
-                      aria-hidden={bulkReviewerType !== 'supervisor'}
+                      className={`grid grid-cols-1 gap-3 md:grid-cols-2 ${
+                        bulkReviewerType === 'custom' ? 'xl:grid-cols-5' : 'lg:grid-cols-4'
+                      }`}
                     >
+                      <ParticipantFieldMultiFilter
+                        label="Department"
+                        emptyHint="All departments"
+                        values={departmentValues}
+                        selected={filterDepartments}
+                        onSelectedChange={setFilterDepartments}
+                      />
+                      <ParticipantFieldMultiFilter
+                        label="Cost center"
+                        emptyHint="All cost centers"
+                        values={costCenterValues}
+                        selected={filterCostCenters}
+                        onSelectedChange={setFilterCostCenters}
+                      />
+                      <ParticipantFieldMultiFilter
+                        label="Title"
+                        emptyHint="All titles"
+                        values={titleValues}
+                        selected={filterTitles}
+                        onSelectedChange={setFilterTitles}
+                      />
                       <ModusWcSelect
-                        label="Supervisor for all shown (optional)"
+                        label="Reviewer for all shown"
                         size="sm"
-                        value={bulkSupervisorId}
-                        options={[
-                          { label: 'Use each employee’s supervisor on file', value: '' },
-                          ...managerOptions,
-                        ]}
-                        onInputChange={(e) => {
-                          const supervisorId = readInputString(e as CustomEvent)
-                          if (supervisorId) applyBulkSupervisor(supervisorId)
-                          else {
-                            setBulkSupervisorId('')
-                            applyReviewerToFilteredEmployees('supervisor', { supervisorId: '' })
-                          }
-                        }}
+                        value={bulkReviewerType}
+                        options={REVIEWER_TYPE_OPTIONS}
+                        onInputChange={(e) =>
+                          applyBulkReviewer(readInputString(e as CustomEvent) as ReviewerRoleType)
+                        }
                       />
+                      <div
+                        hidden={bulkReviewerType !== 'custom'}
+                        aria-hidden={bulkReviewerType !== 'custom'}
+                      >
+                        <ModusWcAutocomplete
+                          label="Custom reviewer for all selected"
+                          size="sm"
+                          placeholder="Search managers"
+                          includeSearch
+                          showMenuOnFocus
+                          value={bulkCustomManagerLabel}
+                          items={bulkManagerItems}
+                          onItemSelect={(e) => {
+                            const managerId =
+                              (e as CustomEvent<{ value?: string }>).detail?.value ?? ''
+                            if (managerId) applyBulkCustomManager(managerId)
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div
-                      hidden={bulkReviewerType !== 'custom'}
-                      aria-hidden={bulkReviewerType !== 'custom'}
-                    >
-                      <ModusWcAutocomplete
-                        label="Custom reviewer for all selected"
-                        size="sm"
-                        placeholder="Search managers"
-                        includeSearch
-                        showMenuOnFocus
-                        value={bulkCustomManagerLabel}
-                        items={bulkManagerItems}
-                        onItemSelect={(e) => {
-                          const managerId =
-                            (e as CustomEvent<{ value?: string }>).detail?.value ?? ''
-                          if (managerId) applyBulkCustomManager(managerId)
-                        }}
-                      />
-                    </div>
+                    {filterDepartments.length + filterCostCenters.length + filterTitles.length >
+                    0 ? (
+                      <div
+                        className="flex min-w-0 flex-wrap items-center gap-2"
+                        role="group"
+                        aria-label="Active participant filters"
+                      >
+                        {filterDepartments.map((value) => (
+                          <ModusWcChip
+                            key={`dept-${value}`}
+                            label={value}
+                            size="sm"
+                            active
+                            variant="filled"
+                            showRemove
+                            aria-label={`${value}, remove department filter`}
+                            onChipRemove={() =>
+                              setFilterDepartments((prev) => prev.filter((entry) => entry !== value))
+                            }
+                          />
+                        ))}
+                        {filterCostCenters.map((value) => (
+                          <ModusWcChip
+                            key={`cc-${value}`}
+                            label={value}
+                            size="sm"
+                            active
+                            variant="filled"
+                            showRemove
+                            aria-label={`${value}, remove cost center filter`}
+                            onChipRemove={() =>
+                              setFilterCostCenters((prev) => prev.filter((entry) => entry !== value))
+                            }
+                          />
+                        ))}
+                        {filterTitles.map((value) => (
+                          <ModusWcChip
+                            key={`title-${value}`}
+                            label={value}
+                            size="sm"
+                            active
+                            variant="filled"
+                            showRemove
+                            aria-label={`${value}, remove title filter`}
+                            onChipRemove={() =>
+                              setFilterTitles((prev) => prev.filter((entry) => entry !== value))
+                            }
+                          />
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
+                  <CycleParticipantSummaryPanel summary={cycleParticipantSummary} />
                   <ModusWcTypography
                     hierarchy="p"
                     size="sm"
                     customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                    label="Changing Reviewer for all shown updates every row in the table below (respecting filters). Row checkboxes add people to the cycle; editing a single row’s reviewer also adds that person."
+                    label="Use filters and bulk reviewer controls for the rows shown below. Check employees to add them to the cycle and set each row’s reviewer."
                   />
-                  {missingSupervisorInShownTableCount > 0 ? (
-                    <ModusWcAlert
-                      variant="warning"
-                      alertTitle="Missing supervisors"
-                      alertDescription={missingSupervisorTableAlertDescription}
-                    />
-                  ) : null}
-                  {participantsTabIndex === 0 ? (
                   <PerformanceDataTable
                     key={reviewerTableKey}
                     caption="Employees available for this review cycle"
@@ -1360,69 +1383,7 @@ export function LaunchCycleWizard() {
                     selectedRowIds={individualEmployeeIds}
                     onRowSelectionChange={handleEmployeeRowSelectionChange}
                   />
-                  ) : null}
               </div>
-
-              <div
-                className="flex flex-col gap-3"
-                hidden={participantsTabIndex !== 1}
-                aria-hidden={participantsTabIndex !== 1}
-              >
-                <LaunchCycleGroupPicker
-                  groups={groupPickerItems}
-                  attachedGroupIds={attachedGroupIds}
-                  onAttachedGroupIdsChange={handleAttachedGroupIdsChange}
-                  onAttachAll={selectAllReviewGroups}
-                  onClearAll={clearAttachedGroups}
-                  onCreateGroup={() => {
-                    setDraftLaunchGroup({
-                      id: `rgrp-${crypto.randomUUID().slice(0, 8)}`,
-                      name: '',
-                      memberIds: [],
-                      defaultReviewerAssignment: defaultReviewerAssignment(),
-                      createdBy: 'HR Admin',
-                    })
-                    setLaunchGroupFormOpen(true)
-                  }}
-                />
-              </div>
-
-              <ReviewGroupFormModal
-                modalId={LAUNCH_GROUP_FORM_MODAL_ID}
-                open={launchGroupFormOpen}
-                title="Create review group"
-                submitLabel="Save group"
-                people={state.people}
-                initial={draftLaunchGroup ? formValuesFromGroup(draftLaunchGroup) : undefined}
-                onClose={() => {
-                  setLaunchGroupFormOpen(false)
-                  setDraftLaunchGroup(null)
-                }}
-                onSubmit={handleLaunchGroupFormSubmit}
-              />
-
-              {derivedParticipantIds.length > 0 ? (
-                <div className="flex flex-col gap-2 border-t border-[var(--modus-wc-color-base-200)] pt-4">
-                  <ModusWcTypography
-                    hierarchy="h4"
-                    size="md"
-                    weight="semibold"
-                    label="Reviewer assignments"
-                  />
-                  <ModusWcTypography
-                    hierarchy="p"
-                    size="sm"
-                    customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                    label="Everyone in this cycle appears here. When Reviewer is Supervisor, assign or confirm the supervisor for each employee."
-                  />
-                  <PerformanceDataTable
-                    caption="Cycle participants and reviewer assignments"
-                    columns={participantAssignmentTableColumns}
-                    data={participantAssignmentTableData}
-                    density="comfortable"
-                  />
-                </div>
-              ) : null}
             </div>
           </ModusWcCard>
         )}
@@ -1437,8 +1398,9 @@ export function LaunchCycleWizard() {
             ratingScale={ratingScale}
             allowSupportingDocuments={allowSupportingDocuments}
             selectedEmployees={selectedEmployees}
-            attachedGroups={attachedGroups}
-            conflictsWereResolved={conflicts.length === 0 && derivedParticipantIds.length > 0}
+            conflictsWereResolved={derivedParticipantIds.every((id) =>
+              isReviewerAssignmentValid(getEffectiveAssignment(id), getPerson(id)),
+            )}
             getPerson={getPerson}
           />
         )}
@@ -1487,18 +1449,8 @@ export function LaunchCycleWizard() {
             </ModusWcButton>
 
             <div className="tq-launch-wizard-page__footer-actions">
-              {stepIndex !== 4 ? (
-                <ModusWcButton
-                  variant="filled"
-                  color="primary"
-                  size="sm"
-                  disabled={!canAdvance()}
-                  onButtonClick={goNext}
-                >
-                  Continue
-                </ModusWcButton>
-              ) : (
-                <div className="tq-launch-wizard-page__footer-final-actions">
+              <div className="tq-launch-wizard-page__footer-final-actions">
+                {stepIndex >= 2 && stepIndex <= 4 ? (
                   <ModusWcButton
                     variant="outlined"
                     color="tertiary"
@@ -1508,6 +1460,18 @@ export function LaunchCycleWizard() {
                   >
                     Save Draft
                   </ModusWcButton>
+                ) : null}
+                {stepIndex !== 4 ? (
+                  <ModusWcButton
+                    variant="filled"
+                    color="primary"
+                    size="sm"
+                    disabled={!canAdvance()}
+                    onButtonClick={goNext}
+                  >
+                    Continue
+                  </ModusWcButton>
+                ) : (
                   <ModusWcButton
                     variant="filled"
                     color="primary"
@@ -1518,8 +1482,8 @@ export function LaunchCycleWizard() {
                     <ModusWcIcon name="play" size="xs" decorative />
                     Confirm & Start Review Cycle
                   </ModusWcButton>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </footer>

@@ -44,6 +44,9 @@ import {
   statusAfterManagerPhaseComplete,
   workflowFromLegacy,
 } from '../utils/workflow'
+import {
+  computeCycleDueDateFromWorkflow,
+} from '../utils/cycleDisplay'
 import { buildReviewAcknowledgement, legacyAutoAcknowledgement } from '../utils/acknowledgement'
 import {
   appStatePatchFromRoute,
@@ -781,15 +784,19 @@ export function PerformanceProvider({
         cycleInput.workflow ??
         workflowFromLegacy(cycleInput.includesSelfEvaluation ?? true)
       const includesSelfEvaluation = includesSelfEvaluationFromWorkflow(workflow)
+      const today = new Date().toISOString().slice(0, 10)
+      const dueDate = computeCycleDueDateFromWorkflow(workflow, cycleInput.dueDate)
       const cycle: ReviewCycle = {
         ...cycleInput,
         workflow,
         includesSelfEvaluation,
         id: `cycle-${crypto.randomUUID().slice(0, 8)}`,
         status: 'active',
+        startDate: today,
+        publishedAt: today,
+        dueDate,
         reviewerAssignments: undefined,
       }
-      const today = new Date().toISOString().slice(0, 10)
       setState((s) => ({
         ...s,
         cycles: [...s.cycles, cycle],
@@ -824,12 +831,15 @@ export function PerformanceProvider({
         cycleInput.workflow ??
         workflowFromLegacy(cycleInput.includesSelfEvaluation ?? true)
       const includesSelfEvaluation = includesSelfEvaluationFromWorkflow(workflow)
+      const dueDate = computeCycleDueDateFromWorkflow(workflow, cycleInput.dueDate)
       const cycle: ReviewCycle = {
         ...cycleInput,
         workflow,
         includesSelfEvaluation,
         id: `cycle-${crypto.randomUUID().slice(0, 8)}`,
         status: 'draft',
+        startDate: cycleInput.startDate || '',
+        dueDate,
         reviewerAssignments: options?.reviewerAssignments,
       }
       setState((s) => ({

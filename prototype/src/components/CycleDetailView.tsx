@@ -15,6 +15,11 @@ import { computeCycleStats } from '../utils/cycleStats'
 import { readInputString } from '../utils/modusFormEvents'
 import { formatEmployeeNameWithCode } from '../utils/employeeCode'
 import { formatDate, isReviewDateRangeValid } from '../utils/status'
+import {
+  computeCycleDueDateFromWorkflow,
+  getCycleDisplayEndDate,
+  getCycleDisplayStartDate,
+} from '../utils/cycleDisplay'
 import { CycleStatusBadge } from './CycleStatusBadge'
 import { PerformanceDataTable } from './PerformanceDataTable'
 import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
@@ -294,7 +299,9 @@ export function CycleDetailView() {
     if (workflowStepEnabled('manager')) checks.push(draftManagerDue)
     if (workflowStepEnabled('acknowledgement')) checks.push(draftAckDue)
     if (checks.length === 0) return true
-    return checks.every((date) => isReviewDateRangeValid(cycle.startDate, date))
+    const cycleStart =
+      getCycleDisplayStartDate(cycle) || new Date().toISOString().slice(0, 10)
+    return checks.every((date) => isReviewDateRangeValid(cycleStart, date))
   }, [
     cycle,
     draftSelfEvalDue,
@@ -327,13 +334,7 @@ export function CycleDetailView() {
         applyStepDeadline('acknowledgement', draftAckDue)
       }
 
-      const deadlineValues = [
-        workflowStepEnabled('employee') ? draftSelfEvalDue : '',
-        workflowStepEnabled('manager') ? draftManagerDue : '',
-        workflowStepEnabled('acknowledgement') ? draftAckDue : '',
-      ].filter(Boolean)
-      const latestDue =
-        deadlineValues.sort().at(-1) ?? cycle.dueDate
+      const latestDue = computeCycleDueDateFromWorkflow(nextWorkflow, cycle.dueDate)
 
       updateCycle(cycle.id, {
         name: draftName.trim(),
@@ -644,11 +645,23 @@ export function CycleDetailView() {
             </div>
             <div>
               <ModusWcTypography hierarchy="p" size="xs" weight="semibold" label="Start date" />
-              <ModusWcTypography hierarchy="p" size="sm" label={formatDate(cycle.startDate)} />
+              <ModusWcTypography
+                hierarchy="p"
+                size="sm"
+                label={
+                  getCycleDisplayStartDate(cycle)
+                    ? formatDate(getCycleDisplayStartDate(cycle))
+                    : '—'
+                }
+              />
             </div>
             <div>
               <ModusWcTypography hierarchy="p" size="xs" weight="semibold" label="End date" />
-              <ModusWcTypography hierarchy="p" size="sm" label={formatDate(cycle.dueDate)} />
+              <ModusWcTypography
+                hierarchy="p"
+                size="sm"
+                label={formatDate(getCycleDisplayEndDate(cycle))}
+              />
             </div>
             <div className="min-w-0">
               <ModusWcTypography hierarchy="p" size="xs" weight="semibold" label="Template" />

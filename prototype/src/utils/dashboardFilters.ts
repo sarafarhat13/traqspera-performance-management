@@ -1,4 +1,5 @@
 import type { PerformanceReview, Person, ReviewCycle } from '../types'
+import { getCycleDisplayEndDate } from './cycleDisplay'
 import { normalizeRatingScale } from './ratingScale'
 import {
   cycleIncludesRatingScale,
@@ -71,7 +72,7 @@ export type DashboardReviewFilterOptions = {
 type PersonFilterKey = 'department' | 'costCenter' | 'title' | 'union'
 
 function isCyclePastDue(cycle: ReviewCycle, now: Date): boolean {
-  const due = new Date(cycle.dueDate)
+  const due = new Date(getCycleDisplayEndDate(cycle))
   due.setHours(23, 59, 59, 999)
   return due < now
 }

@@ -17,6 +17,10 @@ import {
   type DashboardFilters,
 } from '../utils/dashboardFilters'
 import { CYCLE_STATUS_LABELS, formatDate } from '../utils/status'
+import {
+  getCycleDisplayEndDate,
+  getCycleDisplayStartDate,
+} from '../utils/cycleDisplay'
 import { TraqsperaPageBody, TraqsperaPageHeader } from './TraqsperaPageHeader'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { ReviewCycleCard } from './ReviewCycleCard'
@@ -84,8 +88,10 @@ export function HRAdminDashboard() {
           name: cycle.name,
           status: cycle.status,
           statusLabel: CYCLE_STATUS_LABELS[cycle.status],
-          startDate: formatDate(cycle.startDate),
-          dueDate: formatDate(cycle.dueDate),
+          startDate: getCycleDisplayStartDate(cycle)
+            ? formatDate(getCycleDisplayStartDate(cycle))
+            : '—',
+          dueDate: formatDate(getCycleDisplayEndDate(cycle)),
           employees: String(stats.totalEmployees),
           reviewers: cycleReviewersSummary(cycle.id, state.reviews, getPerson),
           progress: `${stats.percentComplete}%`,

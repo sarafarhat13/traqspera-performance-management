@@ -10,6 +10,10 @@ import type { ReviewCycle } from '../types'
 import { canCompleteReviewCycle } from '../utils/cycleFinalApproval'
 import { computeCycleStats } from '../utils/cycleStats'
 import { formatReviewPeriod } from '../utils/status'
+import {
+  getCycleDisplayEndDate,
+  getCycleDisplayStartDate,
+} from '../utils/cycleDisplay'
 import { CycleStatusBadge } from './CycleStatusBadge'
 import { ReviewCycleCompleteModal } from './ReviewCycleCompleteModal'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
@@ -106,7 +110,7 @@ export function ReviewCycleCard({
           hierarchy="p"
           size="sm"
           customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-          label={`Created by: ${createdBy} • ${formatReviewPeriod(cycle.startDate, cycle.dueDate)} • ${employeeLabel}`}
+          label={`Created by: ${createdBy} • ${formatReviewPeriod(getCycleDisplayStartDate(cycle), getCycleDisplayEndDate(cycle))} • ${employeeLabel}`}
         />
 
         <div className="flex flex-wrap items-center gap-4">

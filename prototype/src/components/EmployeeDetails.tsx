@@ -9,6 +9,10 @@ import {
 import { usePerformance } from '../context/PerformanceContext'
 import type { EmployeeDetailsTab, PerformanceReview, ReviewCycle, ReviewTemplate } from '../types'
 import { formatReviewPeriod, isLaunchedReviewCycle } from '../utils/status'
+import {
+  getCycleDisplayEndDate,
+  getCycleDisplayStartDate,
+} from '../utils/cycleDisplay'
 import { CurrentStageDueLine } from './CurrentStageDueLine'
 import { StatusBadge } from './StatusBadge'
 import { PerformanceReviewDetailContent } from './PerformanceReviewDetailContent'
@@ -131,7 +135,7 @@ function EmployeeReviewDetailPanel({
           {cycle && (
             <div className="mt-1">
               <p className="text-[13px] text-[#6a6e79]">
-                {formatReviewPeriod(cycle.startDate, cycle.dueDate)}
+                {formatReviewPeriod(getCycleDisplayStartDate(cycle), getCycleDisplayEndDate(cycle))}
               </p>
               <CurrentStageDueLine
                 cycle={cycle}

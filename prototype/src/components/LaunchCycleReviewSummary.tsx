@@ -31,6 +31,8 @@ import {
 
 type LaunchCycleReviewSummaryProps = {
   cycleName: string
+  /** Message included in participant launch email */
+  cycleDescription?: string
   template?: ReviewTemplate
   workflow: WorkflowStep[]
   workflowKickoffMode: WorkflowKickoffMode
@@ -150,6 +152,7 @@ function buildTimelineRows(
 
 export function LaunchCycleReviewSummary({
   cycleName,
+  cycleDescription = '',
   template,
   workflow,
   workflowKickoffMode,
@@ -204,6 +207,26 @@ export function LaunchCycleReviewSummary({
               />
               <ModusWcTypography hierarchy="p" size="md" weight="semibold" label={cycleName} />
             </div>
+            {cycleDescription.trim() ? (
+              <>
+                <ModusWcDivider />
+                <div>
+                  <ModusWcTypography
+                    hierarchy="p"
+                    size="xs"
+                    weight="semibold"
+                    customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                    label="Participant email message"
+                  />
+                  <ModusWcTypography
+                    hierarchy="p"
+                    size="sm"
+                    customClass="!mt-1 whitespace-pre-wrap text-[var(--modus-wc-color-base-content)]"
+                    label={cycleDescription.trim()}
+                  />
+                </div>
+              </>
+            ) : null}
             <ModusWcDivider />
             <div>
               <ModusWcTypography

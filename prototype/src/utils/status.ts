@@ -136,7 +136,8 @@ export function formatLongDate(iso: string): string {
 }
 
 export function formatReviewPeriod(startDate: string, endDate: string): string {
-  return `${formatDate(startDate)} – ${formatDate(endDate)}`
+  const startLabel = startDate ? formatDate(startDate) : '—'
+  return `${startLabel} – ${formatDate(endDate)}`
 }
 
 export function isReviewDateRangeValid(startDate: string, endDate: string): boolean {

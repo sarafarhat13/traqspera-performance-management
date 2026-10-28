@@ -89,13 +89,16 @@ export interface ReviewTemplate {
 export interface ReviewCycle {
   id: string
   name: string
+  /** Optional message for participants; included in launch notification email */
   description?: string
   createdBy?: string
   templateId: string
-  /** When the review cycle opens for participants */
+  /** When the review cycle opens for participants (set to publish date on launch) */
   startDate: string
   /** Final due date for the cycle (end of review period) */
   dueDate: string
+  /** ISO date (YYYY-MM-DD) when the cycle was published; drives dashboard start date */
+  publishedAt?: string
   includesSelfEvaluation: boolean
   workflow?: WorkflowStep[]
   /** When both self-evaluation and manager evaluation are enabled, controls simultaneous vs ordered kickoff. */

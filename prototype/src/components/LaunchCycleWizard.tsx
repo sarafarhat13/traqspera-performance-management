@@ -4,13 +4,13 @@ import {
   ModusWcAutocomplete,
   ModusWcButton,
   ModusWcCard,
-  ModusWcDate,
   ModusWcIcon,
   ModusWcModal,
   ModusWcSelect,
   ModusWcStepper,
   ModusWcTabs,
   ModusWcTextInput,
+  ModusWcTextarea,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
 import { createEmptyTemplate, DEFAULT_RATING_SCALE } from '../data/seed'
@@ -29,7 +29,8 @@ import {
   readTableSelectedRowIds,
   rowIdSetEqual,
 } from '../utils/tableRowSelection'
-import { CYCLE_STATUS_LABELS, isReviewDateRangeValid } from '../utils/status'
+import { CYCLE_STATUS_LABELS } from '../utils/status'
+import { computeCycleDueDateFromWorkflow } from '../utils/cycleDisplay'
 import { isRatingScaleConfigValid, normalizeRatingScale } from '../utils/ratingScale'
 import {
   createDefaultWorkflowSteps,
@@ -89,11 +90,7 @@ const LAUNCH_GROUP_FORM_MODAL_ID = 'launch-wizard-review-group-form'
 
 const LAUNCH_WIZARD_CARD = `${TRAQ_CARD_CLASS} tq-launch-wizard__card`
 
-function defaultStartDate(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
-function defaultDueDate(): string {
+function defaultCycleEndFallback(): string {
   return new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
 }
 
@@ -112,8 +109,7 @@ export function LaunchCycleWizard() {
 
   const [stepIndex, setStepIndex] = useState(0)
   const [cycleName, setCycleName] = useState('')
-  const [startDate, setStartDate] = useState(defaultStartDate())
-  const [dueDate, setDueDate] = useState(defaultDueDate())
+  const [cycleDescription, setCycleDescription] = useState('')
   const [templateMode, setTemplateMode] = useState<'select' | 'create'>('select')
   const wizardSelectableTemplates = useMemo(
     () => state.templates.filter(isTemplateVisibleInCycleWizard),
@@ -301,16 +297,14 @@ export function LaunchCycleWizard() {
 
     if (!templateId) return null
 
-    const workflowDeadlines = workflow.map((s) => s.deadline).filter(Boolean)
-    const latestDeadline = workflowDeadlines.sort().at(-1)
-    const cycleDue = latestDeadline || dueDate
+    const cycleDue = computeCycleDueDateFromWorkflow(workflow, defaultCycleEndFallback())
 
     return {
       name: cycleName.trim(),
-      description: launchedTemplate?.description || undefined,
+      description: cycleDescription.trim() || undefined,
       createdBy: 'HR Admin',
       templateId,
-      startDate,
+      startDate: '',
       dueDate: cycleDue,
       includesSelfEvaluation: workflow.some((s) => s.enabled && s.type === 'employee'),
       workflow,
@@ -884,10 +878,7 @@ export function LaunchCycleWizard() {
   const canAdvance = () => {
     switch (stepIndex) {
       case 0:
-        return (
-          cycleName.trim().length > 0 &&
-          isReviewDateRangeValid(startDate, dueDate)
-        )
+        return cycleName.trim().length > 0
       case 1:
         return isTemplateValid()
       case 2: {
@@ -999,35 +990,25 @@ export function LaunchCycleWizard() {
                 value={cycleName}
                 onInputChange={(e) => setCycleName(readInputString(e as CustomEvent))}
               />
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <ModusWcDate
-                  label="Start date"
-                  size="sm"
-                  required
-                  value={startDate}
-                  onInputChange={(e) => setStartDate(readInputString(e as CustomEvent))}
-                />
-                <ModusWcDate
-                  label="End date"
-                  size="sm"
-                  required
-                  value={dueDate}
-                  onInputChange={(e) => setDueDate(readInputString(e as CustomEvent))}
-                />
-              </div>
-              {!isReviewDateRangeValid(startDate, dueDate) && startDate && dueDate && (
-                <ModusWcTypography
-                  hierarchy="p"
-                  size="sm"
-                  customClass="text-[var(--modus-wc-color-danger)]"
-                  label="End date must be on or after the start date."
-                />
-              )}
+              <ModusWcTextarea
+                label="Description for participants"
+                size="sm"
+                rows={4}
+                value={cycleDescription}
+                placeholder="Explain what this review cycle covers and what employees should do next."
+                onInputChange={(e) => setCycleDescription(readInputString(e as CustomEvent))}
+              />
+              <ModusWcTypography
+                hierarchy="p"
+                size="xs"
+                customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                label="Included in the email notification sent to participants when the cycle launches."
+              />
               <ModusWcTypography
                 hierarchy="p"
                 size="sm"
                 customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                label="Workflow step deadlines can override the end date when set in step 3."
+                label="Start and end dates are set automatically when you launch: start is the publish date; end is the due date on the last workflow step (configure deadlines in step 3)."
               />
             </div>
           </ModusWcCard>
@@ -1420,6 +1401,7 @@ export function LaunchCycleWizard() {
         {stepIndex === 4 && (
           <LaunchCycleReviewSummary
             cycleName={cycleName.trim() || '—'}
+            cycleDescription={cycleDescription.trim()}
             template={resolvedTemplate}
             workflow={workflow}
             workflowKickoffMode={workflowKickoffMode}

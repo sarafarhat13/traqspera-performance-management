@@ -1461,26 +1461,28 @@ export function LaunchCycleWizard() {
                     Save Draft
                   </ModusWcButton>
                 ) : null}
-                {stepIndex !== 4 ? (
+                {stepIndex === WIZARD_STEPS.length - 1 ? (
                   <ModusWcButton
+                    key="wizard-publish-review"
                     variant="filled"
                     color="primary"
                     size="sm"
-                    disabled={!canAdvance()}
-                    onButtonClick={goNext}
+                    customClass="tq-launch-wizard-publish-btn"
+                    onButtonClick={handleLaunch}
                   >
-                    Continue
+                    <ModusWcIcon name="send" size="xs" decorative />
+                    Publish review
                   </ModusWcButton>
                 ) : (
                   <ModusWcButton
+                    key="wizard-continue"
                     variant="filled"
                     color="primary"
                     size="sm"
-                    disabled={!canAdvance()}
-                    onButtonClick={handleLaunch}
+                    {...(!canAdvance() ? { disabled: true } : {})}
+                    onButtonClick={goNext}
                   >
-                    <ModusWcIcon name="play" size="xs" decorative />
-                    Confirm & Start Review Cycle
+                    Continue
                   </ModusWcButton>
                 )}
               </div>

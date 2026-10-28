@@ -726,6 +726,23 @@ modus-wc-card [slot='footer'].tq-review-acceptance-footer {
   gap: var(--modus-wc-spacing-sm, 0.75rem);
 }
 
+/* Launch wizard — Publish review matches filled primary Continue */
+.tq-launch-wizard-page__footer-final-actions
+  modus-wc-button
+  button.tq-launch-wizard-publish-btn:not(:disabled):not(.modus-wc-btn-disabled) {
+  background-color: var(--modus-wc-color-primary, #0063a3);
+  border-color: var(--modus-wc-color-primary, #0063a3);
+  color: var(--modus-wc-color-primary-content, #ffffff);
+}
+
+.tq-launch-wizard-page__footer-final-actions
+  modus-wc-button
+  button.tq-launch-wizard-publish-btn:not(:disabled):not(.modus-wc-btn-disabled):hover {
+  background-color: color-mix(in srgb, var(--modus-wc-color-primary, #0063a3) 88%, #000000);
+  border-color: color-mix(in srgb, var(--modus-wc-color-primary, #0063a3) 88%, #000000);
+  color: var(--modus-wc-color-primary-content, #ffffff);
+}
+
 .tq-launch-wizard {
   --tq-launch-wizard-panel-width: 72rem;
   width: 100%;

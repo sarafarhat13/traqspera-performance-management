@@ -518,7 +518,9 @@ export function LaunchCycleWizard() {
     [derivedParticipantIds, getEffectiveAssignment],
   )
 
-  const buildCycleInput = (): Omit<ReviewCycle, 'id' | 'status'> | null => {
+  const buildCycleInput = (options?: {
+    allowEmptyTemplate?: boolean
+  }): Omit<ReviewCycle, 'id' | 'status'> | null => {
     let templateId = selectedTemplateId
     const launchedTemplate =
       templateMode === 'create'
@@ -533,7 +535,10 @@ export function LaunchCycleWizard() {
       templateId = launchedTemplate.id
     }
 
-    if (!templateId) return null
+    if (!templateId) {
+      if (!options?.allowEmptyTemplate) return null
+      templateId = ''
+    }
 
     const cycleDue = computeCycleDueDateFromWorkflow(workflow, defaultCycleEndFallback())
 
@@ -936,7 +941,11 @@ export function LaunchCycleWizard() {
     setTemplateMode('select')
   }
 
-  const canSaveDraft = () => cycleName.trim().length > 0 && isTemplateValid()
+  const canSaveDraft = () => {
+    if (cycleName.trim().length === 0) return false
+    if (stepIndex === 0) return true
+    return isTemplateValid()
+  }
 
   const canAdvance = () => {
     switch (stepIndex) {
@@ -996,7 +1005,9 @@ export function LaunchCycleWizard() {
 
   const handleSaveDraft = () => {
     if (!canSaveDraft()) return
-    const cycleInput = buildCycleInput()
+    const cycleInput = buildCycleInput({
+      allowEmptyTemplate: stepIndex === 0,
+    })
     if (!cycleInput) return
     saveCycleDraft(cycleInput, { reviewerAssignments: reviewerAssignmentsForLaunch })
   }
@@ -1450,17 +1461,15 @@ export function LaunchCycleWizard() {
 
             <div className="tq-launch-wizard-page__footer-actions">
               <div className="tq-launch-wizard-page__footer-final-actions">
-                {stepIndex >= 2 && stepIndex <= 4 ? (
-                  <ModusWcButton
-                    variant="outlined"
-                    color="tertiary"
-                    size="sm"
-                    disabled={!canSaveDraft()}
-                    onButtonClick={handleSaveDraft}
-                  >
-                    Save Draft
-                  </ModusWcButton>
-                ) : null}
+                <ModusWcButton
+                  variant="outlined"
+                  color="tertiary"
+                  size="sm"
+                  {...(!canSaveDraft() ? { disabled: true } : {})}
+                  onButtonClick={handleSaveDraft}
+                >
+                  Save Draft
+                </ModusWcButton>
                 {stepIndex === WIZARD_STEPS.length - 1 ? (
                   <ModusWcButton
                     key="wizard-publish-review"

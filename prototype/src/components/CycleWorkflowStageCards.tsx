@@ -22,7 +22,7 @@ const STAGE_CARD_META: Record<
 > = {
   employee_review: { valueTone: 'warning', metricLabel: 'in employee review' },
   manager_review: { valueTone: 'warning', metricLabel: 'in manager review' },
-  employee_acknowledgment: { valueTone: 'success', metricLabel: 'awaiting acknowledgment' },
+  employee_acknowledgment: { valueTone: 'warning', metricLabel: 'awaiting acknowledgment' },
   complete: { valueTone: 'success', metricLabel: 'reviews completed' },
 }
 
@@ -35,6 +35,41 @@ export function CycleWorkflowStageCards({
   const stageCards = getCycleWorkflowStageCards(cycle)
   const counts = computeCycleWorkflowStageCounts(cycle, reviews)
   const interactive = Boolean(onStageChange)
+  const totalEmployees = reviews.filter((review) => review.cycleId === cycle.id).length
+  const totalSelected = interactive && activeStage === 'all'
+  const totalCardClass = [
+    'tq-dashboard-kpi-card',
+    'tq-cycle-stage-card',
+    interactive ? 'tq-dashboard-kpi-card--interactive' : '',
+    totalSelected ? 'tq-cycle-stage-card--active' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+  const totalInner = (
+    <>
+      <ModusWcTypography
+        hierarchy="p"
+        size="xs"
+        weight="semibold"
+        customClass="!m-0 min-w-0 text-left"
+        label="Total employees"
+      />
+      <div className="tq-cycle-stage-card__metric">
+        <span
+          className="tq-cycle-stage-card__value tq-dashboard-kpi-card__value--primary"
+          aria-hidden="true"
+        >
+          {totalEmployees}
+        </span>
+        <ModusWcTypography
+          hierarchy="p"
+          size="xs"
+          customClass="!m-0 min-w-0 text-left text-[var(--modus-wc-color-base-content-low-contrast)]"
+          label="in this review"
+        />
+      </div>
+    </>
+  )
 
   return (
     <div
@@ -42,6 +77,19 @@ export function CycleWorkflowStageCards({
       role={interactive ? 'group' : undefined}
       aria-label={interactive ? 'Filter employees by workflow stage' : undefined}
     >
+      {interactive ? (
+        <button
+          type="button"
+          className={totalCardClass}
+          aria-pressed={totalSelected}
+          aria-label={`Total employees, ${totalEmployees} in this review`}
+          onClick={() => onStageChange?.('all')}
+        >
+          {totalInner}
+        </button>
+      ) : (
+        <article className={totalCardClass}>{totalInner}</article>
+      )}
       {stageCards.map((stage) => {
         const meta = STAGE_CARD_META[stage]
         const value = counts[stage]

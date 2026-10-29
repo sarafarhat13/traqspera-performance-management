@@ -73,7 +73,6 @@ function stageChipMatchesStatusFilter(
   filter: DashboardReviewStatusFilter,
 ): boolean {
   if (filter === 'all') return true
-  if (filter === 'completed') return chipStatus === 'complete'
   if (filter === 'pending' || filter === 'overdue') return chipStatus === filter
   return true
 }
@@ -214,8 +213,7 @@ export function CycleDetailView() {
       const chipStatus = getReviewCycleStageChipStatus(cycle, review, stage)
       if (!chipStatus) continue
       counts.all += 1
-      if (chipStatus === 'complete') counts.completed += 1
-      else counts[chipStatus] += 1
+      counts[chipStatus] += 1
     }
     return counts
   }, [cycle, cycleReviewsMatchingPanelFilters, showStageStatusChips, workflowStageFilter])

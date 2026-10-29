@@ -61,7 +61,6 @@ const CYCLE_DETAIL_STATUS_FILTERS: {
   { id: 'all', label: 'All', countClass: 'tq-dashboard-filter-chip__count--primary' },
   { id: 'pending', label: 'Pending', countClass: 'tq-dashboard-filter-chip__count--warning' },
   { id: 'overdue', label: 'Overdue', countClass: 'tq-dashboard-filter-chip__count--danger' },
-  { id: 'completed', label: 'Complete', countClass: 'tq-dashboard-filter-chip__count--success' },
 ]
 
 type PerformanceDashboardFilterBarProps = {

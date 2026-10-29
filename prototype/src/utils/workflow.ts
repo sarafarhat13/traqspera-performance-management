@@ -713,6 +713,10 @@ export function getReviewWorkflowStage(
   cycle: ReviewCycle,
   review: PerformanceReview,
 ): WorkflowReviewStage | 'complete' {
+  // A submitted self-evaluation means the employee stage is done even if status was not advanced.
+  if (review.status === 'self_eval_pending' && review.selfEval?.completedAt) {
+    return stageFromCurrentWorkflowStep(cycle, review)
+  }
   switch (review.status) {
     case 'not_started':
       return 'not_started'
@@ -730,21 +734,27 @@ export function getReviewWorkflowStage(
       return 'employee_acknowledgment'
     case 'completed':
       return 'complete'
-    default: {
-      const step = getCurrentWorkflowStep(cycle, review)
-      if (!step) return 'complete'
-      switch (step.type) {
-        case 'employee':
-          return 'employee_review'
-        case 'manager':
-        case 'rating_scale':
-          return 'manager_review'
-        case 'acknowledgement':
-          return 'employee_acknowledgment'
-        default:
-          return 'not_started'
-      }
-    }
+    default:
+      return stageFromCurrentWorkflowStep(cycle, review)
+  }
+}
+
+function stageFromCurrentWorkflowStep(
+  cycle: ReviewCycle,
+  review: PerformanceReview,
+): WorkflowReviewStage | 'complete' {
+  const step = getCurrentWorkflowStep(cycle, review)
+  if (!step) return 'complete'
+  switch (step.type) {
+    case 'employee':
+      return 'employee_review'
+    case 'manager':
+    case 'rating_scale':
+      return 'manager_review'
+    case 'acknowledgement':
+      return 'employee_acknowledgment'
+    default:
+      return 'not_started'
   }
 }
 
@@ -795,8 +805,8 @@ export function computeCycleWorkflowStageCounts(
   return counts
 }
 
-/** Pending / overdue / complete within a selected cycle workflow stage KPI card. */
-export type CycleStageChipStatus = 'pending' | 'overdue' | 'complete'
+/** Pending / overdue for a review sitting in a selected cycle workflow stage KPI card. */
+export type CycleStageChipStatus = 'pending' | 'overdue'
 
 export function getReviewCycleStageChipStatus(
   cycle: ReviewCycle,
@@ -807,22 +817,15 @@ export function getReviewCycleStageChipStatus(
   const workflowStage = getReviewWorkflowStage(cycle, review)
   if (workflowStage !== stage) return null
 
-  if (stage === 'employee_review') {
-    const progress = getEmployeeReviewParticipantProgress(cycle, review, now)
-    if (progress === 'overdue') return 'overdue'
-    if (progress === 'submitted') return 'complete'
-    return 'pending'
-  }
-
-  if (stage === 'manager_review') {
-    const progress = getManagerReviewParticipantProgress(cycle, review, now)
-    if (progress === 'overdue') return 'overdue'
-    if (progress === 'submitted') return 'complete'
-    return 'pending'
-  }
-
-  if (isReviewAcknowledgementComplete(review.acknowledgement)) return 'complete'
-  const step = getEnabledStepOfType(cycle, 'acknowledgement')
+  const stepType =
+    stage === 'employee_review'
+      ? 'employee'
+      : stage === 'manager_review'
+        ? 'manager'
+        : 'acknowledgement'
+  const step =
+    getEnabledStepOfType(cycle, stepType) ??
+    (stage === 'manager_review' ? getEnabledStepOfType(cycle, 'rating_scale') : undefined)
   const deadline = stepDeadlineOrCycleEnd(cycle, step)
   if (isDeadlinePast(deadline, now)) return 'overdue'
   return 'pending'

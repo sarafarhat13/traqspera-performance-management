@@ -726,6 +726,26 @@ modus-wc-card [slot='footer'].tq-review-acceptance-footer {
   gap: var(--modus-wc-spacing-sm, 0.75rem);
 }
 
+/* Launch wizard — participant picker modal needs room for the employee table */
+dialog.tq-launch-wizard-participant-picker-dialog .modus-wc-modal-box {
+  width: min(72rem, 95vw);
+  max-width: min(72rem, 95vw);
+  max-height: calc(100dvh - 3rem);
+  flex-direction: column;
+  overflow: hidden;
+}
+
+dialog.tq-launch-wizard-participant-picker-dialog .modus-wc-modal-header,
+dialog.tq-launch-wizard-participant-picker-dialog .modus-wc-modal-action {
+  flex-shrink: 0;
+}
+
+dialog.tq-launch-wizard-participant-picker-dialog .modus-wc-modal-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 /* Launch wizard — Publish review matches filled primary Continue */
 .tq-launch-wizard-page__footer-final-actions
   modus-wc-button
@@ -821,6 +841,12 @@ modus-wc-card [slot='footer'].tq-review-acceptance-footer {
 .tq-launch-wizard modus-wc-card [slot='title'] modus-wc-typography {
   text-align: left;
   width: 100%;
+}
+
+.tq-launch-wizard modus-wc-card [slot='title'].tq-launch-wizard__title-row {
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
 }
 
 /* Employee reviews — demo empty / full toggle */

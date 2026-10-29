@@ -40,6 +40,7 @@ export function HRAdminDashboard() {
     state,
     setView,
     selectCycle,
+    openCycleDraft,
     getTemplate,
     getPerson,
   } = usePerformance()
@@ -121,11 +122,19 @@ export function HRAdminDashboard() {
         header: '',
         accessor: 'id',
         sortable: false,
-        cellRenderer: (value: unknown) =>
-          createTableActionButton('View details', () => openCycle(String(value))),
+        cellRenderer: (value: unknown, row: unknown) => {
+          const cycleId = String(value)
+          const record = row as { name: string; status: CycleStatus }
+          if (record.status === 'draft') {
+            const button = createTableActionButton('Edit review', () => openCycleDraft(cycleId))
+            button.setAttribute('aria-label', `Edit draft review cycle ${record.name}`)
+            return button
+          }
+          return createTableActionButton('View details', () => openCycle(cycleId))
+        },
       },
     ],
-    [openCycle],
+    [openCycle, openCycleDraft],
   )
 
   const updateFilters = useCallback((patch: Partial<DashboardFilters>) => {
@@ -228,6 +237,7 @@ export function HRAdminDashboard() {
                 reviews={state.reviews}
                 templateDescription={getTemplate(cycle.templateId)?.description}
                 onViewDetails={() => openCycle(cycle.id)}
+                onEditDraft={() => openCycleDraft(cycle.id)}
               />
             ))}
           </div>

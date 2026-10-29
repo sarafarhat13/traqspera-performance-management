@@ -232,6 +232,8 @@ export interface AppState {
   employeeDetailsTab: EmployeeDetailsTab
   selectedReviewId: string | null
   editingTemplateId: string | null
+  /** Draft cycle reopened in the launch wizard; null when launching a new cycle. */
+  editingCycleId: string | null
   layoutMode: 'desktop' | 'mobile'
   templates: ReviewTemplate[]
   reviewGroups: ReviewEmployeeGroup[]

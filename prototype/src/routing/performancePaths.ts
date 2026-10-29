@@ -53,7 +53,9 @@ export function buildPerformancePath(state: AppState): string {
       return id ? `/cycles/${encodeURIComponent(id)}` : '/'
     }
     case 'launch_cycle_wizard':
-      return '/launch-cycle'
+      return state.editingCycleId
+        ? `/launch-cycle/${encodeURIComponent(state.editingCycleId)}`
+        : '/launch-cycle'
     case 'templates':
       return '/templates'
     case 'template_editor': {
@@ -124,7 +126,11 @@ export function parsePerformancePath(pathname: string, search: string): Performa
   }
 
   if (root === 'launch-cycle') {
-    return { view: 'launch_cycle_wizard' }
+    if (rest.length === 0) return { view: 'launch_cycle_wizard' }
+    if (rest.length === 1) {
+      return { view: 'launch_cycle_wizard', cycleId: decodeURIComponent(rest[0]) }
+    }
+    return null
   }
 
   if (root === 'templates') {
@@ -208,6 +214,8 @@ export function routeMatchesAppState(route: PerformanceRouteState, state: AppSta
   switch (route.view) {
     case 'cycle_details':
       return (route.cycleId ?? null) === state.selectedCycleId
+    case 'launch_cycle_wizard':
+      return (route.cycleId ?? null) === state.editingCycleId
     case 'template_editor': {
       const templateId = state.editingTemplateId ?? state.selectedTemplateId
       return (route.templateId ?? null) === templateId
@@ -253,6 +261,7 @@ export function appStatePatchFromRoute(
   const base: Partial<AppState> = {
     view: route.view,
     selectedCycleId: route.view === 'cycle_details' ? (route.cycleId ?? null) : null,
+    editingCycleId: route.view === 'launch_cycle_wizard' ? (route.cycleId ?? null) : null,
     selectedReviewId:
       route.reviewId != null
         ? route.reviewId

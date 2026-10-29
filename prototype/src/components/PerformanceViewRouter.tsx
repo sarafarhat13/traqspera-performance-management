@@ -30,7 +30,7 @@ export function PerformanceViewRouter({ myPerformanceVisit = 0 }: { myPerformanc
     case 'review_groups':
       return <ReviewGroupsAdmin />
     case 'launch_cycle_wizard':
-      return <LaunchCycleWizard />
+      return <LaunchCycleWizard key={state.editingCycleId ?? 'new'} />
     case 'employee_dashboard':
       return <EmployeeDashboard />
     case 'self_eval':

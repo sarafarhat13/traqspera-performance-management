@@ -24,6 +24,8 @@ interface ReviewCycleCardProps {
   reviews: PerformanceReview[]
   templateDescription?: string
   onViewDetails: () => void
+  /** Shown instead of View details while the cycle is a draft. */
+  onEditDraft?: () => void
 }
 
 function StatusMetric({
@@ -48,7 +50,9 @@ export function ReviewCycleCard({
   reviews,
   templateDescription,
   onViewDetails,
+  onEditDraft,
 }: ReviewCycleCardProps) {
+  const isEditableDraft = cycle.status === 'draft' && Boolean(onEditDraft)
   const [completeModalOpen, setCompleteModalOpen] = useState(false)
   const stats = computeCycleStats(cycle, reviews)
   const canCompleteCycle =
@@ -83,15 +87,29 @@ export function ReviewCycleCard({
             />
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-            <ModusWcButton
-              variant="borderless"
-              color="tertiary"
-              size="sm"
-              onButtonClick={onViewDetails}
-            >
-              <ModusWcIcon name="visibility" size="xs" decorative />
-              View details
-            </ModusWcButton>
+            {isEditableDraft ? (
+              <ModusWcButton
+                key="edit-draft"
+                variant="borderless"
+                color="tertiary"
+                size="sm"
+                onButtonClick={onEditDraft}
+              >
+                <ModusWcIcon name="pencil" size="xs" decorative />
+                Edit review
+              </ModusWcButton>
+            ) : (
+              <ModusWcButton
+                key="view-details"
+                variant="borderless"
+                color="tertiary"
+                size="sm"
+                onButtonClick={onViewDetails}
+              >
+                <ModusWcIcon name="visibility" size="xs" decorative />
+                View details
+              </ModusWcButton>
+            )}
             {canCompleteCycle ? (
               <ModusWcButton
                 variant="filled"

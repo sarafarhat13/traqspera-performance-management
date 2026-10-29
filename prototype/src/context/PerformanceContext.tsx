@@ -348,6 +348,24 @@ function reviewsForCycleLaunch(
   return [...existing, ...newReviews]
 }
 
+type CycleSaveOptions = {
+  reviewerAssignments?: Record<string, EmployeeReviewerAssignment>
+  /** Replace this draft cycle (and its placeholder reviews) instead of creating a new cycle. */
+  existingCycleId?: string
+}
+
+/** Swap in `cycle` when it replaces an existing draft; otherwise append it. */
+function upsertCycle(cycles: ReviewCycle[], cycle: ReviewCycle, existingCycleId?: string) {
+  if (existingCycleId && cycles.some((c) => c.id === existingCycleId)) {
+    return cycles.map((c) => (c.id === existingCycleId ? cycle : c))
+  }
+  return [...cycles, cycle]
+}
+
+function reviewsWithoutCycle(reviews: PerformanceReview[], cycleId?: string) {
+  return cycleId ? reviews.filter((r) => r.cycleId !== cycleId) : reviews
+}
+
 interface PerformanceContextValue {
   state: AppState
   setView: (view: ViewId) => void
@@ -374,13 +392,15 @@ interface PerformanceContextValue {
   deleteReviewGroup: (id: string) => void
   addEmployeesToReviewGroup: (groupId: string, employeeIds: string[]) => void
   addEmployeesToCycle: (cycleId: string, employeeIds: string[]) => void
+  /** Reopen a draft cycle in the launch wizard. */
+  openCycleDraft: (cycleId: string) => void
   launchCycle: (
     cycle: Omit<ReviewCycle, 'id' | 'status'>,
-    options?: { reviewerAssignments?: Record<string, EmployeeReviewerAssignment> },
+    options?: CycleSaveOptions,
   ) => void
   saveCycleDraft: (
     cycle: Omit<ReviewCycle, 'id' | 'status'>,
-    options?: { reviewerAssignments?: Record<string, EmployeeReviewerAssignment> },
+    options?: CycleSaveOptions,
   ) => void
   updateCycle: (
     cycleId: string,
@@ -453,6 +473,7 @@ export function PerformanceProvider({
     employeeDetailsTab: 'personal',
     selectedReviewId: null,
     editingTemplateId: null,
+    editingCycleId: null,
     layoutMode: 'desktop',
     templates: resolveTemplates(persisted.templates, initialCycles),
     reviewGroups: resolveReviewGroups(persisted),
@@ -494,7 +515,11 @@ export function PerformanceProvider({
   ])
 
   const setView = useCallback((view: ViewId) => {
-    setState((s) => ({ ...s, view }))
+    setState((s) => ({ ...s, view, editingCycleId: null }))
+  }, [])
+
+  const openCycleDraft = useCallback((cycleId: string) => {
+    setState((s) => ({ ...s, view: 'launch_cycle_wizard', editingCycleId: cycleId }))
   }, [])
 
   const applyRouteState = useCallback((route: PerformanceRouteState) => {
@@ -778,7 +803,7 @@ export function PerformanceProvider({
   const launchCycle = useCallback(
     (
       cycleInput: Omit<ReviewCycle, 'id' | 'status'>,
-      options?: { reviewerAssignments?: Record<string, EmployeeReviewerAssignment> },
+      options?: CycleSaveOptions,
     ) => {
       const workflow =
         cycleInput.workflow ??
@@ -790,7 +815,7 @@ export function PerformanceProvider({
         ...cycleInput,
         workflow,
         includesSelfEvaluation,
-        id: `cycle-${crypto.randomUUID().slice(0, 8)}`,
+        id: options?.existingCycleId ?? `cycle-${crypto.randomUUID().slice(0, 8)}`,
         status: 'active',
         startDate: today,
         publishedAt: today,
@@ -799,7 +824,8 @@ export function PerformanceProvider({
       }
       setState((s) => ({
         ...s,
-        cycles: [...s.cycles, cycle],
+        editingCycleId: null,
+        cycles: upsertCycle(s.cycles, cycle, options?.existingCycleId),
         templates: s.templates.map((t) =>
           t.id === cycle.templateId
             ? {
@@ -812,7 +838,7 @@ export function PerformanceProvider({
         ),
         reviews: reviewsForCycleLaunch(
           cycle,
-          s.reviews,
+          reviewsWithoutCycle(s.reviews, options?.existingCycleId),
           s.people,
           options?.reviewerAssignments,
         ),
@@ -825,7 +851,7 @@ export function PerformanceProvider({
   const saveCycleDraft = useCallback(
     (
       cycleInput: Omit<ReviewCycle, 'id' | 'status'>,
-      options?: { reviewerAssignments?: Record<string, EmployeeReviewerAssignment> },
+      options?: CycleSaveOptions,
     ) => {
       const workflow =
         cycleInput.workflow ??
@@ -836,7 +862,7 @@ export function PerformanceProvider({
         ...cycleInput,
         workflow,
         includesSelfEvaluation,
-        id: `cycle-${crypto.randomUUID().slice(0, 8)}`,
+        id: options?.existingCycleId ?? `cycle-${crypto.randomUUID().slice(0, 8)}`,
         status: 'draft',
         startDate: cycleInput.startDate || '',
         dueDate,
@@ -844,10 +870,11 @@ export function PerformanceProvider({
       }
       setState((s) => ({
         ...s,
-        cycles: [...s.cycles, cycle],
+        editingCycleId: null,
+        cycles: upsertCycle(s.cycles, cycle, options?.existingCycleId),
         reviews: reviewsForCycleLaunch(
           cycle,
-          s.reviews,
+          reviewsWithoutCycle(s.reviews, options?.existingCycleId),
           s.people,
           options?.reviewerAssignments,
         ),
@@ -1176,6 +1203,7 @@ export function PerformanceProvider({
       deleteReviewGroup,
       addEmployeesToReviewGroup,
       addEmployeesToCycle,
+      openCycleDraft,
       launchCycle,
       saveCycleDraft,
       updateCycle,
@@ -1217,6 +1245,7 @@ export function PerformanceProvider({
       deleteReviewGroup,
       addEmployeesToReviewGroup,
       addEmployeesToCycle,
+      openCycleDraft,
       launchCycle,
       saveCycleDraft,
       updateCycle,

@@ -241,16 +241,21 @@ export function LaunchCycleWizard() {
     getPerson,
   } = usePerformance()
 
+  const [draftCycle] = useState(() =>
+    state.editingCycleId
+      ? state.cycles.find((c) => c.id === state.editingCycleId && c.status === 'draft')
+      : undefined,
+  )
   const [stepIndex, setStepIndex] = useState(0)
-  const [cycleName, setCycleName] = useState('')
-  const [cycleDescription, setCycleDescription] = useState('')
+  const [cycleName, setCycleName] = useState(draftCycle?.name ?? '')
+  const [cycleDescription, setCycleDescription] = useState(draftCycle?.description ?? '')
   const [templateMode, setTemplateMode] = useState<'select' | 'create'>('select')
   const wizardSelectableTemplates = useMemo(
     () => state.templates.filter(isTemplateVisibleInCycleWizard),
     [state.templates],
   )
   const [selectedTemplateId, setSelectedTemplateId] = useState(
-    () => wizardSelectableTemplates[0]?.id ?? '',
+    () => draftCycle?.templateId || wizardSelectableTemplates[0]?.id || '',
   )
   const [templateSearchQuery, setTemplateSearchQuery] = useState('')
 
@@ -271,16 +276,24 @@ export function LaunchCycleWizard() {
     setSelectedTemplateId(wizardSelectableTemplates[0]?.id ?? '')
   }, [wizardSelectableTemplates, selectedTemplateId])
   const [draftTemplate, setDraftTemplate] = useState<ReviewTemplate>(() => createEmptyTemplate())
-  const [workflow, setWorkflow] = useState<WorkflowStep[]>(() => createDefaultWorkflowSteps())
-  const [workflowKickoffMode, setWorkflowKickoffMode] = useState<WorkflowKickoffMode>('sequential')
-  const [ratingScale, setRatingScale] = useState<RatingScaleConfig>(() =>
-    normalizeRatingScale(DEFAULT_RATING_SCALE),
+  const [workflow, setWorkflow] = useState<WorkflowStep[]>(
+    () => draftCycle?.workflow ?? createDefaultWorkflowSteps(),
   )
-  const [allowSupportingDocuments, setAllowSupportingDocuments] = useState(false)
-  const [individualEmployeeIds, setIndividualEmployeeIds] = useState<string[]>([])
+  const [workflowKickoffMode, setWorkflowKickoffMode] = useState<WorkflowKickoffMode>(
+    draftCycle?.workflowKickoffMode ?? 'sequential',
+  )
+  const [ratingScale, setRatingScale] = useState<RatingScaleConfig>(() =>
+    normalizeRatingScale(draftCycle?.ratingScale ?? DEFAULT_RATING_SCALE),
+  )
+  const [allowSupportingDocuments, setAllowSupportingDocuments] = useState(
+    draftCycle?.allowSupportingDocuments ?? false,
+  )
+  const [individualEmployeeIds, setIndividualEmployeeIds] = useState<string[]>(
+    () => draftCycle?.employeeIds ?? [],
+  )
   const [reviewerAssignments, setReviewerAssignments] = useState<
     Record<string, EmployeeReviewerAssignment>
-  >({})
+  >(() => draftCycle?.reviewerAssignments ?? {})
   const [participantPickerOpen, setParticipantPickerOpen] = useState(false)
   const [addedEmployeeTableKey, setAddedEmployeeTableKey] = useState(0)
   const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null)
@@ -629,7 +642,10 @@ export function LaunchCycleWizard() {
   const handleLaunch = () => {
     const cycleInput = buildCycleInput()
     if (!cycleInput) return
-    launchCycle(cycleInput, { reviewerAssignments: reviewerAssignmentsForLaunch })
+    launchCycle(cycleInput, {
+      reviewerAssignments: reviewerAssignmentsForLaunch,
+      existingCycleId: draftCycle?.id,
+    })
   }
 
   const handleSaveDraft = () => {
@@ -638,7 +654,10 @@ export function LaunchCycleWizard() {
       allowEmptyTemplate: stepIndex === 0,
     })
     if (!cycleInput) return
-    saveCycleDraft(cycleInput, { reviewerAssignments: reviewerAssignmentsForLaunch })
+    saveCycleDraft(cycleInput, {
+      reviewerAssignments: reviewerAssignmentsForLaunch,
+      existingCycleId: draftCycle?.id,
+    })
   }
 
   return (
@@ -663,8 +682,12 @@ export function LaunchCycleWizard() {
 
         <div className="tq-launch-wizard">
           <TraqsperaPageHeader
-            title="Launch performance review cycle"
-            subtitle="Configure the cycle, template, workflow, and participants before launching."
+            title={draftCycle ? 'Edit draft review cycle' : 'Launch performance review cycle'}
+            subtitle={
+              draftCycle
+                ? 'Pick up where you left off. Save the draft again or publish when it is ready.'
+                : 'Configure the cycle, template, workflow, and participants before launching.'
+            }
           />
 
           <div className="tq-launch-wizard__content flex flex-col gap-3">

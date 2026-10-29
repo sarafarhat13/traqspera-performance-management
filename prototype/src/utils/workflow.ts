@@ -540,7 +540,7 @@ function getEnabledStepOfType(
   return getEnabledWorkflowSteps(workflow).find((s) => s.type === type)
 }
 
-function cycleIncludesManagerEvaluation(cycle: ReviewCycle): boolean {
+export function cycleIncludesManagerEvaluation(cycle: ReviewCycle): boolean {
   const workflow = cycle.workflow ?? workflowFromLegacy(cycle.includesSelfEvaluation)
   return workflow.some((s) => s.enabled && (s.type === 'manager' || s.type === 'rating_scale'))
 }

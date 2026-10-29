@@ -1,5 +1,5 @@
 import type { ReviewCycle, SupportingDocumentAttachment } from '../types'
-import { cycleIncludesSelfEvaluation } from './workflow'
+import { cycleIncludesManagerEvaluation, cycleIncludesSelfEvaluation } from './workflow'
 
 /** HR must set `allowSupportingDocuments: false` to hide uploads; omitted/undefined means allowed. */
 export function cycleAllowsSupportingDocuments(cycle?: ReviewCycle): boolean {
@@ -9,6 +9,14 @@ export function cycleAllowsSupportingDocuments(cycle?: ReviewCycle): boolean {
 
 export function selfEvalAllowsSupportingDocuments(cycle?: ReviewCycle): boolean {
   if (!cycle || !cycleIncludesSelfEvaluation(cycle)) return false
+  return cycleAllowsSupportingDocuments(cycle)
+}
+
+export function managerReviewAllowsSupportingDocuments(cycle?: ReviewCycle): boolean {
+  if (!cycle || !cycleIncludesManagerEvaluation(cycle)) return false
+  if (cycle.allowManagerSupportingDocuments !== undefined) {
+    return cycle.allowManagerSupportingDocuments
+  }
   return cycleAllowsSupportingDocuments(cycle)
 }
 

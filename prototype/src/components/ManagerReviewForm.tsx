@@ -22,7 +22,7 @@ import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { seedQuestionAnswerKeys } from '../utils/questionReview'
 import { PerformanceRatingScaleField } from './PerformanceRatingScaleField'
 import { SupportingDocumentsSection } from './SupportingDocumentsSection'
-import { cycleAllowsSupportingDocuments } from '../utils/supportingDocuments'
+import { managerReviewAllowsSupportingDocuments } from '../utils/supportingDocuments'
 import { formatEmployeeNameWithCode } from '../utils/employeeCode'
 import { ReturnReviewToEmployeeAction } from './ReturnReviewToEmployeeAction'
 const AUTO_SAVE_MS = 800
@@ -72,7 +72,7 @@ export function ManagerReviewForm() {
   const [supportingDocuments, setSupportingDocuments] = useState<SupportingDocumentAttachment[]>(
     () => review?.managerReview?.supportingDocuments ?? [],
   )
-  const showSupportingDocuments = cycleAllowsSupportingDocuments(cycle)
+  const showSupportingDocuments = managerReviewAllowsSupportingDocuments(cycle)
 
   const [draftDirty, setDraftDirty] = useState(false)
   const [draftSaveState, setDraftSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')

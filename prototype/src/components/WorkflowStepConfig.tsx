@@ -40,6 +40,8 @@ type WorkflowStepConfigProps = {
   onRatingScaleChange: (scale: RatingScaleConfig) => void
   allowSupportingDocuments: boolean
   onAllowSupportingDocumentsChange: (enabled: boolean) => void
+  allowManagerSupportingDocuments: boolean
+  onAllowManagerSupportingDocumentsChange: (enabled: boolean) => void
 }
 
 function flowBulletClass(type: WorkflowStepType): string {
@@ -56,6 +58,8 @@ export function WorkflowStepConfig({
   onRatingScaleChange,
   allowSupportingDocuments,
   onAllowSupportingDocumentsChange,
+  allowManagerSupportingDocuments,
+  onAllowManagerSupportingDocumentsChange,
 }: WorkflowStepConfigProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
@@ -362,7 +366,7 @@ export function WorkflowStepConfig({
                       size="sm"
                       value={allowSupportingDocuments && step.enabled}
                       disabled={!step.enabled}
-                      aria-label="Allow supporting document uploads on review forms"
+                      aria-label="Allow employees to upload supporting documents on their self-evaluation"
                       onInputChange={(e) =>
                         onAllowSupportingDocumentsChange(readInputChecked(e as CustomEvent))
                       }
@@ -379,7 +383,38 @@ export function WorkflowStepConfig({
                         hierarchy="p"
                         size="xs"
                         customClass="!m-0 mt-1 text-[var(--modus-wc-color-base-content-low-contrast)]"
-                        label="When enabled, employees can attach files at the end of each review form (self-evaluation, manager evaluation, and acknowledgment)."
+                        label="When enabled, employees can attach files at the end of their self-evaluation."
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {stepType === 'manager' ? (
+                <div className="tq-workflow-step__nested-block">
+                  <div className="tq-workflow-step__nested-option">
+                    <ModusWcCheckbox
+                      size="sm"
+                      value={allowManagerSupportingDocuments && step.enabled}
+                      disabled={!step.enabled}
+                      aria-label="Allow managers to upload supporting documents on their evaluation"
+                      onInputChange={(e) =>
+                        onAllowManagerSupportingDocumentsChange(readInputChecked(e as CustomEvent))
+                      }
+                    />
+                    <div className="tq-workflow-step__nested-copy min-w-0 flex-1">
+                      <ModusWcTypography
+                        hierarchy="p"
+                        size="sm"
+                        weight="semibold"
+                        customClass="!m-0"
+                        label="Supporting document uploads"
+                      />
+                      <ModusWcTypography
+                        hierarchy="p"
+                        size="xs"
+                        customClass="!m-0 mt-1 text-[var(--modus-wc-color-base-content-low-contrast)]"
+                        label="When enabled, managers can attach files at the end of their evaluation."
                       />
                     </div>
                   </div>

@@ -429,6 +429,22 @@ modus-wc-card [slot='title'] {
   outline-offset: 2px;
 }
 
+.tq-dashboard-kpi-card__header modus-wc-badge {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-self: flex-start;
+  width: fit-content;
+}
+
+.tq-dashboard-kpi-card--active {
+  border-color: color-mix(in srgb, var(--modus-wc-color-primary, #0063a3) 45%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--modus-wc-color-primary, #0063a3) 6%,
+    var(--modus-wc-color-base-page, #fff)
+  );
+}
+
 /* Unassigned employees — full-width KPI trigger (ModusWcButton host) */
 modus-wc-button.tq-unassigned-kpi-trigger {
   display: block;

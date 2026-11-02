@@ -8,14 +8,16 @@ import {
 } from '@trimble-oss/moduswebcomponents-react'
 import { DashboardViewModeSegmentedControl } from './DashboardViewModeSegmentedControl'
 import { readInputString } from '../utils/modusFormEvents'
-import type {
-  DashboardFilters,
-  DashboardPackageCounts,
-  DashboardPackageStatusFilter,
-  DashboardReviewCounts,
-  DashboardReviewStatusFilter,
+import {
+  countActivePanelFilters,
+  type DashboardFilters,
+  type DashboardManagerTeamCounts,
+  type DashboardPackageCounts,
+  type DashboardPackageStatusFilter,
+  type DashboardReviewCounts,
+  type DashboardReviewStatusFilter,
+  type ManagerTeamListStatusFilter,
 } from '../utils/dashboardFilters'
-import { countActivePanelFilters } from '../utils/dashboardFilters'
 
 import type { DashboardViewMode } from './DashboardViewModeSegmentedControl'
 
@@ -43,14 +45,14 @@ const REVIEW_STATUS_FILTERS: {
 ]
 
 const MANAGER_TEAM_STATUS_FILTERS: {
-  id: DashboardReviewStatusFilter
+  id: ManagerTeamListStatusFilter
   label: string
   countClass: string
 }[] = [
   { id: 'all', label: 'All', countClass: 'tq-dashboard-filter-chip__count--primary' },
   { id: 'pending', label: 'Pending', countClass: 'tq-dashboard-filter-chip__count--warning' },
-  { id: 'completed', label: 'Completed', countClass: 'tq-dashboard-filter-chip__count--success' },
   { id: 'overdue', label: 'Overdue', countClass: 'tq-dashboard-filter-chip__count--danger' },
+  { id: 'complete', label: 'Complete', countClass: 'tq-dashboard-filter-chip__count--success' },
 ]
 
 const CYCLE_DETAIL_STATUS_FILTERS: {
@@ -65,7 +67,7 @@ const CYCLE_DETAIL_STATUS_FILTERS: {
 
 type PerformanceDashboardFilterBarProps = {
   filters: DashboardFilters
-  counts?: DashboardPackageCounts | DashboardReviewCounts
+  counts?: DashboardPackageCounts | DashboardReviewCounts | DashboardManagerTeamCounts
   departmentOptions?: { label: string; value: string }[]
   costCenterOptions?: { label: string; value: string }[]
   titleOptions?: { label: string; value: string }[]
@@ -170,7 +172,9 @@ export function PerformanceDashboardFilterBar({
             className="tq-dashboard-filter-bar__chips"
             role="group"
             aria-label={
-              statusFilterMode === 'package' ? 'Filter by package status' : 'Filter by review status'
+              statusFilterMode === 'package'
+                ? 'Filter by package status'
+                : 'Filter by review status'
             }
           >
             {statusFilters.map(({ id, label, countClass }) => {

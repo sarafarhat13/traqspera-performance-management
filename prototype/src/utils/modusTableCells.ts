@@ -22,6 +22,11 @@ import {
   templateDisplayStatusBadgeColor,
   type TemplateDisplayStatus,
 } from './templateLifecycle'
+import {
+  MANAGER_TEAM_LIST_STATUS_LABELS,
+  managerTeamListStatusBadgeColor,
+  type ManagerTeamListStatus,
+} from './dashboardFilters'
 
 type TableButtonColor = 'primary' | 'tertiary' | 'danger'
 
@@ -138,6 +143,16 @@ function reviewDisplayStatusBadgeLabel(
     return REVIEW_DISPLAY_STATUS_LABELS.pending
   }
   return REVIEW_DISPLAY_STATUS_LABELS[displayStatus]
+}
+
+export function createManagerTeamListStatusBadge(status: ManagerTeamListStatus) {
+  const badge = document.createElement('modus-wc-badge')
+  applyStatusBadgeStyle(
+    badge,
+    managerTeamListStatusBadgeColor(status),
+    MANAGER_TEAM_LIST_STATUS_LABELS[status],
+  )
+  return badge
 }
 
 export function createReviewDisplayStatusBadge(

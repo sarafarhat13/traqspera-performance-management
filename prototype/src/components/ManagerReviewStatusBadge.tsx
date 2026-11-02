@@ -1,12 +1,12 @@
 import { ModusWcBadge } from '@trimble-oss/moduswebcomponents-react'
 import type { PerformanceReview, ReviewCycle, ReviewStatus } from '../types'
 import {
-  REVIEW_DISPLAY_STATUS_LABELS,
-  reviewDisplayStatusBadgeColor,
-  reviewDisplayStatusFromReviewStatus,
-  statusBadgeCustomClass,
-} from '../utils/status'
-import { getReviewDisplayStatus } from '../utils/workflow'
+  MANAGER_TEAM_LIST_STATUS_LABELS,
+  managerTeamListStatus,
+  managerTeamListStatusBadgeColor,
+  type ManagerTeamListStatus,
+} from '../utils/dashboardFilters'
+import { statusBadgeCustomClass } from '../utils/status'
 
 type ManagerReviewStatusBadgeProps = {
   status: ReviewStatus
@@ -15,9 +15,13 @@ type ManagerReviewStatusBadgeProps = {
 }
 
 export function ManagerReviewStatusBadge({ status, cycle, review }: ManagerReviewStatusBadgeProps) {
-  const displayStatus =
-    cycle && review ? getReviewDisplayStatus(cycle, review) : reviewDisplayStatusFromReviewStatus(status)
-  const color = reviewDisplayStatusBadgeColor(displayStatus)
+  const listStatus: ManagerTeamListStatus =
+    cycle && review
+      ? managerTeamListStatus(review, cycle)
+      : status === 'completed'
+        ? 'complete'
+        : 'pending'
+  const color = managerTeamListStatusBadgeColor(listStatus)
 
   return (
     <ModusWcBadge
@@ -26,7 +30,7 @@ export function ManagerReviewStatusBadge({ status, cycle, review }: ManagerRevie
       size="sm"
       customClass={statusBadgeCustomClass(color)}
     >
-      {REVIEW_DISPLAY_STATUS_LABELS[displayStatus]}
+      {MANAGER_TEAM_LIST_STATUS_LABELS[listStatus]}
     </ModusWcBadge>
   )
 }

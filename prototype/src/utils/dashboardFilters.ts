@@ -3,8 +3,16 @@ import { getCycleDisplayEndDate } from './cycleDisplay'
 import { normalizeRatingScale } from './ratingScale'
 import {
   cycleIncludesRatingScale,
+  getCurrentStageDeadline,
+  getEmployeeReviewParticipantProgress,
+  getEnabledWorkflowSteps,
+  getManagerReviewParticipantProgress,
   getReviewDisplayStatus,
+  getReviewWorkflowStage,
+  needsEmployeeSelfEval,
+  needsManagerReview,
   readManagerOverallRatingValue,
+  workflowFromLegacy,
 } from './workflow'
 
 export const DASHBOARD_FILTER_ALL = '__all__'
@@ -19,7 +27,18 @@ export type DashboardPackageStatusFilter = 'all' | 'draft' | 'active' | 'complet
 
 export type DashboardReviewStatusFilter = 'all' | 'pending' | 'completed' | 'overdue' | 'draft'
 
-export type DashboardStatusFilter = DashboardPackageStatusFilter | DashboardReviewStatusFilter
+/** Who still needs to act on a manager's team review. Shown on the summary cards and row badges. */
+export type ManagerTeamQueue = 'with_employee' | 'manager_action' | 'acknowledgement' | 'complete'
+
+/** Manager list chips: All, Pending, Overdue, Complete. */
+export type ManagerTeamListStatus = 'pending' | 'overdue' | 'complete'
+
+export type ManagerTeamListStatusFilter = 'all' | ManagerTeamListStatus
+
+export type DashboardStatusFilter =
+  | DashboardPackageStatusFilter
+  | DashboardReviewStatusFilter
+  | ManagerTeamQueue
 
 export type DashboardFilters = {
   search: string
@@ -60,11 +79,26 @@ export type DashboardReviewCounts = {
   draft: number
 }
 
+export type DashboardManagerTeamCounts = Record<ManagerTeamListStatusFilter, number>
+
+export const MANAGER_TEAM_QUEUE_LABELS: Record<ManagerTeamQueue, string> = {
+  with_employee: 'With employee',
+  manager_action: 'Your review',
+  acknowledgement: 'Acknowledgement',
+  complete: 'Complete',
+}
+
+export function isManagerTeamListStatusFilter(
+  status: DashboardStatusFilter,
+): status is ManagerTeamListStatusFilter {
+  return status === 'all' || status === 'pending' || status === 'overdue' || status === 'complete'
+}
+
 type ReviewBucket = 'pending' | 'completed' | 'overdue' | 'draft'
 
 export type DashboardReviewFilterOptions = {
   employeeIds?: Set<string>
-  /** Manager Team Reviews: Pending follows workflow status, not calendar due alone. */
+  /** Manager team list: chips are Pending, Overdue, and Complete. */
   managerTeamReviewStatus?: boolean
   getPerson?: (id: string) => Person | undefined
 }
@@ -77,27 +111,113 @@ function isCyclePastDue(cycle: ReviewCycle, now: Date): boolean {
   return due < now
 }
 
-/** In-flight review on the manager team dashboard (Pending chip / filter). */
-export function isManagerTeamInProgressReview(review: PerformanceReview): boolean {
-  return (
-    review.status === 'manager_pending' ||
-    review.status === 'parallel_review_pending' ||
-    review.status === 'self_eval_pending' ||
-    review.status === 'acknowledgement_pending' ||
-    review.status === 'not_started'
-  )
+function queueFromFirstEnabledStep(cycle: ReviewCycle): ManagerTeamQueue {
+  const workflow = cycle.workflow ?? workflowFromLegacy(cycle.includesSelfEvaluation)
+  const first = getEnabledWorkflowSteps(workflow)[0]
+  if (!first) return 'with_employee'
+  switch (first.type) {
+    case 'manager':
+    case 'rating_scale':
+      return 'manager_action'
+    case 'acknowledgement':
+      return 'acknowledgement'
+    default:
+      return 'with_employee'
+  }
 }
 
-/** Mutually exclusive status for manager team review chips and filters. */
-export function managerTeamReviewStatusCategory(
+function queueFromWorkflowStage(cycle: ReviewCycle, review: PerformanceReview): ManagerTeamQueue {
+  switch (getReviewWorkflowStage(cycle, review)) {
+    case 'complete':
+      return 'complete'
+    case 'employee_acknowledgment':
+      return 'acknowledgement'
+    case 'manager_review':
+      return 'manager_action'
+    default:
+      return 'with_employee'
+  }
+}
+
+/**
+ * Exclusive owner queue for the manager team list.
+ * Parallel reviews the manager can still submit count as Your review.
+ */
+export function managerTeamQueue(review: PerformanceReview, cycle: ReviewCycle): ManagerTeamQueue {
+  if (review.status === 'completed') return 'complete'
+  if (review.status === 'acknowledgement_pending') return 'acknowledgement'
+  if (needsManagerReview(cycle, review)) return 'manager_action'
+  if (needsEmployeeSelfEval(cycle, review)) return 'with_employee'
+  if (review.status === 'not_started') return queueFromFirstEnabledStep(cycle)
+  return queueFromWorkflowStage(cycle, review)
+}
+
+export function managerTeamQueueForReview(
+  review: PerformanceReview,
+  cycle: ReviewCycle | undefined,
+): ManagerTeamQueue {
+  if (cycle) return managerTeamQueue(review, cycle)
+  switch (review.status) {
+    case 'completed':
+      return 'complete'
+    case 'acknowledgement_pending':
+      return 'acknowledgement'
+    case 'manager_pending':
+    case 'parallel_review_pending':
+      return 'manager_action'
+    default:
+      return 'with_employee'
+  }
+}
+
+function isStageDeadlinePast(deadline: string | undefined, now: Date): boolean {
+  if (!deadline) return false
+  const due = new Date(deadline)
+  if (Number.isNaN(due.getTime())) return false
+  due.setHours(23, 59, 59, 999)
+  return due < now
+}
+
+/** The queue's own step is past its deadline. Complete reviews are never overdue. */
+export function isManagerTeamStageOverdue(
   review: PerformanceReview,
   cycle: ReviewCycle,
   now = new Date(),
-): Exclude<DashboardReviewStatusFilter, 'all' | 'draft'> {
-  const display = getReviewDisplayStatus(cycle, review, now)
-  if (display === 'complete') return 'completed'
-  if (display === 'overdue') return 'overdue'
+): boolean {
+  const queue = managerTeamQueue(review, cycle)
+  if (queue === 'complete') return false
+  if (queue === 'with_employee') {
+    return getEmployeeReviewParticipantProgress(cycle, review, now) === 'overdue'
+  }
+  if (queue === 'manager_action') {
+    return getManagerReviewParticipantProgress(cycle, review, now) === 'overdue'
+  }
+  return isStageDeadlinePast(getCurrentStageDeadline(cycle, review), now)
+}
+
+/** Chip bucket for the manager list. Overdue stays inside the owner cards. */
+export function managerTeamListStatus(
+  review: PerformanceReview,
+  cycle: ReviewCycle,
+  now = new Date(),
+): ManagerTeamListStatus {
+  if (managerTeamQueue(review, cycle) === 'complete') return 'complete'
+  if (isManagerTeamStageOverdue(review, cycle, now)) return 'overdue'
   return 'pending'
+}
+
+export const MANAGER_TEAM_LIST_STATUS_LABELS: Record<ManagerTeamListStatus, string> = {
+  pending: 'Pending',
+  overdue: 'Overdue',
+  complete: 'Complete',
+}
+
+export function managerTeamListStatusBadgeColor(
+  status: ManagerTeamListStatus,
+): 'warning' | 'danger' | 'success' {
+  if (status === 'overdue') return 'danger'
+  if (status === 'complete') return 'success'
+  return 'warning'
 }
 
 function reviewBucket(
@@ -250,8 +370,10 @@ export function reviewMatchesDashboardFilters(
 
   if (options?.managerTeamReviewStatus) {
     if (filters.status === 'all') return true
-    const category = managerTeamReviewStatusCategory(review, cycle, now)
-    return category === filters.status
+    if (filters.status !== 'pending' && filters.status !== 'overdue' && filters.status !== 'complete') {
+      return false
+    }
+    return managerTeamListStatus(review, cycle, now) === filters.status
   }
 
   const reviewStatusFilters: DashboardReviewStatusFilter[] = [
@@ -421,19 +543,57 @@ export function computeScopedDashboardReviewCounts(
     }
 
     counts.all += 1
-
-    if (options?.managerTeamReviewStatus) {
-      const category = managerTeamReviewStatusCategory(review, cycle, now)
-      counts[category] += 1
-      continue
-    }
-
     const bucket = statusBucketForReview(review, cycle, now)
     counts[bucket] += 1
   }
 
-  if (!options?.managerTeamReviewStatus && counts.draft === 0) {
+  if (counts.draft === 0) {
     counts.draft = countDraftCycles(cycles, people, filters)
+  }
+
+  return counts
+}
+
+export function computeManagerTeamStatusCounts(
+  cycles: ReviewCycle[],
+  reviews: PerformanceReview[],
+  people: Person[],
+  filters: Omit<DashboardFilters, 'status'>,
+  options?: DashboardReviewFilterOptions,
+  now = new Date(),
+): DashboardManagerTeamCounts {
+  const employeeIds = options?.employeeIds
+  const scopedReviews = employeeIds
+    ? reviews.filter((review) => employeeIds.has(review.employeeId))
+    : reviews
+
+  const counts: DashboardManagerTeamCounts = {
+    all: 0,
+    pending: 0,
+    overdue: 0,
+    complete: 0,
+  }
+
+  for (const review of scopedReviews) {
+    const cycle = cycles.find((item) => item.id === review.cycleId)
+    if (!cycle) continue
+    const employee = people.find((person) => person.id === review.employeeId)
+    const getPerson = (id: string) => people.find((person) => person.id === id)
+    if (
+      !reviewMatchesDashboardFilters(
+        review,
+        cycle,
+        employee,
+        { ...filters, status: 'all' },
+        now,
+        { ...options, getPerson },
+      )
+    ) {
+      continue
+    }
+
+    counts.all += 1
+    counts[managerTeamListStatus(review, cycle, now)] += 1
   }
 
   return counts

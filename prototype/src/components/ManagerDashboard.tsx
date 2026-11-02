@@ -12,9 +12,9 @@ import { PerformanceDashboardKpiCard } from './PerformanceDashboardKpiCard'
 import { PerformanceDashboardFilterBar } from './PerformanceDashboardFilterBar'
 import { ManagerTeamReviewRow } from './ManagerTeamReviewRow'
 import { PerformanceDataTable } from './PerformanceDataTable'
-import { formatDate, isLaunchedReviewCycle, REVIEW_DISPLAY_STATUS_LABELS } from '../utils/status'
+import { formatDate, isLaunchedReviewCycle } from '../utils/status'
 import {
-  createReviewDisplayStatusBadge,
+  createManagerTeamListStatusBadge,
   createTableActionButton,
   createTableActionGroup,
 } from '../utils/modusTableCells'
@@ -22,12 +22,17 @@ import {
   countActiveDashboardFilters,
   costCenterOptionsFromPeople,
   createDefaultDashboardFilters,
+  computeManagerTeamStatusCounts,
   departmentOptionsFromPeople,
   filterReviewsForDashboard,
-  computeScopedDashboardReviewCounts,
+  isManagerTeamListStatusFilter,
+  MANAGER_TEAM_LIST_STATUS_LABELS,
+  managerTeamListStatus,
+  managerTeamQueue,
   titleOptionsFromPeople,
   unionOptionsFromPeople,
   type DashboardFilters,
+  type ManagerTeamQueue,
 } from '../utils/dashboardFilters'
 import { formatEmployeeNameWithCode } from '../utils/employeeCode'
 import {
@@ -35,7 +40,6 @@ import {
   formatReviewProcessText,
   getCurrentStageDeadline,
   hasManagerReviewDraft,
-  getReviewDisplayStatus,
   needsManagerReview,
 } from '../utils/workflow'
 import type { PerformanceReview, Person, ReviewCycle, ReviewStatus, ReviewTemplate } from '../types'
@@ -83,20 +87,6 @@ function reviewStatusPriority(status: ReviewStatus): number {
   }
 }
 
-function isCompletedThisQuarter(iso?: string): boolean {
-  if (!iso) return false
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return false
-  const now = new Date()
-  const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3
-  const quarterStart = new Date(now.getFullYear(), quarterStartMonth, 1)
-  return date >= quarterStart
-}
-
-function reviewCompletedAt(review: PerformanceReview): string | undefined {
-  return review.acknowledgement?.completedAt ?? review.managerReview?.completedAt
-}
-
 function buildReviewTableRows(
   reviews: PerformanceReview[],
   getPerson: (id: string) => Person | undefined,
@@ -108,6 +98,7 @@ function buildReviewTableRows(
     const cycle = getCycle(review.cycleId)
     const template = cycle ? getTemplate(cycle.templateId) : undefined
     const dueDate = cycle ? getCurrentStageDeadline(cycle, review) : undefined
+    const listStatus = cycle ? managerTeamListStatus(review, cycle) : 'pending'
 
     return {
       id: review.id,
@@ -117,10 +108,8 @@ function buildReviewTableRows(
       title: employee?.title ?? '—',
       reviewName: template?.name ?? cycle?.name ?? 'Performance review',
       status: review.status,
-      displayStatus: cycle ? getReviewDisplayStatus(cycle, review) : undefined,
-      statusLabel: cycle
-        ? REVIEW_DISPLAY_STATUS_LABELS[getReviewDisplayStatus(cycle, review)]
-        : review.status,
+      listStatus,
+      statusLabel: MANAGER_TEAM_LIST_STATUS_LABELS[listStatus],
       dueDate: dueDate ? formatDate(dueDate) : '—',
       processLabel: formatReviewProcessText(cycle, review),
       managerReviewDraft: hasManagerReviewDraft(review),
@@ -155,9 +144,10 @@ export function ManagerDashboard() {
   const [viewMode, setViewMode] = useState<ManagerDashboardViewMode>(DEFAULT_MANAGER_DASHBOARD_VIEW)
   const [filters, setFilters] = useState<DashboardFilters>(() => createDefaultDashboardFilters())
   const [filterFieldsKey, setFilterFieldsKey] = useState(0)
+  const [activeQueue, setActiveQueue] = useState<'all' | ManagerTeamQueue>('all')
 
   useEffect(() => {
-    if (filters.status === 'draft' || filters.status === 'active') {
+    if (!isManagerTeamListStatusFilter(filters.status)) {
       setFilters((current) => ({ ...current, status: 'all' }))
     }
   }, [filters.status])
@@ -228,11 +218,19 @@ export function ManagerDashboard() {
     [reportIds],
   )
 
+  const queueScopedReviews = useMemo(() => {
+    if (activeQueue === 'all') return teamReviews
+    return teamReviews.filter((review) => {
+      const cycle = getCycle(review.cycleId)
+      return cycle ? managerTeamQueue(review, cycle) === activeQueue : false
+    })
+  }, [teamReviews, activeQueue, getCycle])
+
   const reviewCounts = useMemo(
     () =>
-      computeScopedDashboardReviewCounts(
+      computeManagerTeamStatusCounts(
         state.cycles,
-        teamReviews,
+        queueScopedReviews,
         state.people,
         {
           search: filters.search,
@@ -247,7 +245,7 @@ export function ManagerDashboard() {
       ),
     [
       state.cycles,
-      teamReviews,
+      queueScopedReviews,
       state.people,
       managerReviewFilterOptions,
       filters.search,
@@ -255,6 +253,8 @@ export function ManagerDashboard() {
       filters.costCenter,
       filters.title,
       filters.union,
+      filters.reviewerId,
+      filters.rating,
     ],
   )
 
@@ -262,32 +262,30 @@ export function ManagerDashboard() {
 
   const filteredTeamReviews = useMemo(
     () =>
-      filterReviewsForDashboard(teamReviews, state.cycles, state.people, filters, managerReviewFilterOptions),
-    [teamReviews, state.cycles, state.people, filters, managerReviewFilterOptions],
+      filterReviewsForDashboard(
+        queueScopedReviews,
+        state.cycles,
+        state.people,
+        filters,
+        managerReviewFilterOptions,
+      ),
+    [queueScopedReviews, state.cycles, state.people, filters, managerReviewFilterOptions],
   )
 
-  const reviewsDueCount = useMemo(
-    () =>
-      teamReviews.filter((review) => {
-        const cycle = getCycle(review.cycleId)
-        return cycle ? needsManagerReview(cycle, review) : review.status === 'manager_pending'
-      }).length,
-    [teamReviews, getCycle],
-  )
-
-  const pendingAcknowledgementCount = useMemo(
-    () => teamReviews.filter((review) => review.status === 'acknowledgement_pending').length,
-    [teamReviews],
-  )
-
-  const completedThisQuarterCount = useMemo(
-    () =>
-      teamReviews.filter((review) => {
-        if (review.status !== 'completed') return false
-        return isCompletedThisQuarter(reviewCompletedAt(review))
-      }).length,
-    [teamReviews],
-  )
+  const queueCounts = useMemo(() => {
+    const counts = {
+      with_employee: 0,
+      manager_action: 0,
+      acknowledgement: 0,
+      complete: 0,
+    }
+    for (const review of teamReviews) {
+      const cycle = getCycle(review.cycleId)
+      if (!cycle) continue
+      counts[managerTeamQueue(review, cycle)] += 1
+    }
+    return counts
+  }, [teamReviews, getCycle])
 
   const openManagerReview = useCallback(
     (reviewId: string) => {
@@ -322,12 +320,8 @@ export function ManagerDashboard() {
         accessor: 'statusLabel',
         sortable: true,
         cellRenderer: (_value: unknown, row: unknown) => {
-          const displayStatus = (row as { displayStatus?: ReturnType<typeof getReviewDisplayStatus> })
-            .displayStatus
-          if (displayStatus) {
-            return createReviewDisplayStatusBadge(displayStatus, { forTable: true })
-          }
-          return createReviewDisplayStatusBadge('pending', { forTable: true })
+          const record = row as { listStatus: 'pending' | 'overdue' | 'complete' }
+          return createManagerTeamListStatusBadge(record.listStatus)
         },
       },
       { id: 'due', header: 'Due', accessor: 'dueDate', sortable: true },
@@ -378,15 +372,20 @@ export function ManagerDashboard() {
   const teamEmptyMessage =
     teamReviews.length === 0
       ? 'No performance reviews are assigned to your team yet.'
-      : 'No team reviews match the current filters. Try adjusting search, department, or status.'
+      : 'No team reviews match the current filters. Try adjusting search, department, or status (pending, overdue, or complete).'
 
   const updateFilters = useCallback((patch: Partial<DashboardFilters>) => {
     setFilters((current) => ({ ...current, ...patch }))
   }, [])
 
+  const selectQueue = useCallback((queue: 'all' | ManagerTeamQueue) => {
+    setActiveQueue((current) => (queue !== 'all' && current === queue ? 'all' : queue))
+  }, [])
+
   const clearFilters = useCallback(() => {
     requestAnimationFrame(() => {
       setFilters(createDefaultDashboardFilters())
+      setActiveQueue('all')
       setFilterFieldsKey((key) => key + 1)
     })
   }, [])
@@ -429,7 +428,11 @@ export function ManagerDashboard() {
       />
 
       <div className="tq-manager-dashboard flex flex-col gap-3">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div
+          className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5"
+          role="group"
+          aria-label="Filter team reviews"
+        >
           <PerformanceDashboardKpiCard
             title="Team Members"
             value={directReports.length}
@@ -439,41 +442,74 @@ export function ManagerDashboard() {
             status="complete"
             headerIcon="group"
             footerIcon="group"
+            pressed={activeQueue === 'all'}
+            onClick={() => selectQueue('all')}
           />
           <PerformanceDashboardKpiCard
-            title="Reviews Due"
-            value={reviewsDueCount}
+            title="With employee"
+            pressed={activeQueue === 'with_employee'}
+            onClick={() => selectQueue('with_employee')}
+            value={queueCounts.with_employee}
+            valueTone="warning"
+            metricLabel="Still with the employee"
+            footerLabel={
+              queueCounts.with_employee > 0
+                ? `${queueCounts.with_employee} waiting on the employee`
+                : 'None waiting on employees'
+            }
+            status={queueCounts.with_employee > 0 ? 'badge' : 'complete'}
+            badgeLabel="Pending"
+            badgeColor="warning"
+            footerIcon="group"
+          />
+          <PerformanceDashboardKpiCard
+            title="Your review"
+            pressed={activeQueue === 'manager_action'}
+            onClick={() => selectQueue('manager_action')}
+            value={queueCounts.manager_action}
             valueTone="danger"
             metricLabel="Requiring your review"
             footerLabel={
-              reviewsDueCount > 0
-                ? `${reviewsDueCount} review${reviewsDueCount === 1 ? '' : 's'} need action`
-                : 'No reviews due'
+              queueCounts.manager_action === 0
+                ? 'No reviews due'
+                : queueCounts.manager_action === 1
+                  ? '1 review needs action'
+                  : `${queueCounts.manager_action} reviews need action`
             }
-            status={reviewsDueCount > 0 ? 'badge' : 'complete'}
-            badgeLabel={REVIEW_DISPLAY_STATUS_LABELS.pending}
+            status={queueCounts.manager_action > 0 ? 'badge' : 'complete'}
+            badgeLabel="Pending"
+            badgeColor="warning"
             footerIcon="calendar_clock"
           />
           <PerformanceDashboardKpiCard
-            title="Pending Acknowledgement"
-            value={pendingAcknowledgementCount}
+            title="Acknowledgement"
+            pressed={activeQueue === 'acknowledgement'}
+            onClick={() => selectQueue('acknowledgement')}
+            value={queueCounts.acknowledgement}
             valueTone="warning"
             metricLabel="Awaiting employee sign-off"
             footerLabel={
-              pendingAcknowledgementCount > 0
-                ? `${pendingAcknowledgementCount} awaiting acknowledgement`
+              queueCounts.acknowledgement > 0
+                ? `${queueCounts.acknowledgement} awaiting acknowledgement`
                 : 'All acknowledgements complete'
             }
-            status={pendingAcknowledgementCount > 0 ? 'badge' : 'complete'}
-            badgeLabel="In progress"
+            status={queueCounts.acknowledgement > 0 ? 'badge' : 'complete'}
+            badgeLabel="Pending"
+            badgeColor="warning"
             footerIcon="warning"
           />
           <PerformanceDashboardKpiCard
             title="Completed"
-            value={completedThisQuarterCount}
+            pressed={activeQueue === 'complete'}
+            onClick={() => selectQueue('complete')}
+            value={queueCounts.complete}
             valueTone="success"
-            metricLabel="This quarter"
-            footerLabel={`${completedThisQuarterCount} completed this quarter`}
+            metricLabel="Finished reviews"
+            footerLabel={
+              queueCounts.complete > 0
+                ? `${queueCounts.complete} completed`
+                : 'None completed yet'
+            }
             status="badge"
             badgeLabel="Completed"
             footerIcon="check_circle"

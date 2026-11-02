@@ -12,8 +12,13 @@ type PerformanceDashboardKpiCardProps = {
   footerLabel: string
   status: 'complete' | 'badge'
   badgeLabel?: string
+  /** Overrides the tone used for the corner badge. The metric number still uses `valueTone`. */
+  badgeColor?: StatusBadgeSemanticColor
   footerIcon?: string
   headerIcon?: string
+  /** When set, the card is a toggle that filters the list below. */
+  onClick?: () => void
+  pressed?: boolean
 }
 
 export function PerformanceDashboardKpiCard({
@@ -24,20 +29,32 @@ export function PerformanceDashboardKpiCard({
   footerLabel,
   status,
   badgeLabel,
+  badgeColor: badgeColorProp,
   footerIcon = 'group',
   headerIcon,
+  onClick,
+  pressed = false,
 }: PerformanceDashboardKpiCardProps) {
   const badgeColor: StatusBadgeSemanticColor =
-    valueTone === 'danger'
+    badgeColorProp ??
+    (valueTone === 'danger'
       ? 'danger'
       : valueTone === 'warning'
         ? 'warning'
         : valueTone === 'success'
           ? 'success'
-          : 'tertiary'
+          : 'tertiary')
 
-  return (
-    <article className="tq-dashboard-kpi-card">
+  const className = [
+    'tq-dashboard-kpi-card',
+    onClick ? 'tq-dashboard-kpi-card--interactive' : '',
+    pressed ? 'tq-dashboard-kpi-card--active' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  const body = (
+    <>
       <div className="tq-dashboard-kpi-card__header">
         <ModusWcTypography
           hierarchy="h4"
@@ -83,6 +100,29 @@ export function PerformanceDashboardKpiCard({
           label={footerLabel}
         />
       </div>
-    </article>
+    </>
   )
+
+  if (onClick) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        className={className}
+        aria-pressed={pressed}
+        aria-label={`${title}, ${value} ${metricLabel}`}
+        onClick={onClick}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            onClick()
+          }
+        }}
+      >
+        {body}
+      </div>
+    )
+  }
+
+  return <article className={className}>{body}</article>
 }

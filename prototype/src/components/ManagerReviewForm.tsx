@@ -22,6 +22,7 @@ import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { seedQuestionAnswerKeys } from '../utils/questionReview'
 import { PerformanceRatingScaleField } from './PerformanceRatingScaleField'
 import { SupportingDocumentsSection } from './SupportingDocumentsSection'
+import { SubmittedSupportingDocuments } from './SubmittedSupportingDocuments'
 import { managerReviewAllowsSupportingDocuments } from '../utils/supportingDocuments'
 import { formatEmployeeNameWithCode } from '../utils/employeeCode'
 import { ReturnReviewToEmployeeAction } from './ReturnReviewToEmployeeAction'
@@ -145,6 +146,7 @@ export function ManagerReviewForm() {
   }
 
   const lastSavedAt = review.managerReview?.savedAt
+  const employeeSupportingDocuments = review.selfEval?.supportingDocuments ?? []
 
   const markDirty = () => {
     setDraftDirty(true)
@@ -264,6 +266,15 @@ export function ManagerReviewForm() {
                 </div>
               </div>
             ))}
+            {employeeSupportingDocuments.length > 0 ? (
+              <>
+                <ModusWcDivider />
+                <SubmittedSupportingDocuments
+                  documents={employeeSupportingDocuments}
+                  ownerName={employee?.name ?? 'The employee'}
+                />
+              </>
+            ) : null}
             {showSupportingDocuments ? (
               <>
                 <ModusWcDivider />

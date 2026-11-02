@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ModusWcCard, ModusWcTabs, ModusWcTypography } from '@trimble-oss/moduswebcomponents-react'
+import {
+  ModusWcCard,
+  ModusWcDivider,
+  ModusWcTabs,
+  ModusWcTypography,
+} from '@trimble-oss/moduswebcomponents-react'
 import { usePerformance } from '../context/PerformanceContext'
 import { employeeCanViewManagerReviewContent } from '../utils/reviewAccess'
 import { reviewOverallRatingLabel } from '../utils/workflow'
@@ -11,6 +16,7 @@ import {
 } from './ReviewOverallRating'
 import { ReturnedToEmployeeNotice } from './ReturnReviewToEmployeeAction'
 import { ReviewWorkflowStepCards } from './ReviewWorkflowStepCards'
+import { SubmittedSupportingDocuments } from './SubmittedSupportingDocuments'
 
 const TAB_SELF = 0
 const TAB_MANAGER = 1
@@ -152,6 +158,16 @@ export function PerformanceReviewDetailContent({
                   />
                 </div>
               ))}
+              {review.selfEval.supportingDocuments?.length ? (
+                <>
+                  <ModusWcDivider />
+                  <SubmittedSupportingDocuments
+                    documents={review.selfEval.supportingDocuments}
+                    ownerName={employee?.name ?? 'The employee'}
+                    heading="Supporting documents"
+                  />
+                </>
+              ) : null}
             </div>
           ) : (
             <ModusWcTypography hierarchy="p" size="sm" label="Self-evaluation not submitted." />

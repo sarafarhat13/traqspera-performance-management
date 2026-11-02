@@ -1663,6 +1663,26 @@ dialog.tq-launch-wizard-participant-picker-dialog .modus-wc-modal-content {
   justify-content: space-between;
 }
 
+.tq-submitted-supporting-documents__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--modus-wc-spacing-xs, 0.5rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tq-submitted-supporting-documents__item {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tq-submitted-supporting-documents__item::marker {
+  content: none;
+}
+
 .tq-launch-review__config-list {
   list-style: none;
   margin: 0;

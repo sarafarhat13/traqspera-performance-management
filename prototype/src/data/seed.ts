@@ -6,6 +6,7 @@ import type {
   ReviewEmployeeGroup,
   ReviewTemplate,
   RatingScaleConfig,
+  SupportingDocumentAttachment,
   WorkflowStep,
   WorkflowStepType,
 } from '../types'
@@ -851,7 +852,38 @@ export const seedReviewGroups: ReviewEmployeeGroup[] = [
   },
 ]
 
+/** Aisha Johnson's 2025 self-evaluation files, which the manager can download while reviewing. */
+const AISHA_SUPPORTING_DOCUMENTS: SupportingDocumentAttachment[] = [
+  {
+    id: 'doc-aisha-safety',
+    fileName: 'Q4-Safety-Stand-Down-Summary.pdf',
+    sizeBytes: 482_304,
+    mimeType: 'application/pdf',
+    uploadedAt: '2025-10-20T13:40:00Z',
+  },
+  {
+    id: 'doc-aisha-cert',
+    fileName: 'OSHA-30-Certificate.pdf',
+    sizeBytes: 216_064,
+    mimeType: 'application/pdf',
+    uploadedAt: '2025-10-20T13:42:00Z',
+  },
+  {
+    id: 'doc-aisha-audit',
+    fileName: 'Audit-Findings-Tracker.xlsx',
+    sizeBytes: 58_880,
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    uploadedAt: '2025-10-20T13:45:00Z',
+  },
+]
+
 const cycle2025Reviews = create2025AnnualReviews(seedPeople).map((review) => {
+  if (review.employeeId === 'emp-7' && review.cycleId === 'cycle-2025' && review.selfEval) {
+    return {
+      ...review,
+      selfEval: { ...review.selfEval, supportingDocuments: AISHA_SUPPORTING_DOCUMENTS },
+    }
+  }
   if (review.employeeId !== 'emp-3' || review.cycleId !== 'cycle-2025') return review
   return {
     ...review,
@@ -1427,6 +1459,22 @@ const seedReviewsRaw: PerformanceReview[] = [
         q4: 'Focused on advanced safety leadership coursework.',
       },
       completedAt: '2024-02-21T11:30:00Z',
+      supportingDocuments: [
+        {
+          id: 'doc-rev-2024-7-safety',
+          fileName: 'Q4-Safety-Stand-Down-Summary.pdf',
+          sizeBytes: 482_304,
+          mimeType: 'application/pdf',
+          uploadedAt: '2024-02-21T11:20:00Z',
+        },
+        {
+          id: 'doc-rev-2024-7-cert',
+          fileName: 'OSHA-30-Certificate.pdf',
+          sizeBytes: 216_064,
+          mimeType: 'application/pdf',
+          uploadedAt: '2024-02-21T11:22:00Z',
+        },
+      ],
     },
   },
   {

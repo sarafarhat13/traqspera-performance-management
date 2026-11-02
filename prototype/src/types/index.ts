@@ -110,13 +110,6 @@ export interface ReviewCycle {
   attachedGroupIds?: string[]
   /** Saved reviewer picks when cycle is still a draft */
   reviewerAssignments?: Record<string, EmployeeReviewerAssignment>
-  /** When true, employees can attach supporting files to their self-evaluation. */
-  allowSupportingDocuments?: boolean
-  /**
-   * When true, managers can attach supporting files to their evaluation.
-   * Omitted on cycles created before this option existed; those fall back to `allowSupportingDocuments`.
-   */
-  allowManagerSupportingDocuments?: boolean
   /** Person who performs final approval and closes the cycle */
   finalApproverId?: string
   /** When the final approver closed the cycle (ISO timestamp) */

@@ -37,8 +37,6 @@ type LaunchCycleReviewSummaryProps = {
   workflow: WorkflowStep[]
   workflowKickoffMode: WorkflowKickoffMode
   ratingScale: RatingScaleConfig
-  allowSupportingDocuments?: boolean
-  allowManagerSupportingDocuments?: boolean
   selectedEmployees: Person[]
   attachedGroups?: ReviewEmployeeGroup[]
   conflictsWereResolved?: boolean
@@ -158,8 +156,6 @@ export function LaunchCycleReviewSummary({
   workflow,
   workflowKickoffMode,
   ratingScale,
-  allowSupportingDocuments = false,
-  allowManagerSupportingDocuments = false,
   selectedEmployees,
   attachedGroups = [],
   conflictsWereResolved = false,
@@ -185,22 +181,6 @@ export function LaunchCycleReviewSummary({
     configurationItems.push({
       icon: 'refresh',
       label: 'Parallel kickoff (self-evaluation and manager review together)',
-    })
-  }
-  const employeeUploads =
-    allowSupportingDocuments && workflow.some((step) => step.enabled && step.type === 'employee')
-  const managerUploads =
-    allowManagerSupportingDocuments &&
-    workflow.some((step) => step.enabled && step.type === 'manager')
-  if (employeeUploads || managerUploads) {
-    configurationItems.push({
-      icon: 'upload',
-      label:
-        employeeUploads && managerUploads
-          ? 'Supporting document uploads on self and manager evaluations'
-          : employeeUploads
-            ? 'Supporting document uploads on self-evaluations'
-            : 'Supporting document uploads on manager evaluations',
     })
   }
   return (

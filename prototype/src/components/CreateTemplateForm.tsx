@@ -1,5 +1,6 @@
 import { useState, type DragEvent } from 'react'
 import {
+  ModusWcAlert,
   ModusWcButton,
   ModusWcCard,
   ModusWcCheckbox,
@@ -195,6 +196,11 @@ export function CreateTemplateForm({
         </div>
 
         <div className="flex flex-col gap-3">
+          <ModusWcAlert
+            variant="info"
+            alertTitle="Supporting documents included"
+            alertDescription="Every review using this template ends with a supporting documents section, so employees and managers can attach files to their evaluations. No setup needed."
+          />
           {draft.questions.map((q, index) => (
             <div
               key={q.id}

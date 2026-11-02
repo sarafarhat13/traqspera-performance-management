@@ -126,14 +126,7 @@ function normalizeCycle(cycle: ReviewCycle): ReviewCycle {
     }
   }
 
-  const seed = seedCycles.find((c) => c.id === normalized.id)
-  const allowSupportingDocuments =
-    normalized.allowSupportingDocuments ?? seed?.allowSupportingDocuments
-
-  return {
-    ...normalized,
-    ...(allowSupportingDocuments !== undefined ? { allowSupportingDocuments } : {}),
-  }
+  return normalized
 }
 
 function resolveTemplates(
@@ -214,15 +207,7 @@ function resolveCycles(persisted: Partial<PersistedState>): ReviewCycle[] {
         ? seedCycles.map(normalizeCycle)
         : pinLisaFinalApprovalDemoCycle(mergeMissingSeedCycles(stored)).map(normalizeCycle)
   }
-  return pinUnassignedDemoCycles(pinWalkthroughSupportingDocuments(cycles))
-}
-
-/** Demo annual cycles always allow uploads unless HR explicitly disabled on a custom cycle. */
-function pinWalkthroughSupportingDocuments(cycles: ReviewCycle[]): ReviewCycle[] {
-  const demoCycleIds = new Set(['cycle-2024', 'cycle-2025'])
-  return cycles.map((cycle) =>
-    demoCycleIds.has(cycle.id) ? { ...cycle, allowSupportingDocuments: true } : cycle,
-  )
+  return pinUnassignedDemoCycles(cycles)
 }
 
 function mergeMissingSeedReviews(stored: PerformanceReview[]): PerformanceReview[] {

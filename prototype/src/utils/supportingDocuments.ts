@@ -1,23 +1,13 @@
 import type { ReviewCycle, SupportingDocumentAttachment } from '../types'
 import { cycleIncludesManagerEvaluation, cycleIncludesSelfEvaluation } from './workflow'
 
-/** HR must set `allowSupportingDocuments: false` to hide uploads; omitted/undefined means allowed. */
-export function cycleAllowsSupportingDocuments(cycle?: ReviewCycle): boolean {
-  if (!cycle) return false
-  return cycle.allowSupportingDocuments !== false
-}
-
+/** Supporting documents are part of every review template; only the workflow step must be enabled. */
 export function selfEvalAllowsSupportingDocuments(cycle?: ReviewCycle): boolean {
-  if (!cycle || !cycleIncludesSelfEvaluation(cycle)) return false
-  return cycleAllowsSupportingDocuments(cycle)
+  return Boolean(cycle && cycleIncludesSelfEvaluation(cycle))
 }
 
 export function managerReviewAllowsSupportingDocuments(cycle?: ReviewCycle): boolean {
-  if (!cycle || !cycleIncludesManagerEvaluation(cycle)) return false
-  if (cycle.allowManagerSupportingDocuments !== undefined) {
-    return cycle.allowManagerSupportingDocuments
-  }
-  return cycleAllowsSupportingDocuments(cycle)
+  return Boolean(cycle && cycleIncludesManagerEvaluation(cycle))
 }
 
 export const SUPPORTING_DOCUMENT_ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg'

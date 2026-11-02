@@ -285,12 +285,6 @@ export function LaunchCycleWizard() {
   const [ratingScale, setRatingScale] = useState<RatingScaleConfig>(() =>
     normalizeRatingScale(draftCycle?.ratingScale ?? DEFAULT_RATING_SCALE),
   )
-  const [allowSupportingDocuments, setAllowSupportingDocuments] = useState(
-    draftCycle?.allowSupportingDocuments ?? false,
-  )
-  const [allowManagerSupportingDocuments, setAllowManagerSupportingDocuments] = useState(
-    draftCycle?.allowManagerSupportingDocuments ?? false,
-  )
   const [individualEmployeeIds, setIndividualEmployeeIds] = useState<string[]>(
     () => draftCycle?.employeeIds ?? [],
   )
@@ -368,8 +362,6 @@ export function LaunchCycleWizard() {
       workflow,
       workflowKickoffMode,
       ratingScale: normalizeRatingScale(ratingScale),
-      allowSupportingDocuments,
-      allowManagerSupportingDocuments,
       employeeIds: derivedParticipantIds,
     }
   }
@@ -900,10 +892,6 @@ export function LaunchCycleWizard() {
               onWorkflowKickoffModeChange={setWorkflowKickoffMode}
               ratingScale={ratingScale}
               onRatingScaleChange={setRatingScale}
-              allowSupportingDocuments={allowSupportingDocuments}
-              onAllowSupportingDocumentsChange={setAllowSupportingDocuments}
-              allowManagerSupportingDocuments={allowManagerSupportingDocuments}
-              onAllowManagerSupportingDocumentsChange={setAllowManagerSupportingDocuments}
             />
           </ModusWcCard>
         )}
@@ -979,8 +967,6 @@ export function LaunchCycleWizard() {
             workflow={workflow}
             workflowKickoffMode={workflowKickoffMode}
             ratingScale={ratingScale}
-            allowSupportingDocuments={allowSupportingDocuments}
-            allowManagerSupportingDocuments={allowManagerSupportingDocuments}
             selectedEmployees={selectedEmployees}
             conflictsWereResolved={derivedParticipantIds.every((id) =>
               isReviewerAssignmentValid(getEffectiveAssignment(id), getPerson(id)),

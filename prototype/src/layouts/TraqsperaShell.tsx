@@ -39,14 +39,16 @@ type NavSection = {
   label: string
   icon: ReactNode
   page?: TraqsperaNavPage
-  children?: { key: TraqsperaNavPage; label: string }[]
+  children?: NavChild[]
 }
 
-const PERFORMANCE_NAV_CHILDREN: { key: TraqsperaNavPage; label: string }[] = [
+type NavChild = { key: TraqsperaNavPage; label: string; note?: string }
+
+const PERFORMANCE_NAV_CHILDREN: NavChild[] = [
   { key: 'p_perf_dashboard', label: 'Reviews Dashboard' },
   { key: 'p_perf_team', label: 'Team Reviews' },
   { key: 'p_perf_templates', label: 'Templates' },
-  { key: 'p_perf_review_groups', label: 'Review Groups' },
+  { key: 'p_perf_review_groups', label: 'Review Groups', note: '(Out of Scope)' },
 ]
 
 const NAV_SECTIONS: NavSection[] = [
@@ -284,6 +286,14 @@ function NavSidebar({
                             }}
                           >
                             {child.label}
+                            {child.note && (
+                              <span
+                                className="ml-[4px] text-[11px] italic"
+                                style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 400 }}
+                              >
+                                {child.note}
+                              </span>
+                            )}
                           </span>
                         </button>
                       )

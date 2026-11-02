@@ -19,7 +19,7 @@ export function PerformanceRatingScaleField({
       : undefined
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-[var(--modus-wc-color-base-200)] bg-[var(--modus-wc-color-base-100)] p-4">
+    <div className="flex flex-col gap-3 rounded-lg border border-[var(--modus-wc-color-base-200)] bg-[var(--modus-wc-color-base-page)] p-4">
       <div className="flex flex-col gap-1">
         <ModusWcTypography
           hierarchy="p"

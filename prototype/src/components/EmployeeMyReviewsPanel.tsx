@@ -299,11 +299,6 @@ export function EmployeeMyReviewsPanel({
 
   const { todo, completed } = useMemo(() => partitionReviews(displayReviews), [displayReviews])
 
-  const hasSelfEvalDue = todo.some((row) =>
-    row.cycle ? needsEmployeeSelfEval(row.cycle, row.review) : row.review.status === 'self_eval_pending',
-  )
-  const hasAcknowledgementDue = todo.some((row) => row.review.status === 'acknowledgement_pending')
-
   const tabs: ITab[] = useMemo(
     () => [
       { label: todo.length > 0 ? `To do (${todo.length})` : 'To do' },
@@ -334,20 +329,6 @@ export function EmployeeMyReviewsPanel({
       </div>
 
       <div hidden={activeTabIndex !== 0} aria-hidden={activeTabIndex !== 0} className="flex flex-col gap-3">
-        {audience === 'self' && hasSelfEvalDue ? (
-          <ModusWcAlert
-            variant="warning"
-            alertTitle="Self-evaluation due"
-            alertDescription="Complete your self-evaluation so your manager can continue the review."
-          />
-        ) : null}
-        {audience === 'self' && hasAcknowledgementDue ? (
-          <ModusWcAlert
-            variant="info"
-            alertTitle="Review acceptance"
-            alertDescription="These reviews are ready for your acceptance. Read the summary, choose agree or disagree, and sign."
-          />
-        ) : null}
         <ReviewList
           rows={todo}
           emptyLabel={todoEmptyLabel}

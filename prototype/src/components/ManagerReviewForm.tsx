@@ -222,17 +222,6 @@ export function ManagerReviewForm() {
           />
 
           <div className="flex flex-col gap-6">
-            {includesRatingScale && ratingScale && (
-              <PerformanceRatingScaleField
-                ratingScale={ratingScale}
-                value={overallRating}
-                onChange={(value) => {
-                  markDirty()
-                  setOverallRating(value)
-                }}
-              />
-            )}
-
             {template.questions.map((q, index) => (
               <div key={q.id} className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div className="flex flex-col gap-2 rounded-lg bg-[var(--modus-wc-color-base-100)] p-3">
@@ -283,6 +272,19 @@ export function ManagerReviewForm() {
                   onDocumentsChange={(next) => {
                     markDirty()
                     setSupportingDocuments(next)
+                  }}
+                />
+              </>
+            ) : null}
+            {includesRatingScale && ratingScale ? (
+              <>
+                <ModusWcDivider />
+                <PerformanceRatingScaleField
+                  ratingScale={ratingScale}
+                  value={overallRating}
+                  onChange={(value) => {
+                    markDirty()
+                    setOverallRating(value)
                   }}
                 />
               </>

@@ -83,6 +83,7 @@ export function PerformanceReviewDetailContent({
     Boolean(cycle)
 
   const overallRatingLabel = cycle ? reviewOverallRatingLabel(cycle, review) : null
+  const showManagerDocuments = canViewManager && Boolean(review.managerReview?.completedAt)
 
   const managerHiddenMessage = (
     <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
@@ -158,16 +159,6 @@ export function PerformanceReviewDetailContent({
                   />
                 </div>
               ))}
-              {review.selfEval.supportingDocuments?.length ? (
-                <>
-                  <ModusWcDivider />
-                  <SubmittedSupportingDocuments
-                    documents={review.selfEval.supportingDocuments}
-                    ownerName={employee?.name ?? 'The employee'}
-                    heading="Supporting documents"
-                  />
-                </>
-              ) : null}
             </div>
           ) : (
             <ModusWcTypography hierarchy="p" size="sm" label="Self-evaluation not submitted." />
@@ -267,6 +258,32 @@ export function PerformanceReviewDetailContent({
         </>
       )}
 
+      <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
+        <ModusWcTypography
+          slot="title"
+          hierarchy="h4"
+          size="md"
+          weight="semibold"
+          label="Supporting documents"
+        />
+        <div className="flex flex-col gap-4">
+          <SubmittedSupportingDocuments
+            documents={review.selfEval?.supportingDocuments ?? []}
+            ownerName={employee?.name ?? 'The employee'}
+          />
+          {showManagerDocuments ? (
+            <>
+              <ModusWcDivider />
+              <SubmittedSupportingDocuments
+                documents={review.managerReview?.supportingDocuments ?? []}
+                ownerName={managerName}
+                heading="Manager supporting documents"
+                attachedWith="their review"
+              />
+            </>
+          ) : null}
+        </div>
+      </ModusWcCard>
     </div>
   )
 }

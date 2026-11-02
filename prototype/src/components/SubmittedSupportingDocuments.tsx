@@ -11,6 +11,7 @@ type SubmittedSupportingDocumentsProps = {
   documents: SupportingDocumentAttachment[]
   ownerName: string
   heading?: string
+  attachedWith?: string
 }
 
 /** Read-only list of files someone else attached, with a download action per file. */
@@ -18,6 +19,7 @@ export function SubmittedSupportingDocuments({
   documents,
   ownerName,
   heading = 'Employee supporting documents',
+  attachedWith = 'their self-evaluation',
 }: SubmittedSupportingDocumentsProps) {
   const headingId = `submitted-supporting-documents-${useId()}`
 
@@ -34,7 +36,7 @@ export function SubmittedSupportingDocuments({
           customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
           label={
             documents.length > 0
-              ? `${ownerName} attached ${documents.length} file${documents.length === 1 ? '' : 's'} with their self-evaluation.`
+              ? `${ownerName} attached ${documents.length} file${documents.length === 1 ? '' : 's'} with ${attachedWith}.`
               : `${ownerName} did not attach any files.`
           }
         />

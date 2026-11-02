@@ -940,6 +940,8 @@ type WalkthroughCopy = {
   /** Extra 90-day check-in ready for employee acceptance (manager review complete). */
   includeAcknowledgementSample?: boolean
   acknowledgementManagerAnswers?: Record<string, string>
+  completedSelfDocuments?: SupportingDocumentAttachment[]
+  completedManagerDocuments?: SupportingDocumentAttachment[]
 }
 
 function createMyPerformanceWalkthroughReviews(copy: WalkthroughCopy): PerformanceReview[] {
@@ -992,10 +994,14 @@ function createMyPerformanceWalkthroughReviews(copy: WalkthroughCopy): Performan
       selfEval: {
         answers: copy.completedSelf,
         completedAt: '2024-02-11T10:00:00Z',
+        ...(copy.completedSelfDocuments ? { supportingDocuments: copy.completedSelfDocuments } : {}),
       },
       managerReview: {
         answers: copy.completedManager,
         completedAt: '2024-02-26T14:00:00Z',
+        ...(copy.completedManagerDocuments
+          ? { supportingDocuments: copy.completedManagerDocuments }
+          : {}),
       },
       acknowledgement: {
         acknowledged: true,
@@ -1072,6 +1078,15 @@ export const myPerformanceWalkthroughReviews: PerformanceReview[] = [
       q4: 'Encourage continued CPA progress and training goals.',
     },
     acceptanceComment: 'Discussed ratings and development goals with Mike; aligned on CPA study plan.',
+    completedSelfDocuments: [
+      {
+        id: 'doc-walk-emp3-2024-close',
+        fileName: 'Quarterly-Close-Checklist.pdf',
+        sizeBytes: 198_656,
+        mimeType: 'application/pdf',
+        uploadedAt: '2024-02-11T09:40:00Z',
+      },
+    ],
   }),
   ...createMyPerformanceWalkthroughReviews({
     employeeId: 'hr-1',
@@ -1115,6 +1130,31 @@ export const myPerformanceWalkthroughReviews: PerformanceReview[] = [
     },
     acceptanceComment:
       'Reviewed 2024 goals with Lisa; aligned on analytics training and Q1 compliance priorities.',
+    completedSelfDocuments: [
+      {
+        id: 'doc-walk-hr1-2024-program',
+        fileName: 'Review-Cycle-Program-Summary.pdf',
+        sizeBytes: 356_352,
+        mimeType: 'application/pdf',
+        uploadedAt: '2024-02-11T09:30:00Z',
+      },
+      {
+        id: 'doc-walk-hr1-2024-training',
+        fileName: 'Compliance-Training-Completion.xlsx',
+        sizeBytes: 64_512,
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        uploadedAt: '2024-02-11T09:34:00Z',
+      },
+    ],
+    completedManagerDocuments: [
+      {
+        id: 'doc-walk-hr1-2024-feedback',
+        fileName: 'Stakeholder-Feedback-Notes.pdf',
+        sizeBytes: 142_336,
+        mimeType: 'application/pdf',
+        uploadedAt: '2024-02-26T13:45:00Z',
+      },
+    ],
   }),
 ]
 

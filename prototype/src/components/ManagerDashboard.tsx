@@ -20,17 +20,14 @@ import {
 } from '../utils/modusTableCells'
 import {
   countActiveDashboardFilters,
-  costCenterOptionsFromPeople,
   createDefaultDashboardFilters,
   computeManagerTeamStatusCounts,
-  departmentOptionsFromPeople,
+  DASHBOARD_FILTER_ALL,
   filterReviewsForDashboard,
   isManagerTeamListStatusFilter,
   MANAGER_TEAM_LIST_STATUS_LABELS,
   managerTeamListStatus,
   managerTeamQueue,
-  titleOptionsFromPeople,
-  unionOptionsFromPeople,
   type DashboardFilters,
   type ManagerTeamQueue,
 } from '../utils/dashboardFilters'
@@ -166,14 +163,31 @@ export function ManagerDashboard() {
     [state.reviews, managerId, getCycle],
   )
 
-  const teamReviews = useMemo(() => {
+  const launchedTeamReviews = useMemo(() => {
     const reportIds = new Set(directReports.map((person) => person.id))
-    const relevant = state.reviews.filter(
+    return state.reviews.filter(
       (review) =>
         review.managerId === managerId &&
         reportIds.has(review.employeeId) &&
         isLaunchedReviewCycle(getCycle(review.cycleId)),
     )
+  }, [state.reviews, managerId, directReports, getCycle])
+
+  const reviewCycleOptions = useMemo(() => {
+    const cycleIds = [...new Set(launchedTeamReviews.map((review) => review.cycleId))]
+    const options = cycleIds
+      .map((id) => getCycle(id))
+      .filter((cycle): cycle is ReviewCycle => Boolean(cycle))
+      .sort((left, right) => left.name.localeCompare(right.name))
+      .map((cycle) => ({ label: cycle.name, value: cycle.id }))
+    return [{ label: 'All reviews', value: DASHBOARD_FILTER_ALL }, ...options]
+  }, [launchedTeamReviews, getCycle])
+
+  const teamReviews = useMemo(() => {
+    const relevant =
+      filters.reviewCycleId === DASHBOARD_FILTER_ALL
+        ? launchedTeamReviews
+        : launchedTeamReviews.filter((review) => review.cycleId === filters.reviewCycleId)
     const byEmployee = new Map<string, PerformanceReview>()
 
     for (const review of relevant) {
@@ -192,26 +206,12 @@ export function ManagerDashboard() {
       const rightName = getPerson(right.employeeId)?.name ?? ''
       return leftName.localeCompare(rightName)
     })
-  }, [state.reviews, managerId, directReports, getPerson, getCycle])
+  }, [launchedTeamReviews, filters.reviewCycleId, getPerson])
 
   const reportIds = useMemo(
     () => new Set(directReports.map((person) => person.id)),
     [directReports],
   )
-
-  const departmentOptions = useMemo(
-    () => departmentOptionsFromPeople(directReports),
-    [directReports],
-  )
-
-  const costCenterOptions = useMemo(
-    () => costCenterOptionsFromPeople(directReports),
-    [directReports],
-  )
-
-  const titleOptions = useMemo(() => titleOptionsFromPeople(directReports), [directReports])
-
-  const unionOptions = useMemo(() => unionOptionsFromPeople(directReports), [directReports])
 
   const managerReviewFilterOptions = useMemo(
     () => ({ employeeIds: reportIds, managerTeamReviewStatus: true as const }),
@@ -240,6 +240,7 @@ export function ManagerDashboard() {
           union: filters.union,
           reviewerId: filters.reviewerId,
           rating: filters.rating,
+          reviewCycleId: filters.reviewCycleId,
         },
         managerReviewFilterOptions,
       ),
@@ -255,6 +256,7 @@ export function ManagerDashboard() {
       filters.union,
       filters.reviewerId,
       filters.rating,
+      filters.reviewCycleId,
     ],
   )
 
@@ -519,16 +521,13 @@ export function ManagerDashboard() {
         <PerformanceDashboardFilterBar
           filters={filters}
           counts={reviewCounts}
-          departmentOptions={departmentOptions}
-          costCenterOptions={costCenterOptions}
-          titleOptions={titleOptions}
-          unionOptions={unionOptions}
+          reviewCycleOptions={reviewCycleOptions}
           activeFilterCount={activeFilterCount}
           filterFieldsKey={filterFieldsKey}
           viewMode={viewMode}
           statusFilterMode="managerTeam"
+          showFilterPanel={false}
           searchAriaLabel="Search by employee name, review cycle, department, or cost center"
-          filterPanelId="manager-dashboard-filter-panel"
           onFiltersChange={updateFilters}
           onClearFilters={clearFilters}
           onViewModeChange={setViewMode}

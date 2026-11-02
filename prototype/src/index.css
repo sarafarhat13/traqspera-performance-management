@@ -1854,6 +1854,13 @@ dialog.tq-launch-wizard-participant-picker-dialog .modus-wc-modal-content {
   max-width: 100%;
 }
 
+.tq-dashboard-filter-bar__review {
+  flex: 0 0 14rem;
+  width: 14rem;
+  max-width: 100%;
+}
+
+.tq-dashboard-filter-bar__review modus-wc-select,
 .tq-dashboard-filter-bar__reviewer modus-wc-select,
 .tq-dashboard-filter-bar--compact .tq-dashboard-filter-bar__search modus-wc-text-input {
   width: 100%;

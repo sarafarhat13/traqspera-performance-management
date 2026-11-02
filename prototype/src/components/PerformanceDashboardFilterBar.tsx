@@ -74,6 +74,8 @@ type PerformanceDashboardFilterBarProps = {
   unionOptions?: { label: string; value: string }[]
   reviewerOptions?: { label: string; value: string }[]
   ratingOptions?: { label: string; value: string }[]
+  /** Shown as a dropdown beside search when it has more than the "All" option. */
+  reviewCycleOptions?: { label: string; value: string }[]
   activeFilterCount: number
   filterFieldsKey: number
   viewMode?: DashboardViewMode
@@ -98,6 +100,7 @@ export function PerformanceDashboardFilterBar({
   unionOptions,
   reviewerOptions,
   ratingOptions,
+  reviewCycleOptions,
   activeFilterCount,
   filterFieldsKey,
   viewMode = 'table',
@@ -151,6 +154,22 @@ export function PerformanceDashboardFilterBar({
             }
           />
         </div>
+
+        {reviewCycleOptions && reviewCycleOptions.length > 1 ? (
+          <div className="tq-dashboard-filter-bar__field tq-dashboard-filter-bar__review">
+            <ModusWcSelect
+              key={`dashboard-review-${filterFieldsKey}`}
+              size="sm"
+              label={compactBar ? 'Review' : undefined}
+              aria-label="Filter by review"
+              value={filters.reviewCycleId}
+              options={reviewCycleOptions}
+              onInputChange={(e) =>
+                onFiltersChange({ reviewCycleId: readInputString(e as CustomEvent) })
+              }
+            />
+          </div>
+        ) : null}
 
         {showReviewerInBar && reviewerOptions && reviewerOptions.length > 1 ? (
           <div className="tq-dashboard-filter-bar__field tq-dashboard-filter-bar__reviewer">

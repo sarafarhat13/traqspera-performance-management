@@ -48,6 +48,8 @@ export type DashboardFilters = {
   union: string
   reviewerId: string
   rating: string
+  /** Review cycle id. */
+  reviewCycleId: string
   status: DashboardStatusFilter
 }
 
@@ -60,6 +62,7 @@ export function createDefaultDashboardFilters(): DashboardFilters {
     union: DASHBOARD_FILTER_ALL,
     reviewerId: DASHBOARD_FILTER_ALL,
     rating: DASHBOARD_FILTER_ALL,
+    reviewCycleId: DASHBOARD_FILTER_ALL,
     status: 'all',
   }
 }
@@ -356,6 +359,13 @@ export function reviewMatchesDashboardFilters(
     return false
   }
 
+  if (
+    filters.reviewCycleId !== DASHBOARD_FILTER_ALL &&
+    review.cycleId !== filters.reviewCycleId
+  ) {
+    return false
+  }
+
   if (filters.rating !== DASHBOARD_FILTER_ALL) {
     const submittedRating = readManagerOverallRatingValue(cycle, review)
     if (filters.rating === DASHBOARD_RATING_UNRATED) {
@@ -608,6 +618,7 @@ export function countActiveDashboardFilters(filters: DashboardFilters): number {
   if (filters.union !== DASHBOARD_FILTER_ALL) count += 1
   if (filters.reviewerId !== DASHBOARD_FILTER_ALL) count += 1
   if (filters.rating !== DASHBOARD_FILTER_ALL) count += 1
+  if (filters.reviewCycleId !== DASHBOARD_FILTER_ALL) count += 1
   if (filters.status !== 'all') count += 1
   return count
 }

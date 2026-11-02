@@ -25,8 +25,9 @@ import { SupportingDocumentsSection } from './SupportingDocumentsSection'
 import { managerReviewAllowsSupportingDocuments } from '../utils/supportingDocuments'
 import { formatEmployeeNameWithCode } from '../utils/employeeCode'
 import { ReturnReviewToEmployeeAction } from './ReturnReviewToEmployeeAction'
+import { useModusDialog } from '../utils/useModusDialog'
 const AUTO_SAVE_MS = 800
-const MANAGER_ACK_SENT_MODAL_ID = 'manager-ack-sent-modal'
+const MANAGER_SUBMIT_CONFIRM_MODAL_ID = 'manager-submit-confirm-modal'
 
 function readStoredRating(answers?: Record<string, string>): number {
   const raw = answers?.[MANAGER_OVERALL_RATING_KEY]
@@ -76,7 +77,13 @@ export function ManagerReviewForm() {
 
   const [draftDirty, setDraftDirty] = useState(false)
   const [draftSaveState, setDraftSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
-  const [ackSentModalOpen, setAckSentModalOpen] = useState(false)
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false)
+  const closeSubmitConfirm = useCallback(() => setSubmitConfirmOpen(false), [])
+  const { requestClose: requestCloseSubmitConfirm } = useModusDialog(
+    MANAGER_SUBMIT_CONFIRM_MODAL_ID,
+    submitConfirmOpen,
+    closeSubmitConfirm,
+  )
   const lastPersistedRef = useRef<Record<string, string>>({})
 
   const buildPayload = useCallback(() => {
@@ -129,15 +136,6 @@ export function ManagerReviewForm() {
     setDraftSaveState('idle')
   }, [review?.id, template, includesRatingScale, review?.managerReview?.supportingDocuments])
 
-  useEffect(() => {
-    const dialog = document.getElementById(MANAGER_ACK_SENT_MODAL_ID) as HTMLDialogElement | null
-    if (ackSentModalOpen) {
-      dialog?.showModal()
-      return
-    }
-    dialog?.close()
-  }, [ackSentModalOpen])
-
   if (!review || !template) {
     return (
       <TraqsperaPageBody>
@@ -164,40 +162,25 @@ export function ManagerReviewForm() {
     persistDraft()
   }
 
-  const handleSubmit = () => {
-    const completedAt = new Date().toISOString()
-    const payload = buildPayload()
-    const nextReview = {
-      ...review,
-      managerReview: {
-        answers: payload,
-        completedAt,
-        savedAt: completedAt,
-        supportingDocuments:
-          showSupportingDocuments && supportingDocuments.length > 0
-            ? supportingDocuments
-            : undefined,
-      },
-    }
-    const nextStatus = cycle
-      ? statusAfterManagerPhaseComplete(cycle, nextReview)
-      : 'completed'
-    const showAckSentModal = nextStatus === 'acknowledgement_pending'
+  const submittedAt = review.managerReview?.savedAt ?? new Date().toISOString()
+  const sendsToAcknowledgement = cycle
+    ? statusAfterManagerPhaseComplete(cycle, {
+        ...review,
+        managerReview: { answers: buildPayload(), completedAt: submittedAt, savedAt: submittedAt },
+      }) === 'acknowledgement_pending'
+    : false
+  const employeeName = employee?.name ?? 'the employee'
+  const submitConfirmMessage = sendsToAcknowledgement
+    ? `Submit your review for ${employeeName}? It will be sent to them for acknowledgement, and you won't be able to edit it after submitting.`
+    : `Submit your review for ${employeeName}? You won't be able to edit it after submitting.`
 
+  const confirmSubmit = () => {
+    requestCloseSubmitConfirm()
     saveManagerReview(
       review.id,
-      payload,
+      buildPayload(),
       showSupportingDocuments ? supportingDocuments : undefined,
-      { navigate: !showAckSentModal },
     )
-    if (showAckSentModal) {
-      setAckSentModalOpen(true)
-    }
-  }
-
-  const closeAckSentModal = () => {
-    setAckSentModalOpen(false)
-    setView('manager_dashboard')
   }
 
   const draftStatusLabel =
@@ -319,7 +302,7 @@ export function ManagerReviewForm() {
                 variant="filled"
                 color="primary"
                 size="sm"
-                onButtonClick={handleSubmit}
+                onButtonClick={() => setSubmitConfirmOpen(true)}
               >
                 <ModusWcIcon name="send" size="xs" decorative />
                 Submit review
@@ -330,23 +313,28 @@ export function ManagerReviewForm() {
       </div>
 
       <ModusWcModal
-        modalId={MANAGER_ACK_SENT_MODAL_ID}
+        modalId={MANAGER_SUBMIT_CONFIRM_MODAL_ID}
         backdrop="default"
         position="center"
         showClose
-        aria-label="Employee acknowledgment sent"
+        aria-label="Submit review"
       >
-        <span slot="header">Review submitted</span>
+        <span slot="header">Submit review</span>
         <div slot="content">
-          <ModusWcTypography
-            hierarchy="p"
-            size="md"
-            label={`Employee acknowledgment has been sent to ${employee?.name ?? 'the employee'}. They will be notified to accept the review.`}
-          />
+          <ModusWcTypography hierarchy="p" size="sm" label={submitConfirmMessage} />
         </div>
-        <div slot="footer" className="flex w-full justify-end">
-          <ModusWcButton variant="filled" color="primary" size="sm" onButtonClick={closeAckSentModal}>
-            OK
+        <div slot="footer" className="flex w-full flex-wrap justify-end gap-2">
+          <ModusWcButton
+            variant="outlined"
+            color="tertiary"
+            size="sm"
+            onButtonClick={requestCloseSubmitConfirm}
+          >
+            Cancel
+          </ModusWcButton>
+          <ModusWcButton variant="filled" color="primary" size="sm" onButtonClick={confirmSubmit}>
+            <ModusWcIcon name="send" size="xs" decorative />
+            Submit
           </ModusWcButton>
         </div>
       </ModusWcModal>

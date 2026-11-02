@@ -202,7 +202,7 @@ export const seedTemplates: ReviewTemplate[] = [
   },
 ]
 
-function assignPersonUnion(person: Omit<Person, 'union'>): string {
+function assignPersonUnion(person: Omit<Person, 'union' | 'wageCode'>): string {
   if (person.role !== 'employee') return 'Non-union'
   if (
     person.department === 'Operations' &&
@@ -224,7 +224,38 @@ function assignPersonUnion(person: Omit<Person, 'union'>): string {
   return 'Non-union'
 }
 
-const BULK_EMPLOYEE_PROFILES: Omit<Person, 'union' | 'id' | 'name' | 'role'>[] = [
+const UNION_WAGE_CODES: Record<string, Record<string, string>> = {
+  CUPE: {
+    'Field Coordinator': 'CUPE-H1',
+    'Logistics Specialist': 'CUPE-H1',
+    'Safety Officer': 'CUPE-H2',
+    'Site Supervisor': 'CUPE-H3',
+  },
+  CSU: {
+    'Accounts Payable Clerk': 'CSU-H1',
+    'Payroll Specialist': 'CSU-H2',
+  },
+  IBEW: {
+    'Help Desk Technician': 'IBEW-H1',
+  },
+}
+
+const DEPARTMENT_SALARY_CODES: Record<string, string> = {
+  Operations: 'SAL-OPS',
+  Finance: 'SAL-FIN',
+  'Information Technology': 'SAL-IT',
+  Sales: 'SAL-SLS',
+  'Human Resources': 'SAL-HR',
+}
+
+function assignPersonWageCode(person: Omit<Person, 'union' | 'wageCode'>, union: string): string {
+  if (person.role !== 'employee') return 'SAL-MGT'
+  const unionCode = UNION_WAGE_CODES[union]?.[person.title]
+  if (unionCode) return unionCode
+  return DEPARTMENT_SALARY_CODES[person.department] ?? 'SAL-GEN'
+}
+
+const BULK_EMPLOYEE_PROFILES: Omit<Person, 'union' | 'wageCode' | 'id' | 'name' | 'role'>[] = [
   { department: 'Operations', costCenter: 'CC-100', title: 'Field Coordinator', managerId: 'mgr-1' },
   { department: 'Operations', costCenter: 'CC-150', title: 'Logistics Specialist', managerId: 'mgr-1' },
   { department: 'Operations', costCenter: 'CC-100', title: 'Project Analyst', managerId: 'mgr-1' },
@@ -272,7 +303,7 @@ export const UNASSIGNED_DEMO_EMPLOYEE_IDS = [
   'emp-63',
 ] as const
 
-const UNASSIGNED_DEMO_EMPLOYEES: Omit<Person, 'union'>[] = [
+const UNASSIGNED_DEMO_EMPLOYEES: Omit<Person, 'union' | 'wageCode'>[] = [
   {
     id: 'emp-51',
     name: 'Priya Sharma',
@@ -321,7 +352,7 @@ const UNASSIGNED_DEMO_EMPLOYEES: Omit<Person, 'union'>[] = [
 ]
 
 /** Beyond bulk-generated roster (emp-21–55); not on active/draft cycles or review groups. */
-const EXTRA_UNASSIGNED_DEMO_EMPLOYEES: Omit<Person, 'union'>[] = [
+const EXTRA_UNASSIGNED_DEMO_EMPLOYEES: Omit<Person, 'union' | 'wageCode'>[] = [
   /** Demo roster entry: no supervisor on file (see post-map clear on emp-56). */
   {
     id: 'emp-56',
@@ -397,7 +428,7 @@ const EXTRA_UNASSIGNED_DEMO_EMPLOYEES: Omit<Person, 'union'>[] = [
   },
 ]
 
-function generateAdditionalEmployees(): Omit<Person, 'union'>[] {
+function generateAdditionalEmployees(): Omit<Person, 'union' | 'wageCode'>[] {
   return Array.from({ length: 35 }, (_, index) => {
     const id = index + 21
     const profile = BULK_EMPLOYEE_PROFILES[index % BULK_EMPLOYEE_PROFILES.length]
@@ -536,7 +567,7 @@ function create2025AnnualReviews(people: Person[]): PerformanceReview[] {
   })
 }
 
-const SEED_PEOPLE_BASE: Omit<Person, 'union'>[] = [
+const SEED_PEOPLE_BASE: Omit<Person, 'union' | 'wageCode'>[] = [
   {
     id: 'hr-1',
     name: 'Hannah Reed',
@@ -767,19 +798,23 @@ const SEED_PEOPLE_BASE: Omit<Person, 'union'>[] = [
   ...EXTRA_UNASSIGNED_DEMO_EMPLOYEES,
 ]
 
-function defaultSupervisorId(person: Omit<Person, 'union'>): string | undefined {
+function defaultSupervisorId(person: Omit<Person, 'union' | 'wageCode'>): string | undefined {
   if (person.role !== 'employee' || !person.managerId) return undefined
   if (person.managerId === 'mgr-1') return 'sup-1'
   return 'mgr-1'
 }
 
-export const seedPeople: Person[] = SEED_PEOPLE_BASE.map((person) => ({
-  ...person,
-  union: assignPersonUnion(person),
-  supervisorId:
-    person.supervisorId ??
-    (person.role === 'employee' ? defaultSupervisorId(person) : undefined),
-})).map((person) =>
+export const seedPeople: Person[] = SEED_PEOPLE_BASE.map((person) => {
+  const union = assignPersonUnion(person)
+  return {
+    ...person,
+    union,
+    wageCode: assignPersonWageCode(person, union),
+    supervisorId:
+      person.supervisorId ??
+      (person.role === 'employee' ? defaultSupervisorId(person) : undefined),
+  }
+}).map((person) =>
   person.id === 'emp-56' ? { ...person, supervisorId: undefined } : person,
 )
 

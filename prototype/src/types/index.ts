@@ -155,6 +155,8 @@ export interface Person {
   costCenter: string
   title: string
   union: string
+  /** Payroll wage code (union classification for union members, salaried band otherwise). */
+  wageCode: string
   /** Crew manager (direct line manager) */
   managerId?: string
   /** Field / department supervisor */

@@ -124,6 +124,8 @@ export function LaunchCycleParticipantPickerModal({
   const [filterDepartments, setFilterDepartments] = useState<string[]>([])
   const [filterCostCenters, setFilterCostCenters] = useState<string[]>([])
   const [filterTitles, setFilterTitles] = useState<string[]>([])
+  const [filterUnions, setFilterUnions] = useState<string[]>([])
+  const [filterWageCodes, setFilterWageCodes] = useState<string[]>([])
   const [bulkReviewerType, setBulkReviewerType] = useState<ReviewerRoleType>('supervisor')
   const [bulkCustomManagerId, setBulkCustomManagerId] = useState('')
   const [reviewerTableKey, setReviewerTableKey] = useState(0)
@@ -135,6 +137,8 @@ export function LaunchCycleParticipantPickerModal({
     setFilterDepartments([])
     setFilterCostCenters([])
     setFilterTitles([])
+    setFilterUnions([])
+    setFilterWageCodes([])
     setBulkReviewerType('supervisor')
     setBulkCustomManagerId('')
     setReviewerTableKey((key) => key + 1)
@@ -159,6 +163,14 @@ export function LaunchCycleParticipantPickerModal({
     () => uniqueSorted(availableEmployees.map((p) => p.title)),
     [availableEmployees],
   )
+  const unionValues = useMemo(
+    () => uniqueSorted(availableEmployees.map((p) => p.union)),
+    [availableEmployees],
+  )
+  const wageCodeValues = useMemo(
+    () => uniqueSorted(availableEmployees.map((p) => p.wageCode)),
+    [availableEmployees],
+  )
 
   const filteredEmployees = useMemo(
     () =>
@@ -166,9 +178,18 @@ export function LaunchCycleParticipantPickerModal({
         (p) =>
           matchesMultiFilter(filterDepartments, p.department) &&
           matchesMultiFilter(filterCostCenters, p.costCenter) &&
-          matchesMultiFilter(filterTitles, p.title),
+          matchesMultiFilter(filterTitles, p.title) &&
+          matchesMultiFilter(filterUnions, p.union) &&
+          matchesMultiFilter(filterWageCodes, p.wageCode),
       ),
-    [availableEmployees, filterDepartments, filterCostCenters, filterTitles],
+    [
+      availableEmployees,
+      filterDepartments,
+      filterCostCenters,
+      filterTitles,
+      filterUnions,
+      filterWageCodes,
+    ],
   )
 
   const filteredEmployeeIds = useMemo(
@@ -319,6 +340,20 @@ export function LaunchCycleParticipantPickerModal({
         cellRenderer: (value: unknown) => createNeutralTagBadge(String(value)),
       },
       {
+        id: 'union',
+        header: 'Union code',
+        accessor: 'union',
+        sortable: true,
+        cellRenderer: (value: unknown) => createNeutralTagBadge(String(value)),
+      },
+      {
+        id: 'wageCode',
+        header: 'Wage code',
+        accessor: 'wageCode',
+        sortable: true,
+        cellRenderer: (value: unknown) => createNeutralTagBadge(String(value)),
+      },
+      {
         id: 'reviewer',
         header: 'Reviewer',
         accessor: 'reviewerType',
@@ -342,6 +377,8 @@ export function LaunchCycleParticipantPickerModal({
             title: person.title,
             department: person.department,
             costCenter: person.costCenter,
+            union: person.union,
+            wageCode: person.wageCode,
             reviewerType: assignment.type,
             reviewerCustomManagerId: assignment.customManagerId ?? '',
             reviewerSupervisorId: resolveEffectiveSupervisorId(person, assignment) ?? '',
@@ -389,7 +426,12 @@ export function LaunchCycleParticipantPickerModal({
   }`
   const confirmLabel = `Add ${selectedCount === 1 ? '1 employee' : `${selectedCount} employees`}`
   const hasActiveFilters =
-    filterDepartments.length + filterCostCenters.length + filterTitles.length > 0
+    filterDepartments.length +
+      filterCostCenters.length +
+      filterTitles.length +
+      filterUnions.length +
+      filterWageCodes.length >
+    0
 
   const handleConfirm = () => {
     if (selectedCount === 0) return
@@ -410,11 +452,7 @@ export function LaunchCycleParticipantPickerModal({
     >
       <span slot="header">Add employees to review</span>
       <div slot="content" className="flex min-w-0 flex-col gap-3">
-        <div
-          className={`grid grid-cols-1 gap-3 md:grid-cols-2 ${
-            bulkReviewerType === 'custom' ? 'xl:grid-cols-5' : 'lg:grid-cols-4'
-          }`}
-        >
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-5">
           <ParticipantFieldMultiFilter
             label="Department"
             emptyHint="All departments"
@@ -436,6 +474,23 @@ export function LaunchCycleParticipantPickerModal({
             selected={filterTitles}
             onSelectedChange={setFilterTitles}
           />
+          <ParticipantFieldMultiFilter
+            label="Union code"
+            emptyHint="All union codes"
+            values={unionValues}
+            selected={filterUnions}
+            onSelectedChange={setFilterUnions}
+          />
+          <ParticipantFieldMultiFilter
+            label="Wage code"
+            emptyHint="All wage codes"
+            values={wageCodeValues}
+            selected={filterWageCodes}
+            onSelectedChange={setFilterWageCodes}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-5">
           <ModusWcSelect
             label="Reviewer for all shown"
             size="sm"
@@ -507,6 +562,34 @@ export function LaunchCycleParticipantPickerModal({
               aria-label={`${value}, remove title filter`}
               onChipRemove={() =>
                 setFilterTitles((prev) => prev.filter((entry) => entry !== value))
+              }
+            />
+          ))}
+          {filterUnions.map((value) => (
+            <ModusWcChip
+              key={`union-${value}`}
+              label={value}
+              size="sm"
+              active
+              variant="filled"
+              showRemove
+              aria-label={`${value}, remove union code filter`}
+              onChipRemove={() =>
+                setFilterUnions((prev) => prev.filter((entry) => entry !== value))
+              }
+            />
+          ))}
+          {filterWageCodes.map((value) => (
+            <ModusWcChip
+              key={`wage-${value}`}
+              label={value}
+              size="sm"
+              active
+              variant="filled"
+              showRemove
+              aria-label={`${value}, remove wage code filter`}
+              onChipRemove={() =>
+                setFilterWageCodes((prev) => prev.filter((entry) => entry !== value))
               }
             />
           ))}

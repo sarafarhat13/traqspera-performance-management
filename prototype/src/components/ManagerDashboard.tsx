@@ -46,6 +46,16 @@ type ManagerDashboardViewMode = 'card' | 'table'
 
 const DEFAULT_MANAGER_DASHBOARD_VIEW: ManagerDashboardViewMode = 'table'
 
+const NO_HIDDEN_STATUS_CHIPS: readonly string[] = []
+const HIDE_COMPLETE_STATUS_CHIP: readonly string[] = ['complete']
+
+/** In-progress queues can't contain complete reviews; the Completed queue makes every status chip redundant. */
+function hiddenStatusChipsForQueue(queue: 'all' | ManagerTeamQueue): readonly string[] | 'all' {
+  if (queue === 'complete') return 'all'
+  if (queue === 'all') return NO_HIDDEN_STATUS_CHIPS
+  return HIDE_COMPLETE_STATUS_CHIP
+}
+
 function TeamReviewsSectionTitle() {
   return (
     <div slot="title" className="tq-section-card-title mb-4 flex w-full min-w-0 flex-col gap-1">
@@ -380,9 +390,19 @@ export function ManagerDashboard() {
     setFilters((current) => ({ ...current, ...patch }))
   }, [])
 
-  const selectQueue = useCallback((queue: 'all' | ManagerTeamQueue) => {
-    setActiveQueue((current) => (queue !== 'all' && current === queue ? 'all' : queue))
-  }, [])
+  const selectQueue = useCallback(
+    (queue: 'all' | ManagerTeamQueue) => {
+      const nextQueue = queue !== 'all' && activeQueue === queue ? 'all' : queue
+      setActiveQueue(nextQueue)
+      const hidden = hiddenStatusChipsForQueue(nextQueue)
+      if (hidden === 'all' ? filters.status !== 'all' : hidden.includes(filters.status)) {
+        setFilters((current) => ({ ...current, status: 'all' }))
+      }
+    },
+    [activeQueue, filters.status],
+  )
+
+  const hiddenStatusChips = hiddenStatusChipsForQueue(activeQueue)
 
   const clearFilters = useCallback(() => {
     requestAnimationFrame(() => {
@@ -526,6 +546,8 @@ export function ManagerDashboard() {
           filterFieldsKey={filterFieldsKey}
           viewMode={viewMode}
           statusFilterMode="managerTeam"
+          showStatusChips={hiddenStatusChips !== 'all'}
+          hiddenStatusIds={hiddenStatusChips === 'all' ? undefined : hiddenStatusChips}
           showFilterPanel={false}
           searchAriaLabel="Search by employee name, review cycle, department, or cost center"
           onFiltersChange={updateFilters}

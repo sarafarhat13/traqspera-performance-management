@@ -81,6 +81,7 @@ type PerformanceDashboardFilterBarProps = {
   viewMode?: DashboardViewMode
   showViewToggle?: boolean
   showStatusChips?: boolean
+  hiddenStatusIds?: readonly string[]
   showFilterPanel?: boolean
   showReviewerInBar?: boolean
   statusFilterMode?: 'package' | 'review' | 'managerTeam' | 'cycleDetail'
@@ -106,6 +107,7 @@ export function PerformanceDashboardFilterBar({
   viewMode = 'table',
   showViewToggle = true,
   showStatusChips = true,
+  hiddenStatusIds,
   showFilterPanel = true,
   showReviewerInBar = false,
   statusFilterMode = 'package',
@@ -117,7 +119,7 @@ export function PerformanceDashboardFilterBar({
 }: PerformanceDashboardFilterBarProps) {
   const [panelOpen, setPanelOpen] = useState(false)
   const panelFilterCount = countActivePanelFilters(filters)
-  const statusFilters =
+  const allStatusFilters =
     statusFilterMode === 'package'
       ? PACKAGE_STATUS_FILTERS
       : statusFilterMode === 'managerTeam'
@@ -125,6 +127,9 @@ export function PerformanceDashboardFilterBar({
         : statusFilterMode === 'cycleDetail'
           ? CYCLE_DETAIL_STATUS_FILTERS
           : REVIEW_STATUS_FILTERS
+  const statusFilters = hiddenStatusIds?.length
+    ? allStatusFilters.filter(({ id }) => !hiddenStatusIds.includes(id))
+    : allStatusFilters
 
   const searchInputId = `dashboard-search-${filterFieldsKey}`
   const compactBar = showReviewerInBar

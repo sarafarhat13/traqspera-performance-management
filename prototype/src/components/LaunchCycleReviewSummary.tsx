@@ -1,4 +1,5 @@
 import {
+  ModusWcAlert,
   ModusWcAvatar,
   ModusWcCard,
   ModusWcDivider,
@@ -162,131 +163,74 @@ export function LaunchCycleReviewSummary({
   getPerson,
 }: LaunchCycleReviewSummaryProps) {
   const timelineRows = buildTimelineRows(workflow, workflowKickoffMode, ratingScale.max)
-  const ratingEnabled = workflowIncludesManagerRatingScale(workflow)
   const employeeCount = selectedEmployees.length
   const employeeCountLabel =
     employeeCount === 1 ? '1 employee' : `${employeeCount} employees`
+  const readyAlertDescription = `${
+    conflictsWereResolved ? 'All reviewer assignments are confirmed. ' : ''
+  }${employeeCountLabel} will be notified when the review cycle begins.`
 
-  const configurationItems: { icon: string; label: string }[] = []
-  if (workflow.some((step) => step.enabled && step.type === 'employee')) {
-    configurationItems.push({ icon: WORKFLOW_STEP_META.employee.icon, label: 'Self Evaluation' })
-  }
-  if (workflow.some((step) => step.enabled && step.type === 'manager')) {
-    const managerLabel = ratingEnabled
-      ? `Manager Evaluation (optional ${ratingScale.max}-point rating)`
-      : 'Manager Evaluation'
-    configurationItems.push({ icon: WORKFLOW_STEP_META.manager.icon, label: managerLabel })
-  }
-  if (workflowKickoffMode === 'parallel' && canUseParallelKickoff(workflow)) {
-    configurationItems.push({
-      icon: 'refresh',
-      label: 'Parallel kickoff (self-evaluation and manager review together)',
-    })
-  }
   return (
     <div className="tq-launch-review flex flex-col gap-3">
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
-          <SummaryCardHeader icon="description" title="Review Cycle Details" />
-          <div className="flex flex-col gap-3">
-            <div>
-              <ModusWcTypography
-                hierarchy="p"
-                size="xs"
-                weight="semibold"
-                customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                label="Cycle Name"
-              />
-              <ModusWcTypography hierarchy="p" size="md" weight="semibold" label={cycleName} />
-            </div>
-            {cycleDescription.trim() ? (
-              <>
-                <ModusWcDivider />
-                <div>
-                  <ModusWcTypography
-                    hierarchy="p"
-                    size="xs"
-                    weight="semibold"
-                    customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                    label="Participant email message"
-                  />
-                  <ModusWcTypography
-                    hierarchy="p"
-                    size="sm"
-                    customClass="!mt-1 whitespace-pre-wrap text-[var(--modus-wc-color-base-content)]"
-                    label={cycleDescription.trim()}
-                  />
-                </div>
-              </>
-            ) : null}
-            <ModusWcDivider />
-            <div>
-              <ModusWcTypography
-                hierarchy="p"
-                size="xs"
-                weight="semibold"
-                customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                label="Review Template"
-              />
-              <ModusWcTypography
-                hierarchy="p"
-                size="md"
-                weight="semibold"
-                label={template?.name ?? '—'}
-              />
-              {template?.description?.trim() && (
+      <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
+        <SummaryCardHeader icon="description" title="Review Cycle Details" />
+        <div className="flex flex-col gap-3">
+          <div>
+            <ModusWcTypography
+              hierarchy="p"
+              size="xs"
+              weight="semibold"
+              customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+              label="Cycle Name"
+            />
+            <ModusWcTypography hierarchy="p" size="md" weight="semibold" label={cycleName} />
+          </div>
+          {cycleDescription.trim() ? (
+            <>
+              <ModusWcDivider />
+              <div>
+                <ModusWcTypography
+                  hierarchy="p"
+                  size="xs"
+                  weight="semibold"
+                  customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+                  label="Participant email message"
+                />
                 <ModusWcTypography
                   hierarchy="p"
                   size="sm"
-                  customClass="!mt-1 text-[var(--modus-wc-color-base-content-low-contrast)]"
-                  label={template.description}
+                  customClass="!mt-1 whitespace-pre-wrap text-[var(--modus-wc-color-base-content)]"
+                  label={cycleDescription.trim()}
                 />
-              )}
-            </div>
-          </div>
-        </ModusWcCard>
-
-        <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
-          <SummaryCardHeader icon="settings" title="Review Configuration" />
-          <ul className="tq-launch-review__config-list">
-            {configurationItems.map((item) => (
-              <li key={item.label} className="tq-launch-review__config-item">
-                <ModusWcIcon
-                  name="check_circle"
-                  size="sm"
-                  customClass="text-[var(--modus-wc-color-success)] shrink-0"
-                  decorative
-                />
-                <ModusWcIcon name={item.icon} size="sm" decorative />
-                <ModusWcTypography hierarchy="p" size="sm" label={item.label} />
-              </li>
-            ))}
-          </ul>
-          {ratingEnabled ? (
-            <div className="tq-launch-review__rating-scale-summary">
+              </div>
+            </>
+          ) : null}
+          <ModusWcDivider />
+          <div>
+            <ModusWcTypography
+              hierarchy="p"
+              size="xs"
+              weight="semibold"
+              customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
+              label="Review Template"
+            />
+            <ModusWcTypography
+              hierarchy="p"
+              size="md"
+              weight="semibold"
+              label={template?.name ?? '—'}
+            />
+            {template?.description?.trim() && (
               <ModusWcTypography
                 hierarchy="p"
-                size="xs"
-                weight="semibold"
-                customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
-                label="Rating labels"
+                size="sm"
+                customClass="!mt-1 text-[var(--modus-wc-color-base-content-low-contrast)]"
+                label={template.description}
               />
-              <ul className="tq-launch-review__rating-scale-list">
-                {ratingScale.labels.map((label, index) => (
-                  <li key={`${index}-${label}`}>
-                    <ModusWcTypography
-                      hierarchy="p"
-                      size="sm"
-                      customClass="!m-0"
-                      label={`${ratingScale.min + index} star: ${label}`}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </ModusWcCard>
-      </div>
+            )}
+          </div>
+        </div>
+      </ModusWcCard>
 
       <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
         <SummaryCardHeader icon="calendar" title="Review Process Timeline" />
@@ -368,17 +312,11 @@ export function LaunchCycleReviewSummary({
           <TagBadge label={employeeCountLabel} />
         </div>
         <div className="flex flex-col gap-3">
-          <div>
-            <ModusWcTypography
-              hierarchy="p"
-              size="xs"
-              weight="semibold"
-              customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-              label="Departments"
-            />
-            <ModusWcTypography hierarchy="p" size="sm" weight="semibold" label="Individual Selection" />
-          </div>
-          <ModusWcDivider />
+          <ModusWcAlert
+            variant="info"
+            alertTitle="Ready to Start Review Cycle"
+            alertDescription={readyAlertDescription}
+          />
           <div>
             <ModusWcTypography
               hierarchy="p"
@@ -418,38 +356,6 @@ export function LaunchCycleReviewSummary({
           </div>
         </div>
       </ModusWcCard>
-
-      <div className="tq-launch-review__ready-banner" role="status">
-        <ModusWcIcon
-          name="check_circle"
-          size="sm"
-          customClass="text-[var(--modus-wc-color-primary)] shrink-0"
-          decorative
-        />
-        <div className="min-w-0 text-center">
-          <ModusWcTypography
-            hierarchy="p"
-            size="sm"
-            weight="semibold"
-            customClass="text-[var(--modus-wc-color-primary)]"
-            label="Ready to Start Review Cycle"
-          />
-          {conflictsWereResolved ? (
-            <ModusWcTypography
-              hierarchy="p"
-              size="xs"
-              customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-              label="All reviewer assignments are confirmed."
-            />
-          ) : null}
-          <ModusWcTypography
-            hierarchy="p"
-            size="xs"
-            customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-            label={`${employeeCountLabel} will be notified when the review cycle begins`}
-          />
-        </div>
-      </div>
     </div>
   )
 }

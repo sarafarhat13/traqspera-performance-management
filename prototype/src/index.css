@@ -1683,39 +1683,6 @@ dialog.tq-launch-wizard-participant-picker-dialog .modus-wc-modal-content {
   content: none;
 }
 
-.tq-launch-review__config-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--modus-wc-spacing-sm, 0.75rem);
-}
-
-.tq-launch-review__config-item {
-  display: flex;
-  align-items: center;
-  gap: var(--modus-wc-spacing-sm, 0.75rem);
-}
-
-.tq-launch-review__rating-scale-summary {
-  display: flex;
-  flex-direction: column;
-  gap: var(--modus-wc-spacing-xs, 0.5rem);
-  margin-top: var(--modus-wc-spacing-md, 1rem);
-  padding-top: var(--modus-wc-spacing-md, 1rem);
-  border-top: 1px solid var(--modus-wc-color-base-200, #e8e9ef);
-}
-
-.tq-launch-review__rating-scale-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--modus-wc-spacing-2xs, 0.25rem);
-}
-
 .tq-workflow-step__nested-block {
   display: flex;
   flex-direction: column;
@@ -1800,17 +1767,6 @@ dialog.tq-launch-wizard-participant-picker-dialog .modus-wc-modal-content {
   padding: var(--modus-wc-spacing-sm, 0.75rem) var(--modus-wc-spacing-md, 1rem);
   border-radius: var(--modus-wc-border-radius-lg, 0.5rem);
   background-color: var(--modus-wc-color-base-200, #f1f1f6);
-}
-
-.tq-launch-review__ready-banner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--modus-wc-spacing-sm, 0.75rem);
-  padding: var(--modus-wc-spacing-md, 1rem);
-  border: 1px solid var(--modus-wc-color-primary, #0063a3);
-  border-radius: var(--modus-wc-border-radius-lg, 0.5rem);
-  background-color: color-mix(in srgb, var(--modus-wc-color-primary, #0063a3) 8%, transparent);
 }
 
 /* Performance dashboard — filter bar */

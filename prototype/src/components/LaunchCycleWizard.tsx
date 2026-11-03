@@ -972,6 +972,7 @@ export function LaunchCycleWizard() {
               isReviewerAssignmentValid(getEffectiveAssignment(id), getPerson(id)),
             )}
             getPerson={getPerson}
+            reviewerAssignments={reviewerAssignmentsForLaunch}
           />
         )}
 

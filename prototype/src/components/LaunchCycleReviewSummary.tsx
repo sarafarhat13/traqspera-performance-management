@@ -1,12 +1,12 @@
 import {
   ModusWcAlert,
-  ModusWcAvatar,
   ModusWcCard,
   ModusWcDivider,
   ModusWcIcon,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
 import type {
+  EmployeeReviewerAssignment,
   Person,
   RatingScaleConfig,
   ReviewEmployeeGroup,
@@ -15,10 +15,11 @@ import type {
   WorkflowStep,
   WorkflowStepType,
 } from '../types'
-import { reviewerPreviewLabel } from '../utils/reviewer'
+import { defaultReviewerAssignment, reviewerPreviewLabel } from '../utils/reviewer'
 import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { formatEmployeeNameWithCode } from '../utils/employeeCode'
 import { formatLongDate } from '../utils/status'
+import { PerformanceDataTable } from './PerformanceDataTable'
 import { TagBadge } from './TagBadge'
 import {
   canUseParallelKickoff,
@@ -42,7 +43,13 @@ type LaunchCycleReviewSummaryProps = {
   attachedGroups?: ReviewEmployeeGroup[]
   conflictsWereResolved?: boolean
   getPerson?: (id: string) => Person | undefined
+  reviewerAssignments?: Record<string, EmployeeReviewerAssignment>
 }
+
+const TEAM_MEMBER_COLUMNS = [
+  { id: 'name', header: 'Employee', accessor: 'name', sortable: true },
+  { id: 'reviewer', header: 'Reviewer', accessor: 'reviewer', sortable: true },
+]
 
 const TIMELINE_BULLET_CLASS: Record<WorkflowStepType, string> = {
   employee: 'tq-launch-review__step-index--primary',
@@ -69,15 +76,6 @@ function timelineStepLabel(type: WorkflowStepType, ratingScaleMax: number): stri
     default:
       return 'Scale Rating'
   }
-}
-
-function employeeInitials(name: string): string {
-  return name
-    .split(/\s+/)
-    .map((part) => part.charAt(0))
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
 }
 
 function SummaryCardHeader({ icon, title }: { icon: string; title: string }) {
@@ -161,11 +159,21 @@ export function LaunchCycleReviewSummary({
   attachedGroups = [],
   conflictsWereResolved = false,
   getPerson,
+  reviewerAssignments = {},
 }: LaunchCycleReviewSummaryProps) {
   const timelineRows = buildTimelineRows(workflow, workflowKickoffMode, ratingScale.max)
   const employeeCount = selectedEmployees.length
   const employeeCountLabel =
     employeeCount === 1 ? '1 employee' : `${employeeCount} employees`
+  const teamMemberRows = selectedEmployees.map((person) => ({
+    id: person.id,
+    name: formatEmployeeNameWithCode(person.name, person.id),
+    reviewer: reviewerPreviewLabel(
+      person,
+      reviewerAssignments[person.id] ?? defaultReviewerAssignment(),
+      getPerson ?? (() => undefined),
+    ),
+  }))
   const readyAlertDescription = `${
     conflictsWereResolved ? 'All reviewer assignments are confirmed. ' : ''
   }${employeeCountLabel} will be notified when the review cycle begins.`
@@ -317,43 +325,11 @@ export function LaunchCycleReviewSummary({
             alertTitle="Ready to Start Review Cycle"
             alertDescription={readyAlertDescription}
           />
-          <div>
-            <ModusWcTypography
-              hierarchy="p"
-              size="xs"
-              weight="semibold"
-              customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-              label="Team Members"
-            />
-            <ul className="tq-launch-review__member-list">
-              {selectedEmployees.map((person) => (
-                <li key={person.id} className="tq-launch-review__member-row">
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <ModusWcAvatar
-                      imgSrc={`https://i.pravatar.cc/96?u=${encodeURIComponent(person.id)}`}
-                      initials={employeeInitials(person.name)}
-                      size="sm"
-                    />
-                    <div className="min-w-0">
-                      <ModusWcTypography
-                        hierarchy="p"
-                        size="sm"
-                        weight="semibold"
-                        label={formatEmployeeNameWithCode(person.name, person.id)}
-                      />
-                      <ModusWcTypography
-                        hierarchy="p"
-                        size="xs"
-                        customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                        label={person.title}
-                      />
-                    </div>
-                  </div>
-                  <TagBadge label={person.department} />
-                </li>
-              ))}
-            </ul>
-          </div>
+          <PerformanceDataTable
+            caption="Employees in this review cycle and their reviewers"
+            columns={TEAM_MEMBER_COLUMNS}
+            data={teamMemberRows}
+          />
         </div>
       </ModusWcCard>
     </div>

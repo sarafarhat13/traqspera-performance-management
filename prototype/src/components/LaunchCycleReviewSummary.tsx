@@ -28,7 +28,6 @@ import {
   getEnabledWorkflowSteps,
   RATING_SCALE_STEP_META,
   workflowFlowStepLabel,
-  workflowIncludesManagerRatingScale,
   WORKFLOW_STEP_META,
   type CoreWorkflowStepType,
 } from '../utils/workflow'
@@ -63,21 +62,6 @@ const TIMELINE_BULLET_CLASS: Record<WorkflowStepType, string> = {
 function timelineStepIcon(type: WorkflowStepType): string {
   if (type === 'rating_scale') return RATING_SCALE_STEP_META.icon
   return WORKFLOW_STEP_META[type as CoreWorkflowStepType].icon
-}
-
-function timelineStepLabel(type: WorkflowStepType, ratingScaleMax: number): string {
-  switch (type) {
-    case 'employee':
-      return 'Employee Self-Evaluation'
-    case 'manager':
-      return 'Manager Evaluation'
-    case 'acknowledgement':
-      return 'Employee Acknowledgment'
-    case 'rating_scale':
-      return `${ratingScaleMax}-Point Scale Rating`
-    default:
-      return 'Scale Rating'
-  }
 }
 
 function SummarySection({
@@ -130,12 +114,31 @@ function SummarySection({
   )
 }
 
-type TimelineRow = {
+type TimelineStep = {
   key: string
   label: string
   icon: string
-  bulletClass: string
   deadline?: string
+}
+
+type TimelineRow = TimelineStep & {
+  bulletClass: string
+  /** Steps that open at the same time within this stage (parallel kickoff). */
+  parallelSteps?: TimelineStep[]
+}
+
+function TimelineDueDate({ deadline }: { deadline?: string }) {
+  return (
+    <div className="tq-launch-review__timeline-due">
+      <ModusWcIcon name="calendar" size="xs" decorative />
+      <ModusWcTypography
+        hierarchy="p"
+        size="xs"
+        customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
+        label={deadline ? `Due ${formatLongDate(deadline)}` : 'No due date set'}
+      />
+    </div>
+  )
 }
 
 function buildTimelineRows(
@@ -155,16 +158,27 @@ function buildTimelineRows(
       .map((d) => d?.trim())
       .filter((d): d is string => Boolean(d))
       .sort()
-    const managerTimelineLabel = workflowIncludesManagerRatingScale(workflow)
-      ? `${timelineStepLabel('manager', ratingScaleMax)} (optional rating)`
-      : timelineStepLabel('manager', ratingScaleMax)
     const rows: TimelineRow[] = [
       {
         key: 'parallel-kickoff',
-        label: `${timelineStepLabel('employee', ratingScaleMax)} + ${managerTimelineLabel} (at the same time)`,
+        label: 'Self and manager evaluations',
         icon: 'people_group',
         bulletClass: TIMELINE_BULLET_CLASS.employee,
         deadline: kickoffDeadlines.at(-1),
+        parallelSteps: [
+          {
+            key: employee.id,
+            label: workflowFlowStepLabel(workflow, employee, ratingScaleMax),
+            icon: timelineStepIcon('employee'),
+            deadline: employee.deadline?.trim() || undefined,
+          },
+          {
+            key: manager.id,
+            label: workflowFlowStepLabel(workflow, manager, ratingScaleMax),
+            icon: timelineStepIcon('manager'),
+            deadline: manager.deadline?.trim() || undefined,
+          },
+        ],
       },
     ]
     for (const step of tail) {
@@ -221,7 +235,11 @@ export function LaunchCycleReviewSummary({
     conflictsWereResolved ? 'All reviewer assignments are confirmed. ' : ''
   }${employeeCountLabel} will be notified when the review cycle begins.`
   const lastDeadline = timelineRows.at(-1)?.deadline
-  const stepCountLabel = timelineRows.length === 1 ? '1 step' : `${timelineRows.length} steps`
+  const isParallelKickoff = timelineRows.some((row) => row.parallelSteps)
+  const stageCount = timelineRows.length
+  const stepCountLabel = isParallelKickoff
+    ? `Parallel kickoff · ${stageCount === 1 ? '1 stage' : `${stageCount} stages`}`
+    : `Sequential · ${stageCount === 1 ? '1 step' : `${stageCount} steps`}`
   const groupCountLabel =
     attachedGroups.length === 1 ? '1 group' : `${attachedGroups.length} groups`
 
@@ -309,33 +327,65 @@ export function LaunchCycleReviewSummary({
         }
       >
         <ol className="tq-launch-review__timeline">
-          {timelineRows.map((row, index) => (
-            <li key={row.key} className="tq-launch-review__timeline-row">
-              <span className={`tq-launch-review__step-index ${row.bulletClass}`}>{index + 1}</span>
-              <div className="tq-launch-review__timeline-main min-w-0 flex-1">
-                <div className="flex min-w-0 items-center gap-2">
-                  <ModusWcIcon name={row.icon} size="sm" decorative />
-                  <ModusWcTypography
-                    hierarchy="p"
-                    size="sm"
-                    weight="semibold"
-                    label={row.label}
-                  />
+          {timelineRows.map((row, index) =>
+            row.parallelSteps ? (
+              <li
+                key={row.key}
+                className="tq-launch-review__timeline-row tq-launch-review__timeline-row--parallel"
+              >
+                <span className={`tq-launch-review__step-index ${row.bulletClass}`}>{index + 1}</span>
+                <div className="tq-launch-review__timeline-main min-w-0 flex-1">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <ModusWcIcon name={row.icon} size="sm" decorative />
+                    <ModusWcTypography
+                      hierarchy="p"
+                      size="sm"
+                      weight="semibold"
+                      customClass="!m-0"
+                      label={row.label}
+                    />
+                    <TagBadge label="Start together" color="primary" />
+                  </div>
+                  <ul
+                    className="tq-launch-review__parallel-steps"
+                    aria-label="Steps that run at the same time"
+                  >
+                    {row.parallelSteps.map((step) => (
+                      <li key={step.key} className="tq-launch-review__parallel-step">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <ModusWcIcon name={step.icon} size="sm" decorative />
+                          <ModusWcTypography
+                            hierarchy="p"
+                            size="sm"
+                            weight="semibold"
+                            customClass="!m-0"
+                            label={step.label}
+                          />
+                        </div>
+                        <TimelineDueDate deadline={step.deadline} />
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <div className="tq-launch-review__timeline-due">
-                  <ModusWcIcon name="calendar" size="xs" decorative />
-                  <ModusWcTypography
-                    hierarchy="p"
-                    size="xs"
-                    customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
-                    label={
-                      row.deadline ? `Due ${formatLongDate(row.deadline)}` : 'No due date set'
-                    }
-                  />
+              </li>
+            ) : (
+              <li key={row.key} className="tq-launch-review__timeline-row">
+                <span className={`tq-launch-review__step-index ${row.bulletClass}`}>{index + 1}</span>
+                <div className="tq-launch-review__timeline-main min-w-0 flex-1">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <ModusWcIcon name={row.icon} size="sm" decorative />
+                    <ModusWcTypography
+                      hierarchy="p"
+                      size="sm"
+                      weight="semibold"
+                      label={row.label}
+                    />
+                  </div>
+                  <TimelineDueDate deadline={row.deadline} />
                 </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            ),
+          )}
         </ol>
       </SummarySection>
 

@@ -1815,6 +1815,30 @@ dialog.tq-launch-wizard-participant-picker-dialog .modus-wc-modal-content {
   background-color: var(--modus-wc-color-base-200, #f1f1f6);
 }
 
+.tq-launch-review__timeline-row--parallel {
+  align-items: flex-start;
+}
+
+.tq-launch-review__parallel-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--modus-wc-spacing-sm, 0.75rem);
+  margin: var(--modus-wc-spacing-sm, 0.75rem) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tq-launch-review__parallel-step {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: var(--modus-wc-spacing-sm, 0.75rem);
+  border: 1px solid var(--modus-wc-color-base-300);
+  border-left: 3px solid var(--modus-wc-color-primary);
+  border-radius: var(--modus-wc-border-radius-default, 0.25rem);
+  background-color: var(--modus-wc-color-base-page);
+}
+
 .tq-launch-review__step-index {
   display: flex;
   align-items: center;

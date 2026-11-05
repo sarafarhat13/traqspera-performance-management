@@ -1099,12 +1099,11 @@ export function LaunchCycleWizard() {
               hierarchy="p"
               size="md"
               customClass="!m-0"
-              label={`Publishing ${cycleName.trim() || 'this review cycle'} starts it today. ${publishParticipantLabel} and their reviewers will be notified by email and can begin their reviews.`}
+              label={`Publishing ${cycleName.trim() || 'this review cycle'} starts it today. ${publishParticipantLabel} and their reviewers will be notified and can begin their reviews.`}
             />
             <ModusWcAlert
               variant="info"
               alertTitle={`Final deadline: ${formatLongDate(publishEndDate)}`}
-              alertDescription="You can still add employees and adjust deadlines from the review details page after publishing."
             />
           </div>
           <div slot="footer" className="flex w-full justify-end gap-2">

@@ -8,6 +8,7 @@ import {
   ModusWcStepper,
   ModusWcTextInput,
   ModusWcTextarea,
+  ModusWcToast,
   ModusWcTypography,
 } from '@trimble-oss/moduswebcomponents-react'
 import { createEmptyTemplate, DEFAULT_RATING_SCALE } from '../data/seed'
@@ -23,7 +24,7 @@ import type {
   WorkflowStep,
 } from '../types'
 import { readInputString } from '../utils/modusFormEvents'
-import { CYCLE_STATUS_LABELS } from '../utils/status'
+import { CYCLE_STATUS_LABELS, formatLongDate } from '../utils/status'
 import { computeCycleDueDateFromWorkflow } from '../utils/cycleDisplay'
 import { isRatingScaleConfigValid, normalizeRatingScale } from '../utils/ratingScale'
 import {
@@ -38,7 +39,11 @@ import { TRAQ_CARD_CLASS } from '../layouts/traqsperaShellConstants'
 import { CreateTemplateForm, isCreateTemplateValid } from './CreateTemplateForm'
 import { TemplateEmployeePreview } from './TemplateEmployeePreview'
 import { PerformanceDataTable } from './PerformanceDataTable'
-import { createReviewerAssignmentCell, createTableActionButton } from '../utils/modusTableCells'
+import {
+  createReviewerAssignmentCell,
+  createTableActionGroup,
+  createTableIconActionButton,
+} from '../utils/modusTableCells'
 import {
   defaultReviewerAssignment,
   buildManagerOptions,
@@ -49,12 +54,15 @@ import {
 import { WorkflowStepConfig } from './WorkflowStepConfig'
 import { LaunchCycleReviewSummary } from './LaunchCycleReviewSummary'
 import { LaunchCycleParticipantPickerModal } from './LaunchCycleParticipantPickerModal'
+import { PublishingReviewCycleScreen } from './PublishingReviewCycleScreen'
 import { formatEmployeeNameWithCode } from '../utils/employeeCode'
 import { isTemplateVisibleInCycleWizard } from '../utils/templateLifecycle'
 import { useModusDialog } from '../utils/useModusDialog'
 
 const TEMPLATE_PREVIEW_MODAL_ID = 'launch-wizard-template-preview'
 const PARTICIPANT_SUMMARY_DETAIL_MODAL_ID = 'launch-wizard-participant-summary-detail'
+const PARTICIPANT_REMOVED_TOAST_MS = 6000
+const PUBLISH_CONFIRM_MODAL_ID = 'launch-wizard-publish-confirm'
 
 const WIZARD_STEPS = [
   'Cycle Details',
@@ -239,6 +247,7 @@ export function LaunchCycleWizard() {
     saveTemplate,
     getTemplate,
     getPerson,
+    selectCycle,
   } = usePerformance()
 
   const [draftCycle] = useState(() =>
@@ -294,6 +303,25 @@ export function LaunchCycleWizard() {
   const [participantPickerOpen, setParticipantPickerOpen] = useState(false)
   const [addedEmployeeTableKey, setAddedEmployeeTableKey] = useState(0)
   const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null)
+  const [removedParticipantToast, setRemovedParticipantToast] = useState<{
+    id: number
+    name: string
+  } | null>(null)
+  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false)
+  const [publishedCycle, setPublishedCycle] = useState<{
+    id: string
+    name: string
+    recipients: Person[]
+  } | null>(null)
+
+  useEffect(() => {
+    if (!removedParticipantToast) return
+    const timer = window.setTimeout(
+      () => setRemovedParticipantToast(null),
+      PARTICIPANT_REMOVED_TOAST_MS,
+    )
+    return () => window.clearTimeout(timer)
+  }, [removedParticipantToast])
 
   const employeePool = useMemo(
     () => state.people.filter((p) => p.role === 'employee'),
@@ -431,7 +459,7 @@ export function LaunchCycleWizard() {
     }
   }, [derivedParticipantIds, getEffectiveAssignment, getPerson])
 
-  const removeParticipant = useCallback((employeeId: string) => {
+  const removeParticipant = useCallback((employeeId: string, employeeName: string) => {
     setIndividualEmployeeIds((prev) => prev.filter((id) => id !== employeeId))
     setReviewerAssignments((prev) => {
       if (!(employeeId in prev)) return prev
@@ -439,6 +467,7 @@ export function LaunchCycleWizard() {
       delete next[employeeId]
       return next
     })
+    setRemovedParticipantToast({ id: Date.now(), name: employeeName })
   }, [])
 
   const handleParticipantPickerConfirm = useCallback(
@@ -534,13 +563,17 @@ export function LaunchCycleWizard() {
         sortable: false,
         cellRenderer: (_value: unknown, row: unknown) => {
           const record = row as { id: string; name: string }
-          const button = createTableActionButton(
-            'Remove',
-            () => removeParticipant(record.id),
-            'danger',
+          return createTableActionGroup(
+            [
+              createTableIconActionButton(
+                `Remove ${record.name} from review`,
+                'delete',
+                () => removeParticipant(record.id, record.name),
+                'danger',
+              ),
+            ],
+            true,
           )
-          button.setAttribute('aria-label', `Remove ${record.name} from review`)
-          return button
         },
       },
     ],
@@ -632,17 +665,37 @@ export function LaunchCycleWizard() {
       setStepIndex((i) => i + 1)
       return
     }
-    handleLaunch()
+    requestPublish()
   }
+
+  const requestPublish = () => {
+    if (!canAdvance()) return
+    setPublishConfirmOpen(true)
+  }
+
+  const { requestClose: closePublishConfirm } = useModusDialog(
+    PUBLISH_CONFIRM_MODAL_ID,
+    publishConfirmOpen,
+    () => setPublishConfirmOpen(false),
+  )
 
   const handleLaunch = () => {
     const cycleInput = buildCycleInput()
     if (!cycleInput) return
-    launchCycle(cycleInput, {
+    closePublishConfirm()
+    const cycleId = launchCycle(cycleInput, {
       reviewerAssignments: reviewerAssignmentsForLaunch,
       existingCycleId: draftCycle?.id,
+      stayOnCurrentView: true,
     })
+    setPublishedCycle({ id: cycleId, name: cycleInput.name, recipients: selectedEmployees })
   }
+
+  const openPublishedCycleDetails = useCallback(() => {
+    if (!publishedCycle) return
+    selectCycle(publishedCycle.id)
+    setView('cycle_details')
+  }, [publishedCycle, selectCycle, setView])
 
   const handleSaveDraft = () => {
     if (!canSaveDraft()) return
@@ -655,6 +708,22 @@ export function LaunchCycleWizard() {
       existingCycleId: draftCycle?.id,
     })
   }
+
+  if (publishedCycle) {
+    return (
+      <TraqsperaPageBody>
+        <PublishingReviewCycleScreen
+          cycleName={publishedCycle.name}
+          recipients={publishedCycle.recipients}
+          onComplete={openPublishedCycleDetails}
+        />
+      </TraqsperaPageBody>
+    )
+  }
+
+  const publishParticipantLabel =
+    selectedEmployees.length === 1 ? '1 employee' : `${selectedEmployees.length} employees`
+  const publishEndDate = computeCycleDueDateFromWorkflow(workflow, defaultCycleEndFallback())
 
   return (
     <TraqsperaPageBody>
@@ -1017,6 +1086,48 @@ export function LaunchCycleWizard() {
           </div>
         </ModusWcModal>
 
+        <ModusWcModal
+          modalId={PUBLISH_CONFIRM_MODAL_ID}
+          backdrop="default"
+          position="center"
+          showClose={true}
+          aria-label="Publish review cycle"
+        >
+          <span slot="header">Publish review cycle?</span>
+          <div slot="content" className="flex flex-col gap-3">
+            <ModusWcTypography
+              hierarchy="p"
+              size="md"
+              customClass="!m-0"
+              label={`Publishing ${cycleName.trim() || 'this review cycle'} starts it today. ${publishParticipantLabel} and their reviewers will be notified by email and can begin their reviews.`}
+            />
+            <ModusWcAlert
+              variant="info"
+              alertTitle={`Final deadline: ${formatLongDate(publishEndDate)}`}
+              alertDescription="You can still add employees and adjust deadlines from the review details page after publishing."
+            />
+          </div>
+          <div slot="footer" className="flex w-full justify-end gap-2">
+            <ModusWcButton
+              variant="outlined"
+              color="tertiary"
+              size="sm"
+              onButtonClick={closePublishConfirm}
+            >
+              Cancel
+            </ModusWcButton>
+            <ModusWcButton
+              variant="filled"
+              color="primary"
+              size="sm"
+              onButtonClick={handleLaunch}
+            >
+              <ModusWcIcon name="paper_plane" size="xs" decorative />
+              Publish
+            </ModusWcButton>
+          </div>
+        </ModusWcModal>
+
         <footer className="tq-launch-wizard-page__footer">
           <div className="tq-launch-wizard-page__footer-inner">
             <ModusWcButton
@@ -1047,9 +1158,9 @@ export function LaunchCycleWizard() {
                     color="primary"
                     size="sm"
                     customClass="tq-launch-wizard-publish-btn"
-                    onButtonClick={handleLaunch}
+                    onButtonClick={requestPublish}
                   >
-                    <ModusWcIcon name="send" size="xs" decorative />
+                    <ModusWcIcon name="paper_plane" size="xs" decorative />
                     Publish review
                   </ModusWcButton>
                 ) : (
@@ -1068,6 +1179,25 @@ export function LaunchCycleWizard() {
             </div>
           </div>
         </footer>
+      </div>
+
+      <div aria-live="polite" aria-atomic="false">
+        {removedParticipantToast ? (
+          <ModusWcToast
+            key={removedParticipantToast.id}
+            position="bottom-end"
+            customClass="tq-launch-wizard-toast"
+          >
+            <ModusWcAlert
+              variant="success"
+              role="status"
+              dismissible
+              alertTitle="Employee removed"
+              alertDescription={`${removedParticipantToast.name} has been removed from this review cycle.`}
+              onDismissClick={() => setRemovedParticipantToast(null)}
+            />
+          </ModusWcToast>
+        ) : null}
       </div>
     </TraqsperaPageBody>
   )

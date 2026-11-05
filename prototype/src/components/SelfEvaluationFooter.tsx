@@ -12,7 +12,7 @@ export function SelfEvaluationActions({ onSaveForLater, onSubmit }: SelfEvaluati
         Save for later
       </ModusWcButton>
       <ModusWcButton variant="filled" color="primary" size="sm" onButtonClick={onSubmit}>
-        <ModusWcIcon name="send" size="xs" decorative />
+        <ModusWcIcon name="paper_plane" size="xs" decorative />
         Submit
       </ModusWcButton>
     </div>

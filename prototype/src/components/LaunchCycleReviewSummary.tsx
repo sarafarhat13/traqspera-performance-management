@@ -1,6 +1,8 @@
+import { useState, type ReactNode } from 'react'
 import {
   ModusWcAlert,
   ModusWcCard,
+  ModusWcCollapse,
   ModusWcDivider,
   ModusWcIcon,
   ModusWcTypography,
@@ -78,12 +80,53 @@ function timelineStepLabel(type: WorkflowStepType, ratingScaleMax: number): stri
   }
 }
 
-function SummaryCardHeader({ icon, title }: { icon: string; title: string }) {
+function SummarySection({
+  collapseId,
+  icon,
+  title,
+  description,
+  defaultExpanded = false,
+  collapsedBadge,
+  children,
+}: {
+  collapseId: string
+  icon: string
+  title: string
+  description: string
+  defaultExpanded?: boolean
+  collapsedBadge?: ReactNode
+  children: ReactNode
+}) {
+  const [expanded, setExpanded] = useState(defaultExpanded)
   return (
-    <div className="tq-launch-review__card-header">
-      <ModusWcIcon name={icon} size="sm" decorative />
-      <ModusWcTypography hierarchy="h4" size="md" weight="semibold" label={title} />
-    </div>
+    <ModusWcCard bordered padding="compact" customClass={`${TRAQ_CARD_CLASS} tq-launch-review__section`}>
+      <ModusWcCollapse
+        collapseId={collapseId}
+        expanded={expanded}
+        onExpandedChange={(e: CustomEvent<{ expanded: boolean }>) => setExpanded(e.detail.expanded)}
+      >
+        <div slot="header" className="tq-launch-review__section-header">
+          <ModusWcIcon name={icon} size="sm" decorative />
+          <div className="min-w-0 flex-1">
+            <ModusWcTypography hierarchy="h3" size="md" weight="semibold" customClass="!m-0" label={title} />
+            <ModusWcTypography
+              hierarchy="p"
+              size="sm"
+              customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
+              label={description}
+            />
+          </div>
+          {collapsedBadge ? (
+            <span className="tq-launch-review__section-badge" hidden={expanded}>
+              {collapsedBadge}
+            </span>
+          ) : null}
+        </div>
+        <div slot="content" className="tq-launch-review__section-body">
+          {children}
+        </div>
+      </ModusWcCollapse>
+    </ModusWcCard>
   )
 }
 
@@ -177,11 +220,25 @@ export function LaunchCycleReviewSummary({
   const readyAlertDescription = `${
     conflictsWereResolved ? 'All reviewer assignments are confirmed. ' : ''
   }${employeeCountLabel} will be notified when the review cycle begins.`
+  const lastDeadline = timelineRows.at(-1)?.deadline
+  const stepCountLabel = timelineRows.length === 1 ? '1 step' : `${timelineRows.length} steps`
+  const groupCountLabel =
+    attachedGroups.length === 1 ? '1 group' : `${attachedGroups.length} groups`
 
   return (
     <div className="tq-launch-review flex flex-col gap-3">
-      <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
-        <SummaryCardHeader icon="description" title="Review Cycle Details" />
+      <ModusWcAlert
+        variant="info"
+        alertTitle="Ready to Start Review Cycle"
+        alertDescription={readyAlertDescription}
+      />
+
+      <SummarySection
+        collapseId="launch-review-details"
+        icon="clipboard"
+        title="Review Cycle Details"
+        description={`${cycleName} · ${template?.name ?? 'No template selected'}`}
+      >
         <div className="flex flex-col gap-3">
           <div>
             <ModusWcTypography
@@ -238,10 +295,19 @@ export function LaunchCycleReviewSummary({
             )}
           </div>
         </div>
-      </ModusWcCard>
+      </SummarySection>
 
-      <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
-        <SummaryCardHeader icon="calendar" title="Review Process Timeline" />
+      <SummarySection
+        collapseId="launch-review-timeline"
+        icon="calendar"
+        title="Review Process Timeline"
+        description={stepCountLabel}
+        collapsedBadge={
+          <TagBadge
+            label={lastDeadline ? `Deadline: ${formatLongDate(lastDeadline)}` : 'No deadline set'}
+          />
+        }
+      >
         <ol className="tq-launch-review__timeline">
           {timelineRows.map((row, index) => (
             <li key={row.key} className="tq-launch-review__timeline-row">
@@ -256,26 +322,30 @@ export function LaunchCycleReviewSummary({
                     label={row.label}
                   />
                 </div>
-              </div>
-              {row.deadline && (
-                <div className="tq-launch-review__timeline-due shrink-0">
+                <div className="tq-launch-review__timeline-due">
                   <ModusWcIcon name="calendar" size="xs" decorative />
                   <ModusWcTypography
                     hierarchy="p"
-                    size="sm"
-                    customClass="text-[var(--modus-wc-color-base-content-low-contrast)]"
-                    label={`Due: ${formatLongDate(row.deadline)}`}
+                    size="xs"
+                    customClass="!m-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
+                    label={
+                      row.deadline ? `Due ${formatLongDate(row.deadline)}` : 'No due date set'
+                    }
                   />
                 </div>
-              )}
+              </div>
             </li>
           ))}
         </ol>
-      </ModusWcCard>
+      </SummarySection>
 
       {attachedGroups.length > 0 ? (
-        <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
-          <SummaryCardHeader icon="people_group" title="Review groups" />
+        <SummarySection
+          collapseId="launch-review-groups"
+          icon="people_group"
+          title="Review groups"
+          description={groupCountLabel}
+        >
           <ul className="tq-launch-review__member-list">
             {attachedGroups.map((group) => {
               const previewPerson =
@@ -303,35 +373,22 @@ export function LaunchCycleReviewSummary({
               )
             })}
           </ul>
-        </ModusWcCard>
+        </SummarySection>
       ) : null}
 
-      <ModusWcCard bordered padding="compact" customClass={TRAQ_CARD_CLASS}>
-        <div className="tq-launch-review__card-header tq-launch-review__card-header--split">
-          <div className="flex min-w-0 items-center gap-2">
-            <ModusWcIcon name="people_group" size="sm" decorative />
-            <ModusWcTypography
-              hierarchy="h4"
-              size="md"
-              weight="semibold"
-              label="Selected Team Members"
-            />
-          </div>
-          <TagBadge label={employeeCountLabel} />
-        </div>
-        <div className="flex flex-col gap-3">
-          <ModusWcAlert
-            variant="info"
-            alertTitle="Ready to Start Review Cycle"
-            alertDescription={readyAlertDescription}
-          />
-          <PerformanceDataTable
-            caption="Employees in this review cycle and their reviewers"
-            columns={TEAM_MEMBER_COLUMNS}
-            data={teamMemberRows}
-          />
-        </div>
-      </ModusWcCard>
+      <SummarySection
+        collapseId="launch-review-participants"
+        icon="people_group"
+        title="Participants"
+        description={`${employeeCountLabel} and their reviewers`}
+        defaultExpanded
+      >
+        <PerformanceDataTable
+          caption="Employees in this review cycle and their reviewers"
+          columns={TEAM_MEMBER_COLUMNS}
+          data={teamMemberRows}
+        />
+      </SummarySection>
     </div>
   )
 }

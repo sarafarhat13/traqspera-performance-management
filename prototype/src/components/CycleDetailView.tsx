@@ -28,6 +28,8 @@ import {
   createManagerSelectCell,
   createStageDueCell,
   createTableActionButton,
+  createTableActionGroup,
+  createTableIconActionButton,
   createReviewDisplayStatusBadge,
 } from '../utils/modusTableCells'
 import { reviewReviewerDisplayName, reviewerPreviewLabel } from '../utils/reviewer'
@@ -470,8 +472,17 @@ export function CycleDetailView() {
         header: '',
         accessor: 'id',
         sortable: false,
-        cellRenderer: (value: unknown) =>
-          createTableActionButton('View employee', () => openEmployeeReview(String(value))),
+        cellRenderer: (value: unknown, row: unknown) =>
+          createTableActionGroup(
+            [
+              createTableIconActionButton(
+                `View review for ${(row as { employeeName: string }).employeeName}`,
+                'visibility_on',
+                () => openEmployeeReview(String(value)),
+              ),
+            ],
+            true,
+          ),
       },
     ],
     [

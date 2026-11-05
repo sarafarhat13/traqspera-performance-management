@@ -274,7 +274,7 @@ export function WorkflowStepConfig({
               key={step.id}
               className={[
                 'tq-workflow-step',
-                'tq-workflow-step--handle-end',
+                'tq-workflow-step--handle-start',
                 draggingId === step.id ? 'tq-workflow-step--dragging' : '',
                 dragOverId === step.id && draggingId !== step.id
                   ? 'tq-workflow-step--drag-over'
@@ -286,6 +286,38 @@ export function WorkflowStepConfig({
               onDragOver={isDraggable ? (event) => handleDragOver(event, step.id) : undefined}
               onDrop={isDraggable ? (event) => handleDrop(event, step.id) : undefined}
             >
+              {isDraggable ? (
+                <button
+                  type="button"
+                  className="tq-workflow-step__handle"
+                  draggable
+                  aria-label={`Drag to reorder ${meta.title}, step ${index + 1}`}
+                  onDragStart={(event) => handleDragStart(event, step.id)}
+                  onDragEnd={handleDragEnd}
+                >
+                  <ModusWcIcon name="drag_indicator" size="sm" decorative />
+                  <ModusWcTypography
+                    hierarchy="p"
+                    size="sm"
+                    weight="semibold"
+                    customClass="!m-0 tabular-nums"
+                    label={String(index + 1)}
+                  />
+                </button>
+              ) : (
+                <div className="tq-workflow-step__handle tq-workflow-step__handle--static">
+                  <ModusWcIcon name="drag_indicator" size="sm" decorative />
+                  <ModusWcTypography
+                    hierarchy="p"
+                    size="sm"
+                    weight="semibold"
+                    customClass="!m-0 tabular-nums"
+                    label={String(index + 1)}
+                  />
+                </div>
+              )}
+
+              <div className="tq-workflow-step__body">
               <div className="tq-workflow-step__top">
                 <ModusWcCheckbox
                   size="sm"
@@ -315,26 +347,6 @@ export function WorkflowStepConfig({
                     label={meta.description}
                   />
                 </div>
-
-                <ModusWcTypography
-                  hierarchy="p"
-                  size="sm"
-                  customClass="!m-0 shrink-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
-                  label={`Step ${index + 1}`}
-                />
-
-                {isDraggable ? (
-                  <button
-                    type="button"
-                    className="tq-workflow-step__handle"
-                    draggable
-                    aria-label={`Drag to reorder ${meta.title}`}
-                    onDragStart={(event) => handleDragStart(event, step.id)}
-                    onDragEnd={handleDragEnd}
-                  >
-                    <ModusWcIcon name="drag_indicator" size="sm" decorative />
-                  </button>
-                ) : null}
               </div>
 
               <div className="tq-workflow-step__due">
@@ -400,6 +412,7 @@ export function WorkflowStepConfig({
                   ) : null}
                 </div>
               ) : null}
+              </div>
             </div>
           )
         })}
@@ -407,12 +420,24 @@ export function WorkflowStepConfig({
         {acknowledgementStep ? (
           <div
             className={[
-              'tq-workflow-step tq-workflow-step--acknowledgement tq-workflow-step--no-handle',
+              'tq-workflow-step tq-workflow-step--acknowledgement tq-workflow-step--handle-start',
               !managerEvaluationEnabled ? 'tq-workflow-step--disabled' : '',
             ]
               .filter(Boolean)
               .join(' ')}
           >
+            <div className="tq-workflow-step__handle tq-workflow-step__handle--fixed">
+              <ModusWcIcon name="drag_indicator" size="sm" decorative />
+              <ModusWcTypography
+                hierarchy="p"
+                size="sm"
+                weight="semibold"
+                customClass="!m-0 tabular-nums"
+                label={String(acknowledgementStepNumber)}
+              />
+            </div>
+
+            <div className="tq-workflow-step__body">
             <div className="tq-workflow-step__top">
               <span
                 className="tq-workflow-step__mandatory"
@@ -443,13 +468,6 @@ export function WorkflowStepConfig({
                   }
                 />
               </div>
-
-              <ModusWcTypography
-                hierarchy="p"
-                size="sm"
-                customClass="!m-0 shrink-0 text-[var(--modus-wc-color-base-content-low-contrast)]"
-                label={`Step ${acknowledgementStepNumber}`}
-              />
             </div>
 
             <div className="tq-workflow-step__due">
@@ -464,6 +482,7 @@ export function WorkflowStepConfig({
                   setStepDeadline(acknowledgementStep.id, readInputString(e as CustomEvent))
                 }
               />
+            </div>
             </div>
           </div>
         ) : null}

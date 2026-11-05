@@ -317,7 +317,7 @@ export function ManagerReviewForm() {
                 size="sm"
                 onButtonClick={() => setSubmitConfirmOpen(true)}
               >
-                <ModusWcIcon name="send" size="xs" decorative />
+                <ModusWcIcon name="paper_plane" size="xs" decorative />
                 Submit review
               </ModusWcButton>
             </div>
@@ -346,7 +346,7 @@ export function ManagerReviewForm() {
             Cancel
           </ModusWcButton>
           <ModusWcButton variant="filled" color="primary" size="sm" onButtonClick={confirmSubmit}>
-            <ModusWcIcon name="send" size="xs" decorative />
+            <ModusWcIcon name="paper_plane" size="xs" decorative />
             Submit
           </ModusWcButton>
         </div>

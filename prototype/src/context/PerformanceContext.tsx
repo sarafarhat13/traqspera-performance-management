@@ -339,6 +339,11 @@ type CycleSaveOptions = {
   existingCycleId?: string
 }
 
+type CycleLaunchOptions = CycleSaveOptions & {
+  /** Keep the current view (e.g. to play a publish animation) instead of returning to the dashboard. */
+  stayOnCurrentView?: boolean
+}
+
 /** Swap in `cycle` when it replaces an existing draft; otherwise append it. */
 function upsertCycle(cycles: ReviewCycle[], cycle: ReviewCycle, existingCycleId?: string) {
   if (existingCycleId && cycles.some((c) => c.id === existingCycleId)) {
@@ -379,10 +384,11 @@ interface PerformanceContextValue {
   addEmployeesToCycle: (cycleId: string, employeeIds: string[]) => void
   /** Reopen a draft cycle in the launch wizard. */
   openCycleDraft: (cycleId: string) => void
+  /** Returns the id of the launched cycle. */
   launchCycle: (
     cycle: Omit<ReviewCycle, 'id' | 'status'>,
-    options?: CycleSaveOptions,
-  ) => void
+    options?: CycleLaunchOptions,
+  ) => string
   saveCycleDraft: (
     cycle: Omit<ReviewCycle, 'id' | 'status'>,
     options?: CycleSaveOptions,
@@ -788,8 +794,8 @@ export function PerformanceProvider({
   const launchCycle = useCallback(
     (
       cycleInput: Omit<ReviewCycle, 'id' | 'status'>,
-      options?: CycleSaveOptions,
-    ) => {
+      options?: CycleLaunchOptions,
+    ): string => {
       const workflow =
         cycleInput.workflow ??
         workflowFromLegacy(cycleInput.includesSelfEvaluation ?? true)
@@ -827,8 +833,9 @@ export function PerformanceProvider({
           s.people,
           options?.reviewerAssignments,
         ),
-        view: 'hr_dashboard',
+        view: options?.stayOnCurrentView ? s.view : 'hr_dashboard',
       }))
+      return cycle.id
     },
     [],
   )

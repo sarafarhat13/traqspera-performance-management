@@ -110,9 +110,18 @@ export function statusBadgeCustomClass(color: StatusBadgeSemanticColor): string 
   return `tq-status-badge tq-status-badge--${color}`
 }
 
+/** Date-only ISO strings (`YYYY-MM-DD`) are parsed as local dates; `new Date()` would treat them as UTC. */
+function parseDisplayDate(iso: string): Date {
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim())
+  if (dateOnly) {
+    return new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+  }
+  return new Date(iso)
+}
+
 export function formatDate(iso: string): string {
   try {
-    return new Date(iso).toLocaleDateString(undefined, {
+    return parseDisplayDate(iso).toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -124,7 +133,7 @@ export function formatDate(iso: string): string {
 
 export function formatLongDate(iso: string): string {
   try {
-    return new Date(iso).toLocaleDateString(undefined, {
+    return parseDisplayDate(iso).toLocaleDateString(undefined, {
       weekday: 'long',
       year: 'numeric',
       month: 'long',

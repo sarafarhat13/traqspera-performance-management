@@ -17,6 +17,7 @@ import {
   createManagerTeamListStatusBadge,
   createTableActionButton,
   createTableActionGroup,
+  createTableIconActionButton,
 } from '../utils/modusTableCells'
 import {
   countActiveDashboardFilters,
@@ -357,23 +358,35 @@ export function ManagerDashboard() {
         cellRenderer: (value: unknown, row: unknown) => {
           const reviewId = String(value)
           const rowData = row as {
+            employeeName: string
             managerReviewDraft: boolean
             managerActionRequired: boolean
           }
           const actions = [
-            createTableActionButton('Details', () => openEmployeeReview(reviewId), 'tertiary'),
+            createTableIconActionButton(
+              `View details for ${rowData.employeeName}`,
+              'visibility_on',
+              () => openEmployeeReview(reviewId),
+            ),
           ]
 
           if (rowData.managerActionRequired) {
             actions.unshift(
-              createTableActionButton(
-                rowData.managerReviewDraft ? 'Continue review' : 'Start Review',
-                () => openManagerReview(reviewId),
-              ),
+              rowData.managerReviewDraft
+                ? createTableIconActionButton(
+                    `Continue review for ${rowData.employeeName}`,
+                    'pencil',
+                    () => openManagerReview(reviewId),
+                  )
+                : createTableIconActionButton(
+                    `Start review for ${rowData.employeeName}`,
+                    'play_circle',
+                    () => openManagerReview(reviewId),
+                  ),
             )
           }
 
-          return createTableActionGroup(actions)
+          return createTableActionGroup(actions, true)
         },
       },
     ],

@@ -28,7 +28,8 @@ import { PerformanceDashboardFilterBar } from './PerformanceDashboardFilterBar'
 import { PerformanceDataTable } from './PerformanceDataTable'
 import {
   createCycleStatusBadge,
-  createTableActionButton,
+  createTableActionGroup,
+  createTableIconActionButton,
 } from '../utils/modusTableCells'
 import type { CycleStatus } from '../types'
 import { DEMO_LISA_FINAL_APPROVAL_CYCLE_ID } from '../data/seed'
@@ -125,12 +126,15 @@ export function HRAdminDashboard() {
         cellRenderer: (value: unknown, row: unknown) => {
           const cycleId = String(value)
           const record = row as { name: string; status: CycleStatus }
-          if (record.status === 'draft') {
-            const button = createTableActionButton('Edit review', () => openCycleDraft(cycleId))
-            button.setAttribute('aria-label', `Edit draft review cycle ${record.name}`)
-            return button
-          }
-          return createTableActionButton('View details', () => openCycle(cycleId))
+          const action =
+            record.status === 'draft'
+              ? createTableIconActionButton(`Edit draft review cycle ${record.name}`, 'pencil', () =>
+                  openCycleDraft(cycleId),
+                )
+              : createTableIconActionButton(`View details for ${record.name}`, 'visibility_on', () =>
+                  openCycle(cycleId),
+                )
+          return createTableActionGroup([action], true)
         },
       },
     ],

@@ -28,6 +28,7 @@ import { PerformanceDashboardFilterBar } from './PerformanceDashboardFilterBar'
 import { PerformanceDataTable } from './PerformanceDataTable'
 import {
   createCycleStatusBadge,
+  createTableActionButton,
   createTableActionGroup,
   createTableIconActionButton,
 } from '../utils/modusTableCells'
@@ -104,7 +105,26 @@ export function HRAdminDashboard() {
 
   const tableColumns = useMemo(
     () => [
-      { id: 'name', header: 'Cycle', accessor: 'name', sortable: true },
+      {
+        id: 'name',
+        header: 'Cycle',
+        accessor: 'name',
+        sortable: true,
+        cellRenderer: (value: unknown, row: unknown) => {
+          const record = row as { id: string; status: CycleStatus }
+          const isDraft = record.status === 'draft'
+          const link = createTableActionButton(String(value), () =>
+            isDraft ? openCycleDraft(record.id) : openCycle(record.id),
+          )
+          link.setAttribute(
+            'aria-label',
+            isDraft
+              ? `Edit draft review cycle ${String(value)}`
+              : `View details for ${String(value)}`,
+          )
+          return link
+        },
+      },
       {
         id: 'status',
         header: 'Status',

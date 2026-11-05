@@ -362,31 +362,22 @@ export function ManagerDashboard() {
             managerReviewDraft: boolean
             managerActionRequired: boolean
           }
-          const actions = [
-            createTableIconActionButton(
-              `View details for ${rowData.employeeName}`,
-              'visibility_on',
-              () => openEmployeeReview(reviewId),
-            ),
-          ]
+          const action = rowData.managerActionRequired
+            ? createTableIconActionButton(
+                `${rowData.managerReviewDraft ? 'Continue' : 'Start'} review for ${rowData.employeeName}`,
+                'triangle_right',
+                () => openManagerReview(reviewId),
+                'primary',
+                false,
+                'solid',
+              )
+            : createTableIconActionButton(
+                `View review for ${rowData.employeeName}`,
+                'visibility_on',
+                () => openEmployeeReview(reviewId),
+              )
 
-          if (rowData.managerActionRequired) {
-            actions.unshift(
-              rowData.managerReviewDraft
-                ? createTableIconActionButton(
-                    `Continue review for ${rowData.employeeName}`,
-                    'pencil',
-                    () => openManagerReview(reviewId),
-                  )
-                : createTableIconActionButton(
-                    `Start review for ${rowData.employeeName}`,
-                    'play_circle',
-                    () => openManagerReview(reviewId),
-                  ),
-            )
-          }
-
-          return createTableActionGroup(actions, true)
+          return createTableActionGroup([action], true)
         },
       },
     ],

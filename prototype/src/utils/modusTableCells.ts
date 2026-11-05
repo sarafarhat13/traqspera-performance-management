@@ -76,6 +76,7 @@ export function createTableIconActionButton(
   onClick: () => void,
   color: TableButtonColor = 'tertiary',
   disabled = false,
+  iconVariant: 'outlined' | 'solid' = 'outlined',
 ) {
   const button = document.createElement('modus-wc-button')
   button.setAttribute('variant', 'filled')
@@ -89,6 +90,7 @@ export function createTableIconActionButton(
   const icon = document.createElement('modus-wc-icon')
   icon.setAttribute('name', iconName)
   icon.setAttribute('size', 'xs')
+  icon.setAttribute('variant', iconVariant)
   icon.setAttribute('decorative', 'true')
   button.appendChild(icon)
 

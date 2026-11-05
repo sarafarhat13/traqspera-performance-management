@@ -480,6 +480,10 @@ modus-wc-button.tq-unassigned-kpi-trigger button {
   background-color: var(--modus-wc-color-base-page, #fff);
 }
 
+modus-wc-rating .modus-wc-rating {
+  color: var(--modus-wc-color-primary);
+}
+
 .tq-rating-scale-legend {
   display: flex;
   flex-direction: column;

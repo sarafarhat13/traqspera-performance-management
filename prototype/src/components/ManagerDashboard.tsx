@@ -362,22 +362,32 @@ export function ManagerDashboard() {
             managerReviewDraft: boolean
             managerActionRequired: boolean
           }
-          const action = rowData.managerActionRequired
-            ? createTableIconActionButton(
-                `${rowData.managerReviewDraft ? 'Continue' : 'Start'} review for ${rowData.employeeName}`,
-                'triangle_right',
-                () => openManagerReview(reviewId),
-                'primary',
-                false,
-                'solid',
-              )
-            : createTableIconActionButton(
-                `View review for ${rowData.employeeName}`,
-                'visibility_on',
-                () => openEmployeeReview(reviewId),
-              )
+          if (!rowData.managerActionRequired) {
+            return createTableActionGroup(
+              [
+                createTableIconActionButton(
+                  `View review for ${rowData.employeeName}`,
+                  'visibility_on',
+                  () => openEmployeeReview(reviewId),
+                ),
+              ],
+              true,
+            )
+          }
 
-          return createTableActionGroup([action], true)
+          const label = rowData.managerReviewDraft ? 'Continue review' : 'Start review'
+          const action = createTableActionButton(
+            label,
+            () => openManagerReview(reviewId),
+            'primary',
+            false,
+            'outlined',
+          )
+          action.setAttribute('aria-label', `${label} for ${rowData.employeeName}`)
+
+          const group = createTableActionGroup([action])
+          group.classList.add('justify-end', 'whitespace-nowrap')
+          return group
         },
       },
     ],

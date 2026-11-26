@@ -22,6 +22,8 @@ const DETAIL_TABS: {
   { id: 'history', label: 'History', icon: 'history' },
 ]
 
+const SELF_HIDDEN_TABS = new Set<EmployeeDetailsTab>(['additional', 'history'])
+
 function formatEmployeeNumber(personId: string): string {
   const digits = personId.replace(/\D/g, '')
   return `# ${digits.padStart(5, '0')}`
@@ -35,12 +37,22 @@ type EmployeeSideNavProps = {
   }
   activeTab: EmployeeDetailsTab
   onSelectTab: (tab: EmployeeDetailsTab) => void
+  /** Self view omits History and Additional Info. Manager view keeps the full list. */
+  variant?: 'self' | 'manager'
 }
 
-export function EmployeeSideNav({ person, activeTab, onSelectTab }: EmployeeSideNavProps) {
+export function EmployeeSideNav({
+  person,
+  activeTab,
+  onSelectTab,
+  variant = 'manager',
+}: EmployeeSideNavProps) {
   const handleItemSelect = (e: CustomEvent<{ value: string }>) => {
     onSelectTab(e.detail.value as EmployeeDetailsTab)
   }
+
+  const tabs =
+    variant === 'self' ? DETAIL_TABS.filter((tab) => !SELF_HIDDEN_TABS.has(tab.id)) : DETAIL_TABS
 
   return (
     <aside className="employee-detail-sidenav w-full shrink-0 lg:w-[214px]">
@@ -87,7 +99,7 @@ export function EmployeeSideNav({ person, activeTab, onSelectTab }: EmployeeSide
 
         <nav aria-label="Employee detail sections">
           <ModusWcMenu size="md" customClass="employee-detail-sidenav__menu">
-            {DETAIL_TABS.map((tab) => (
+            {tabs.map((tab) => (
               <ModusWcMenuItem
                 key={tab.id}
                 label={tab.label}

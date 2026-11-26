@@ -192,6 +192,18 @@ export function EmployeeDetails({ myPerformanceVisit = 0 }: { myPerformanceVisit
   }, [isMobileOwnView])
 
   useEffect(() => {
+    if (!isOwnEmployeeView) return
+    if (activeTab !== 'additional' && activeTab !== 'history') return
+    if (
+      isMobileOwnView &&
+      (mobileSection === 'my_earnings' || mobileSection === 'direct_deposits')
+    ) {
+      return
+    }
+    setEmployeeDetailsTab('personal')
+  }, [isOwnEmployeeView, isMobileOwnView, activeTab, mobileSection, setEmployeeDetailsTab])
+
+  useEffect(() => {
     if (myPerformanceVisit === 0) return
     resetPerformanceMode()
     setMobileSection('performance')
@@ -507,11 +519,17 @@ export function EmployeeDetails({ myPerformanceVisit = 0 }: { myPerformanceVisit
         )}
       </div>
 
-      <div hidden={!isMobileSectionVisible('additional')} aria-hidden={!isMobileSectionVisible('additional')}>
+      <div
+        hidden={isOwnEmployeeView || !isMobileSectionVisible('additional')}
+        aria-hidden={isOwnEmployeeView || !isMobileSectionVisible('additional')}
+      >
         <PlaceholderTab title="Additional Info" />
       </div>
 
-      <div hidden={!isMobileSectionVisible('history')} aria-hidden={!isMobileSectionVisible('history')}>
+      <div
+        hidden={isOwnEmployeeView || !isMobileSectionVisible('history')}
+        aria-hidden={isOwnEmployeeView || !isMobileSectionVisible('history')}
+      >
         <PlaceholderTab title="History" />
       </div>
     </>
@@ -554,7 +572,9 @@ export function EmployeeDetails({ myPerformanceVisit = 0 }: { myPerformanceVisit
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e0e1e9] bg-[#f1f1f6] px-6 py-4">
         <div className="flex min-w-0 items-center gap-3">
           <PageBackButton onBack={handleBack} ariaLabel="Back" />
-          <h1 className="text-[18px] font-bold leading-[28px] text-[#252a2e]">Employee Details</h1>
+          <h1 className="text-[18px] font-bold leading-[28px] text-[#252a2e]">
+            {isOwnEmployeeView ? 'My Info' : 'Employee Details'}
+          </h1>
         </div>
         {isOwnEmployeeView ? (
           layoutModeToggle
@@ -587,7 +607,12 @@ export function EmployeeDetails({ myPerformanceVisit = 0 }: { myPerformanceVisit
 
       <div className="px-6 py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-          <EmployeeSideNav person={person} activeTab={activeTab} onSelectTab={selectTab} />
+          <EmployeeSideNav
+            person={person}
+            activeTab={activeTab}
+            onSelectTab={selectTab}
+            variant={isOwnEmployeeView ? 'self' : 'manager'}
+          />
           <div className="min-w-0 flex-1">{sectionPanels}</div>
         </div>
       </div>
